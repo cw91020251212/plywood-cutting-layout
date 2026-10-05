@@ -8679,6 +8679,24 @@ h1#mainTitle::before, h1#mainTitle::after {
 }
 </style>
 
+<style id="fine-linen-background">
+/* 參考版的麻布感是細密、低對比織紋；避免粗粒噪點搶走內容焦點。 */
+body {
+  background-color: #dfe1df !important;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.16) 0, rgba(255,255,255,.16) 1px, rgba(102,110,108,.045) 1px, rgba(102,110,108,.045) 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.075) 0, rgba(255,255,255,.075) 1px, rgba(92,101,99,.028) 1px, rgba(92,101,99,.028) 4px) !important;
+  background-size: 100% 4px, 4px 100% !important;
+  background-attachment: fixed !important;
+}
+body.wood-dark-mode {
+  background-color: #20242a !important;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0, rgba(255,255,255,.035) 1px, rgba(0,0,0,.055) 1px, rgba(0,0,0,.055) 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0, rgba(255,255,255,.02) 1px, rgba(0,0,0,.04) 1px, rgba(0,0,0,.04) 4px) !important;
+}
+</style>
+
 
 
 

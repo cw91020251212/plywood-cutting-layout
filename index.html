@@ -9095,17 +9095,31 @@ body.wood-dark-mode {
       repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 10px)!important;
     background-size:100% 100%,100% 5px,5px 100%,100% 10px!important;
   }
-  /* 面板只使用更淡的交織線，保留原本的底色與可讀性。 */
-  .container,.section,.simple-more-settings,.trial-board-rules,.objective-box,.advanced-actions,.simple-result,#cutDetails{
+  /* 三層背景：外圍、主容器大面積、內部區塊，各自保留不同明度。 */
+  .container{
     background-image:
-      repeating-linear-gradient(0deg,rgba(70,70,70,.026) 0 1px,transparent 1px 4px),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 5px)!important;
-    background-size:100% 5px,6px 100%!important;
+      repeating-linear-gradient(0deg,rgba(66,74,72,.115) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 10px)!important;
+    background-size:100% 5px,5px 100%,100% 10px!important;
   }
-  body.wood-dark-mode .container,body.wood-dark-mode .section,body.wood-dark-mode .simple-more-settings,body.wood-dark-mode .trial-board-rules,body.wood-dark-mode .objective-box,body.wood-dark-mode .advanced-actions,body.wood-dark-mode .simple-result,body.wood-dark-mode #cutDetails{
+  .section,.simple-more-settings,.trial-board-rules,.objective-box,.advanced-actions,.simple-result,#cutDetails{
     background-image:
-      repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px 4px),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0 1px,transparent 1px 5px)!important;
+      repeating-linear-gradient(0deg,rgba(70,78,76,.065) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0 1px,transparent 1px 5px)!important;
+    background-size:100% 5px,5px 100%!important;
+  }
+  body.wood-dark-mode .container{
+    background-image:
+      repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 10px)!important;
+    background-size:100% 5px,5px 100%,100% 10px!important;
+  }
+  body.wood-dark-mode .section,body.wood-dark-mode .simple-more-settings,body.wood-dark-mode .trial-board-rules,body.wood-dark-mode .objective-box,body.wood-dark-mode .advanced-actions,body.wood-dark-mode .simple-result,body.wood-dark-mode #cutDetails{
+    background-image:
+      repeating-linear-gradient(0deg,rgba(0,0,0,.09) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 5px)!important;
   }
 </style>
 </body>

@@ -9346,5 +9346,16 @@ body.wood-dark-mode {
   body.wood-dark-mode #wood-settings-panel .wood-opacity-level.is-selected{background:#1a75ff!important;color:#fff!important;border-color:#145dc5!important}
   body.wood-dark-mode #wood-settings-panel #wood-opacity-current{color:#dbe5ec!important}
 </style>
+<style>
+/* 電腦寬屏：左側輸入設定、右側切割結果；窄屏仍然上下排列。 */
+@media (min-width:1100px){
+  .container{display:grid;grid-template-columns:minmax(420px,.9fr) minmax(520px,1.1fr);gap:16px;align-items:start;max-width:1600px}
+  .container>.header-container{grid-column:1 / -1}
+  .container>#section-unit,
+  .container>#section-parts,
+  .container>#section-boards{grid-column:1}
+  .container>#section-results{grid-column:2;grid-row:2 / span 3;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+}
+</style>
 </body>
 </html>

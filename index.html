@@ -6630,6 +6630,7 @@ window.addEventListener('DOMContentLoaded', () => {
     var pairedFocusHold = false;
     var pairedScrollX = 0;
     var pairedScrollY = 0;
+    var pairedRestoreTimers = [];
     var visual = window.visualViewport;
     var fullViewportHeight = Math.max(
         visual && Number(visual.height) > 0 ? Number(visual.height) : 0,
@@ -6682,17 +6683,26 @@ window.addEventListener('DOMContentLoaded', () => {
         return match ? match[1] + ':' + match[3] : null;
     }
 
+    function clearPairedRestore() {
+        pairedRestoreTimers.forEach(function (timer) { window.clearTimeout(timer); });
+        pairedRestoreTimers = [];
+    }
+
     function restorePairedScroll() {
+        clearPairedRestore();
         var x = pairedScrollX;
         var y = pairedScrollY;
         var restore = function () {
             try { window.scrollTo({ left: x, top: y, behavior: 'instant' }); }
             catch (_) { try { window.scrollTo(x, y); } catch (__) {} }
         };
-        restore();
-        var raf = window.requestAnimationFrame || function (callback) { return window.setTimeout(callback, 0); };
-        raf(restore);
-        window.setTimeout(restore, 90);
+        // Mobile browsers may apply their own focus/keyboard scroll after focusin.
+        // Re-apply the saved position through the keyboard animation window.
+        [0, 60, 140, 260, 420, 650].forEach(function (delay) {
+            pairedRestoreTimers.push(window.setTimeout(function () {
+                if (pairedFocusHold) restore();
+            }, delay));
+        });
     }
 
     function getViewport() {
@@ -6859,6 +6869,7 @@ window.addEventListener('DOMContentLoaded', () => {
         var incomingGroup = imperialDimensionGroup(event.target);
         var samePairedGroup = !!(incomingGroup && pairedFocusKey === incomingGroup &&
             activeControl && imperialDimensionGroup(activeControl) === incomingGroup);
+        clearPairedRestore();
         cancelPending();
         activeControl = event.target;
         userOwnsScroll = false;
@@ -6877,6 +6888,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!activeControl || event.target !== activeControl) return;
         var losingControl = activeControl;
         var losingGroup = imperialDimensionGroup(losingControl);
+        clearPairedRestore();
         if (losingGroup) {
             pairedFocusKey = losingGroup;
             pairedScrollX = window.scrollX || window.pageXOffset || 0;

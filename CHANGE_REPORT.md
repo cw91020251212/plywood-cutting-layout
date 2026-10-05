@@ -112,3 +112,7 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 ## 2026-10-06 — 加強成組欄位切換鎖定
 
 針對手機瀏覽器在第二個欄位 focus 後仍自行觸發鍵盤滾動的情況，成組切換時會在鍵盤動畫期間多次恢復第一次欄位的位置，避免長度在切換至闊度後被推離畫面。離開該組或改按其他欄位時會解除鎖定，其他輸入欄行為不變。
+
+## 2026-10-06 — focus 前攔截同組欄位自動滾動
+
+由於部分 Android Chrome／iOS WebKit 會在鍵盤出現後忽略 `focus({preventScroll:true})`，單靠 focusin 後恢復位置仍可能失敗。現改在 pointerdown／touchstart 階段攔截同組長闊欄位，先以 `preventScroll` 手動聚焦，再保留原畫面位置；其他欄位仍走原有自動上移流程。

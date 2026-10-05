@@ -6626,6 +6626,10 @@ window.addEventListener('DOMContentLoaded', () => {
     var smoothScrollActive = false;
     var touchOrigin = null;
     var keyboardWasSeen = false;
+    var pairedFocusKey = null;
+    var pairedFocusHold = false;
+    var pairedScrollX = 0;
+    var pairedScrollY = 0;
     var visual = window.visualViewport;
     var fullViewportHeight = Math.max(
         visual && Number(visual.height) > 0 ? Number(visual.height) : 0,
@@ -6662,6 +6666,33 @@ window.addEventListener('DOMContentLoaded', () => {
         var type = (element.type || 'text').toLowerCase();
         return ['hidden', 'button', 'submit', 'reset', 'image', 'checkbox',
             'radio', 'file', 'range', 'color'].indexOf(type) === -1;
+    }
+
+    function sourceIdFor(element) {
+        if (!element) return '';
+        return element.getAttribute('data-source-id') || String(element.id || '').replace(/__editor$/, '');
+    }
+
+    // Imperial length/width fields are paired by owner and unit so that switching
+    // between (for example) part length in inches and part width in inches does not
+    // pull the page away from the first field.
+    function imperialDimensionGroup(element) {
+        var id = sourceIdFor(element);
+        var match = /^(part|board)(Length|Width)(Ft|Inch|Fen)$/.exec(id);
+        return match ? match[1] + ':' + match[3] : null;
+    }
+
+    function restorePairedScroll() {
+        var x = pairedScrollX;
+        var y = pairedScrollY;
+        var restore = function () {
+            try { window.scrollTo({ left: x, top: y, behavior: 'instant' }); }
+            catch (_) { try { window.scrollTo(x, y); } catch (__) {} }
+        };
+        restore();
+        var raf = window.requestAnimationFrame || function (callback) { return window.setTimeout(callback, 0); };
+        raf(restore);
+        window.setTimeout(restore, 90);
     }
 
     function getViewport() {
@@ -6723,6 +6754,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function adjustFocusedControl(token) {
         var element = activeControl;
         if (token !== focusToken || userOwnsScroll || !isNarrowTouchViewport() ||
+            pairedFocusHold ||
             !isEditableControl(element) || document.activeElement !== element) return false;
 
         // Read the visual viewport and field geometry together on every pass. Never reuse
@@ -6824,9 +6856,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('focusin', function (event) {
         if (!isNarrowTouchViewport() || !isEditableControl(event.target)) return;
+        var incomingGroup = imperialDimensionGroup(event.target);
+        var samePairedGroup = !!(incomingGroup && pairedFocusKey === incomingGroup &&
+            activeControl && imperialDimensionGroup(activeControl) === incomingGroup);
         cancelPending();
         activeControl = event.target;
         userOwnsScroll = false;
+        pairedFocusHold = samePairedGroup;
+        pairedFocusKey = incomingGroup;
+        if (samePairedGroup) {
+            roundsRemaining = 0;
+            restorePairedScroll();
+            return;
+        }
         roundsRemaining = MAX_STABLE_ROUNDS;
         scheduleAdjustment(SETTLE_DELAY_MS, focusToken);
     });
@@ -6834,6 +6876,15 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('focusout', function (event) {
         if (!activeControl || event.target !== activeControl) return;
         var losingControl = activeControl;
+        var losingGroup = imperialDimensionGroup(losingControl);
+        if (losingGroup) {
+            pairedFocusKey = losingGroup;
+            pairedScrollX = window.scrollX || window.pageXOffset || 0;
+            pairedScrollY = window.scrollY || window.pageYOffset || 0;
+        } else {
+            pairedFocusKey = null;
+        }
+        pairedFocusHold = false;
         cancelPending();
         // focusout precedes focusin when moving to another editor. Defer only the state
         // cleanup to a microtask; the new focusin owns a fresh token and cancels old work.
@@ -6841,6 +6892,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (activeControl === losingControl && document.activeElement !== losingControl) {
                 activeControl = null;
                 userOwnsScroll = false;
+                pairedFocusKey = null;
+                pairedFocusHold = false;
             }
         });
     });
@@ -6852,6 +6905,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (userOwnsScroll || document.activeElement !== activeControl) return;
+        if (pairedFocusHold) return;
 
         if (fullViewportHeight > 0 && viewport.height <= fullViewportHeight - 80) {
             keyboardWasSeen = true;
@@ -6875,6 +6929,8 @@ window.addEventListener('DOMContentLoaded', () => {
         cancelPending();
         activeControl = null;
         userOwnsScroll = true;
+        pairedFocusKey = null;
+        pairedFocusHold = false;
         touchOrigin = null;
         keyboardWasSeen = false;
         var viewport = getViewport();

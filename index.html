@@ -9077,6 +9077,18 @@ h1#mainTitle::before, h1#mainTitle::after {
       repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 9px)!important;
     background-size:100% 100%,100% 5px,6px 100%,100% 11px!important;
   }
+  /* 面板只使用更淡的交織線，保留原本的底色與可讀性。 */
+  .container,.section,.simple-more-settings,.trial-board-rules,.objective-box,.advanced-actions,.simple-result,#cutDetails{
+    background-image:
+      repeating-linear-gradient(0deg,rgba(70,70,70,.026) 0 1px,transparent 1px 4px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 5px)!important;
+    background-size:100% 5px,6px 100%!important;
+  }
+  body.wood-dark-mode .container,body.wood-dark-mode .section,body.wood-dark-mode .simple-more-settings,body.wood-dark-mode .trial-board-rules,body.wood-dark-mode .objective-box,body.wood-dark-mode .advanced-actions,body.wood-dark-mode .simple-result,body.wood-dark-mode #cutDetails{
+    background-image:
+      repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px 4px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0 1px,transparent 1px 5px)!important;
+  }
 </style>
 </body>
 </html>

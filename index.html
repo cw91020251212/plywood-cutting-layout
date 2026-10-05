@@ -6864,6 +6864,31 @@ window.addEventListener('DOMContentLoaded', () => {
         }, wait);
     }
 
+    // On mobile Chrome/Safari, restoring scroll after focusin is too late: the
+    // browser may perform its own keyboard scroll after the event. For a paired
+    // imperial field, take over at pointerdown and focus with preventScroll.
+    function interceptPairedFieldPointer(event) {
+        if (!isNarrowTouchViewport()) return;
+        var target = event.target && event.target.closest ? event.target.closest('[data-contenteditable-numeric-editor="true"], input, textarea, select') : null;
+        if (!target || !isEditableControl(target)) return;
+        var incomingGroup = imperialDimensionGroup(target);
+        if (!incomingGroup || !activeControl || document.activeElement !== activeControl ||
+            pairedFocusKey !== incomingGroup || imperialDimensionGroup(activeControl) !== incomingGroup ||
+            target === activeControl) return;
+        event.preventDefault();
+        pairedScrollX = window.scrollX || window.pageXOffset || 0;
+        pairedScrollY = window.scrollY || window.pageYOffset || 0;
+        clearQueuedWork();
+        stopSmoothScroll();
+        pairedFocusHold = true;
+        try { target.focus({ preventScroll: true }); }
+        catch (_) { try { target.focus(); } catch (__) {} }
+        restorePairedScroll();
+    }
+    document.addEventListener('pointerdown', interceptPairedFieldPointer, true);
+    // Older iOS WebKit versions may not expose pointer events for contenteditable.
+    document.addEventListener('touchstart', interceptPairedFieldPointer, { capture: true, passive: false });
+
     document.addEventListener('focusin', function (event) {
         if (!isNarrowTouchViewport() || !isEditableControl(event.target)) return;
         var incomingGroup = imperialDimensionGroup(event.target);

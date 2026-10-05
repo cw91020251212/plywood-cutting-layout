@@ -7633,7 +7633,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const fits=specs.filter(spec=>cutOverlay.fitsPartSpec(remnant,spec));
         const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length)} × ${fmtDim(spec.width)}`))];
         const useText=!specs.length?cutCopy('noSpecs'):uniqueFitSizes.length?`${cutCopy('fitsCurrent')}：${uniqueFitSizes.map(esc).join('、')}`:cutCopy('noCurrentFit');
-        html+=`<li data-remnant-material="${esc(remnant.materialId)}"><strong>${esc(measurements.length)} × ${esc(measurements.width)}</strong>（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
+        html+=`<li data-remnant-material="${esc(remnant.materialId)}"><strong>${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
       });
       html+='</ul>';
     });

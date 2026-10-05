@@ -129,8 +129,8 @@
       'Only final, uncut material outputs from the cut tree are listed; kerf bands, trim waste, and zero-size pieces are excluded.'
     ],
     sourceBoard: ['來源板', 'Source sheet'],
-    remnantSize: ['尺寸（長 × 闊）', 'Size (length × width)'],
-    fitsCurrent: ['可容納本次輸入規格', 'Fits a part spec entered this time'],
+    remnantSize: ['長 × 闊', 'length × width'],
+    fitsCurrent: ['可容納本次輸入規格', 'Geometrically fits a part specification entered this time'],
     noCurrentFit: ['未找到幾何上可容納本次輸入部件規格的尺寸。', 'No current input part specification fits geometrically.'],
     noSpecs: ['沒有可供比對的本次輸入部件規格；只列尺寸與面積，不判斷用途。', 'No current part specifications are available to compare; dimensions and area only, no use estimate.'],
     remnantCaveat: [

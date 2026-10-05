@@ -40,3 +40,7 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 - 將首頁大標題由置中改為靠左對齊。
 - 保留原有標題底色、黃色邊框、圖示及文字樣式。
 - 移除標題水平位移，避免左對齊時仍受 `translateX` 影響。
+
+## 2026-10-05 — 大標題白字陰影
+
+為大標題白色文字加入柔和黑色陰影及輕微外暈，提升麻布背景上的閱讀清晰度；保留左對齊及原本標題框外觀。

@@ -7542,7 +7542,15 @@ window.addEventListener('DOMContentLoaded', () => {
   const fmtDim=value=>window.calculator&&window.calculator._formatTrialDimension?window.calculator._formatTrialDimension(value):`${nfmt(value)} mm`;
   const fmtArea=value=>window.calculator&&window.calculator._formatTrialArea?window.calculator._formatTrialArea(value):`${nfmt(value)} mm²`;
   const area=r=>Number(r.width)*Number(r.length);
-  const cutOverlay=window.PlywoodCutOverlay;
+  // Overlay 是輔助顯示功能；即使瀏覽器快取／載入延遲，也不能阻止主計算流程。
+  const cutOverlay=window.PlywoodCutOverlay||{
+    isVerifiedPlan:()=>false,
+    cutSegments:()=>[],
+    finalMaterialLeaves:()=>[],
+    fitsPartSpec:()=>false,
+    formatRemnantMeasurements:()=>null,
+    copy:key=>key
+  };
   const cutCopy=key=>cutOverlay.copy(key,window.calculator&&window.calculator.currentLanguage||'zh');
   const CUT_PATH_STORAGE_KEY='plywood-layout-cut-path-overlay-v1';
   function readCutPathPreference(){try{const value=window.localStorage.getItem(CUT_PATH_STORAGE_KEY);return value==null?true:value==='true';}catch(_){return true;}}

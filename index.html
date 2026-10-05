@@ -9322,6 +9322,25 @@ body.wood-dark-mode {
   body.wood-dark-mode .trial-board-rules strong{color:#edf2f7!important}
   body.wood-dark-mode .advanced-actions>summary{color:#dbe5ec!important}
   body.wood-dark-mode .advanced-actions>summary *{color:#dbe5ec!important}
+  /* 彈窗內部也必須有自己的深色底與淺色字，不能只靠 body 繼承。 */
+  body.wood-dark-mode #helpModal .modal-content,
+  body.wood-dark-mode #printModal .modal-content,
+  body.wood-dark-mode #moveDialog>div{background:#262d34!important;color:#e8eef2!important;border-color:#65737c!important}
+  body.wood-dark-mode #helpModal .modal-content *,
+  body.wood-dark-mode #printModal .modal-content *,
+  body.wood-dark-mode #moveDialog>div *{color:#e8eef2!important}
+  body.wood-dark-mode #helpModal .modal-content button,
+  body.wood-dark-mode #printModal .modal-content button,
+  body.wood-dark-mode #moveDialog>div button{color:#fff!important}
+  body.wood-dark-mode #helpModal .modal-content input,
+  body.wood-dark-mode #helpModal .modal-content select,
+  body.wood-dark-mode #printModal .modal-content input,
+  body.wood-dark-mode #printModal .modal-content select,
+  body.wood-dark-mode #moveDialog>div input,
+  body.wood-dark-mode #moveDialog>div select{background:#f7fafc!important;color:#111!important;border-color:#9aa8b2!important}
+  body.wood-dark-mode #wood-settings-panel .wood-opacity-level{background:#3a4650!important;color:#edf2f7!important;border-color:#71808a!important}
+  body.wood-dark-mode #wood-settings-panel .wood-opacity-level.is-selected{background:#1a75ff!important;color:#fff!important;border-color:#145dc5!important}
+  body.wood-dark-mode #wood-settings-panel #wood-opacity-current{color:#dbe5ec!important}
 </style>
 </body>
 </html>

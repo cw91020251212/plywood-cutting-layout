@@ -9208,5 +9208,104 @@ body.wood-dark-mode {
       repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 5px)!important;
   }
 </style>
+<style id="wood-dark-complete">
+  /* 深色模式完整對比修正：深底配淺字；輸入框保留淺底配深字，避免黑底黑字。 */
+  body.wood-dark-mode .section-title,
+  body.wood-dark-mode .section-title *{color:#f1f6f8!important}
+  body.wood-dark-mode .section-title .step-number{background:rgba(0,0,0,.28)!important;color:#ffe082!important}
+  body.wood-dark-mode .section-intro,
+  body.wood-dark-mode .strategy-hint,
+  body.wood-dark-mode .input-hint,
+  body.wood-dark-mode .legend-spec,
+  body.wood-dark-mode .portraitDisplayHint,
+  body.wood-dark-mode .search-help,
+  body.wood-dark-mode .search-help>summary,
+  body.wood-dark-mode .simple-more-settings>summary,
+  body.wood-dark-mode .trial-board-rules>summary,
+  body.wood-dark-mode #cutDetails>summary{color:#dbe5ec!important}
+
+  body.wood-dark-mode .trial-support-control,
+  body.wood-dark-mode .cut-path-toggle-row,
+  body.wood-dark-mode .cut-path-remnants,
+  body.wood-dark-mode .drag-item,
+  body.wood-dark-mode .snap-controls,
+  body.wood-dark-mode #portraitDisplayControls,
+  body.wood-dark-mode .search-help,
+  body.wood-dark-mode .variation-seq,
+  body.wood-dark-mode .welcome-hint,
+  body.wood-dark-mode .cut-board-detail,
+  body.wood-dark-mode .cut-metrics{
+    background:#293139!important;color:#e8eef2!important;border-color:#596771!important
+  }
+  body.wood-dark-mode .trial-support-control *,
+  body.wood-dark-mode .cut-path-toggle-row *,
+  body.wood-dark-mode .cut-path-remnants *,
+  body.wood-dark-mode .drag-item *,
+  body.wood-dark-mode .snap-controls *,
+  body.wood-dark-mode #portraitDisplayControls *,
+  body.wood-dark-mode .search-help *,
+  body.wood-dark-mode .cut-board-detail *,
+  body.wood-dark-mode .cut-metrics *{color:#e8eef2!important}
+
+  body.wood-dark-mode .objective-choice,
+  body.wood-dark-mode .objective-choice:has(input:checked),
+  body.wood-dark-mode #variationControls,
+  body.wood-dark-mode .next-layout-controls{
+    background:#293139!important;color:#e8eef2!important;border-color:#65737c!important
+  }
+  body.wood-dark-mode .objective-choice strong,
+  body.wood-dark-mode .objective-choice small,
+  body.wood-dark-mode .objective-note,
+  body.wood-dark-mode .objective-title,
+  body.wood-dark-mode .variation-counter,
+  body.wood-dark-mode .variation-status{color:#e8eef2!important}
+
+  body.wood-dark-mode #partsTable,
+  body.wood-dark-mode #boardsTable,
+  body.wood-dark-mode #resultsTable,
+  body.wood-dark-mode .trial-cuts-table{background:#252c33!important;color:#e8eef2!important;border-color:#5c6972!important}
+  body.wood-dark-mode #partsTable th,
+  body.wood-dark-mode #boardsTable th,
+  body.wood-dark-mode #resultsTable th,
+  body.wood-dark-mode .trial-cuts-table th{background:#35414a!important;color:#f0f5f7!important;border-color:#65737c!important}
+  body.wood-dark-mode #partsTable td,
+  body.wood-dark-mode #boardsTable td,
+  body.wood-dark-mode #resultsTable td,
+  body.wood-dark-mode .trial-cuts-table td{background:#252c33!important;color:#e8eef2!important;border-color:#4f5d66!important}
+  body.wood-dark-mode #partsTable tr:nth-child(even) td,
+  body.wood-dark-mode #boardsTable tr:nth-child(even) td,
+  body.wood-dark-mode #resultsTable tr:nth-child(even) td,
+  body.wood-dark-mode .trial-cuts-table tr:nth-child(even) td{background:#2c353d!important}
+
+  body.wood-dark-mode .trial-banner.candidate{background:#493d20!important;color:#ffe8a3!important;border-color:#ad8b3c!important}
+  body.wood-dark-mode .trial-banner.incomplete,
+  body.wood-dark-mode .candidate-warning.incomplete{background:#482b2c!important;color:#ffd6d2!important;border-color:#b35b58!important}
+  body.wood-dark-mode .candidate-warning{background:#493d20!important;color:#ffe8a3!important;border-color:#ad8b3c!important}
+  body.wood-dark-mode .validation-failed{background:#482b2c!important;color:#ffd6d2!important;border-color:#b35b58!important}
+  body.wood-dark-mode .trial-empty{background:#293139!important;color:#e8eef2!important}
+
+  body.wood-dark-mode #canvasContainer{background:#252c33!important}
+  body.wood-dark-mode #canvasContainer .canvas-container{background:#303840!important;border-color:#65737c!important}
+  body.wood-dark-mode #canvasContainer .canvas-label,
+  body.wood-dark-mode #canvasContainer .board-size-legend,
+  body.wood-dark-mode #canvasContainer .board-size-legend-label{color:#e8eef2!important}
+  body.wood-dark-mode #canvasContainer .board-size-legend-item{background:#293139!important;border-color:#65737c!important}
+
+  body.wood-dark-mode .modal-content,
+  body.wood-dark-mode #moveDialog>div{background:#262d34!important;color:#e8eef2!important;border-color:#65737c!important}
+  body.wood-dark-mode .modal-content *,
+  body.wood-dark-mode #moveDialog>div *{color:#e8eef2!important}
+  body.wood-dark-mode .modal-content button,
+  body.wood-dark-mode #moveDialog button{color:#fff!important}
+  body.wood-dark-mode #calculationCounter{color:#dbe5ec!important}
+
+  body.wood-dark-mode input,
+  body.wood-dark-mode select,
+  body.wood-dark-mode textarea,
+  body.wood-dark-mode .contenteditable-number-editor{background:#f7fafc!important;color:#111!important;border-color:#9aa8b2!important}
+  body.wood-dark-mode .contenteditable-number-editor::before{color:#66737b!important}
+  body.wood-dark-mode .input-error{background:#fff8f8!important;color:#111!important}
+  body.wood-dark-mode #wood-scroll-nav button{border-color:#26332d!important}
+</style>
 </body>
 </html>

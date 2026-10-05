@@ -715,11 +715,11 @@ select,
   #section-boards .dimension-unit-row:not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 28px;
+    column-gap: 12px;
     row-gap: 0;
     align-items: center;
-    width: calc(100% - 32px) !important;
-    max-width: calc(100% - 32px);
+    width: calc(100% - 8px) !important;
+    max-width: calc(100% - 8px);
     min-width: 0;
     margin-left: auto;
     margin-right: auto;
@@ -742,9 +742,9 @@ select,
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: 44px;
-    height: 44px;
-    padding: 8px 3px;
+    min-height: 48px;
+    height: 48px;
+    padding: 8px 5px;
     margin: 6px 0;
     box-sizing: border-box;
   }
@@ -1102,9 +1102,8 @@ select,
 </div>
 </div>
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
-<div id="portraitDisplayControls" class="no-print" aria-label="排版圖顯示模式">
+<div id="portraitDisplayControls" class="no-print" aria-label="排版圖顯示模式" style="display:none">
 <button id="portraitModeButton" type="button" aria-pressed="false" onclick="calculator.togglePortraitDisplay()">直向滿版</button>
-<button id="boardOverviewButton" type="button" aria-pressed="false" onclick="calculator.toggleBoardOverview()">整塊板全景</button>
 <span id="portraitDisplayHint">圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版只調整顯示大小。</span>
 </div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
@@ -7804,6 +7803,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function render(plan,selectedLabel){
     const root=$('trialResults'),container=$('canvasContainer'),details=$('cutDetails');
+    const portraitControls=$('portraitDisplayControls');
+    if(portraitControls)portraitControls.style.display='flex';
     const verifiedCutPlan=cutOverlay.isVerifiedPlan(plan);activeVerifiedPlan=verifiedCutPlan?plan:null;
     root.innerHTML='';container.innerHTML='';$('colorLegend').style.display='none';$('cuttingLegend').style.display='none';$('schemeSelector').style.display='none';$('utilizationStats').textContent='';
     details.open=false;details.style.display='block';$('cutDetailsContent').innerHTML=detailHtml(plan,selectedLabel);
@@ -7897,7 +7898,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateVariationControls();return true;
   }
   function calculate(){
-    clearMessages();$('boardAddedNotification').style.display='none';clearCandidatePool();
+    clearMessages();$('boardAddedNotification').style.display='none';clearCandidatePool();const portraitControls=$('portraitDisplayControls');if(portraitControls)portraitControls.style.display='none';
     try{
       const uiSettings=readSettings();const modes=uiSettings.mode==='auto'?['ripThenCrosscut','partFirstTree']:[uiSettings.mode];
       const overrides={...(window.calculator._trialFixedOrientationOverrides||{})};const attempts=[];const errors=[];
@@ -7936,7 +7937,7 @@ window.addEventListener('DOMContentLoaded', () => {
       $('trialResults').innerHTML='<p class="trial-empty">JSON 已載入。舊方案不會視作已驗證切序；按「計算」重新排料及驗證。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';clearMessages();
     }catch(err){$('errorMessage').textContent=`JSON 載入失敗：${err.message}`;}};reader.readAsText(file);};input.click();
   }
-  function resetResults(){clearCandidatePool();window.calculator.trialPlan=null;window.calculator.schemes=[];$('trialResults').innerHTML='<p class="trial-empty">加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
+  function resetResults(){clearCandidatePool();if(window.calculator.portraitDisplayMode)window.calculator.exitPortraitDisplay();window.calculator.trialPlan=null;window.calculator.schemes=[];const portraitControls=$('portraitDisplayControls');if(portraitControls)portraitControls.style.display='none';$('trialResults').innerHTML='<p class="trial-empty">加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
   function showModeDescription(){const m=$('cuttingStrategy').value;const texts={auto:'我會比較兩種工序，只採用通過幾何與逐刀驗證的候選。',ripThenCrosscut:'先分出長條，再逐條截成所需部件。',partFirstTree:'按成品逐刀安排，每刀只切當時可用的材料。'};$('modeNote').textContent=texts[m]||texts.auto;}
   window.calculator.calculateCutting=calculate;window.calculator.saveProject=saveProject;window.calculator.loadProject=loadProject;window.calculator.resetResults=resetResults;
   window.calculator.redrawCurrentScheme=function(){};window.calculator.displayScheme=function(){if(this.trialPlan)render(this.trialPlan,`按已選工序「${this.trialMode}」`);};window.calculator.selectScheme=window.calculator.displayScheme;

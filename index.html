@@ -7544,8 +7544,19 @@ window.addEventListener('DOMContentLoaded', () => {
   const area=r=>Number(r.width)*Number(r.length);
   // Overlay 是輔助顯示功能；即使瀏覽器快取／載入延遲，也不能阻止主計算流程。
   const cutOverlay=window.PlywoodCutOverlay||{
-    isVerifiedPlan:()=>false,
-    cutSegments:()=>[],
+    // 資產未載入時仍保留基本鋸路線顯示，不讓輔助層變成空白。
+    isVerifiedPlan:plan=>!!(plan&&plan.status==='candidate'&&plan.validation&&plan.validation.ok&&Array.isArray(plan.boards)&&plan.boards.length),
+    cutSegments:(board,count,transpose)=>{
+      if(!board||!Array.isArray(board.cuts))return [];
+      const limit=count==null?board.cuts.length:Math.max(0,Math.min(board.cuts.length,Math.floor(Number(count)||0))),swap=transpose===true;
+      return board.cuts.slice(0,limit).map((step,index)=>{
+        const source=step.sourceRect||{},position=Number(step.distanceFromDatum),vertical=(step.axis==='x')!==swap;
+        const projected=swap?{x:Number(source.y),y:Number(source.x),width:Number(source.length),length:Number(source.width)}:source;
+        return vertical
+          ? {number:index+1,boardId:step.boardId,sourceMaterialId:step.sourceMaterialId,cut:step,axis:'x',x1:position,y1:Number(projected.y),x2:position,y2:Number(projected.y)+Number(projected.length)}
+          : {number:index+1,boardId:step.boardId,sourceMaterialId:step.sourceMaterialId,cut:step,axis:'y',x1:Number(projected.x),y1:position,x2:Number(projected.x)+Number(projected.width),y2:position};
+      });
+    },
     finalMaterialLeaves:()=>[],
     fitsPartSpec:()=>false,
     formatRemnantMeasurements:()=>null,

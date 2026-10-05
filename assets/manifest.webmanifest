@@ -1,10 +1,10 @@
 {
-  "id": "./",
+  "id": "/plywood-cutting-layout/",
   "name": "木材切割排版｜夾板簡易排料",
   "short_name": "木材切割排版",
   "description": "夾板木材切割排版工具；協助規劃切割、減少廢料並分享排版連結。",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/plywood-cutting-layout/",
+  "scope": "/plywood-cutting-layout/",
   "display": "standalone",
   "display_override": [
     "standalone",

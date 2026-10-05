@@ -225,3 +225,20 @@ test('kerf, edge trim, cut rectangles and remnant dimensions all use current-uni
   assert.ok(html.includes('cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea)'), 'remnant dimensions and area use the same active dimension/area formatters');
   assert.match(html, /const oldUpdateUnitSystem = calculator\.updateUnitSystem\.bind\(calculator\);[\s\S]*?if \(this\.trialPlan\)\s*\{[\s\S]*?PlywoodTrialUI\.render\(this\.trialPlan/, 'changing units rerenders the existing plan without recomputing cut data');
 });
+
+
+test('only the cut-path overlay stroke is thinner; labels, dash, color and board outlines stay unchanged', () => {
+  const start = html.indexOf('function drawCutPathOverlay');
+  const end = html.indexOf('function drawBoard', start);
+  assert.ok(start >= 0 && end > start, 'locate the current overlay-only draw routine');
+  const drawing = html.slice(start, end);
+  assert.match(drawing, /ctx\.strokeStyle='#075a9b';ctx\.lineWidth=1\.2\*cssScale/, 'cut path uses the thinner 1.2 CSS-scale stroke');
+  assert.doesNotMatch(drawing, /lineWidth=2\.2\*cssScale/, 'old thick overlay width is removed');
+  assert.match(drawing, /cutOverlay\.cutSegments\(board,count,projection\.swap\)/, 'projection still comes from the verified per-board cuts');
+  assert.match(drawing, /ctx\.setLineDash\(\[8\*cssScale,5\*cssScale\]\)/, 'the dashed-line pattern is unchanged');
+  assert.match(drawing, /const label=String\(line\.number\)/, 'cut-number labels are retained');
+  assert.match(drawing, /ctx\.strokeStyle='#075a9b';ctx\.lineWidth=1\*cssScale;ctx\.strokeRect/, 'cut-number badge outline remains 1 CSS-scale pixel');
+  assert.ok(html.includes("ctx.strokeStyle='#303030';ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4)"), 'board outer frame stays 4 pixels');
+  assert.ok(html.includes("ctx.strokeStyle='#245c42';ctx.lineWidth=2;ctx.strokeRect"), 'part outlines stay 2 pixels');
+  assert.ok(html.includes("ctx.strokeStyle='#9aa8a8';ctx.lineWidth=1;ctx.strokeRect"), 'offcut outlines stay 1 pixel');
+});

@@ -7557,7 +7557,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const segments=cutOverlay.cutSegments(board,count,projection.swap);
     if(!segments.length)return;
     const cssScale=W/Math.max(1,canvas.clientWidth||W),fontSize=12*cssScale,pad=4*cssScale,tagHeight=18*cssScale;
-    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#075a9b';ctx.lineWidth=2.2*cssScale;ctx.lineCap='round';ctx.setLineDash([8*cssScale,5*cssScale]);ctx.beginPath();
+    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#075a9b';ctx.lineWidth=1.2*cssScale;ctx.lineCap='round';ctx.setLineDash([8*cssScale,5*cssScale]);ctx.beginPath();
     segments.forEach(line=>{ctx.moveTo(X(line.x1),Y(line.y1));ctx.lineTo(X(line.x2),Y(line.y2));});ctx.stroke();ctx.setLineDash([]);
     ctx.font=`bold ${fontSize}px Arial, sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';
     segments.forEach(line=>{

@@ -9363,9 +9363,11 @@ body.wood-dark-mode {
 </style>
 <style>
 @media (min-width:1100px){
-  .container{height:calc(100vh - 20px);grid-template-columns:minmax(360px,420px) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:stretch;overflow:hidden}
-  .container>#desktop-input-pane{grid-column:1;grid-row:1;min-width:0;min-height:0;overflow:auto;padding-right:4px}
-  .container>#desktop-result-pane{grid-column:2;grid-row:1;min-width:0;min-height:0;overflow:auto;padding-left:2px}
+  html,body{height:100%;overflow:hidden}
+  body{padding:8px}
+  .container{width:calc(100vw - 16px);height:calc(100vh - 16px);max-width:none;margin:0;grid-template-columns:minmax(340px,30%) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:10px;align-items:stretch;overflow:hidden}
+  .container>#desktop-input-pane{grid-column:1;grid-row:1;min-width:0;min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-gutter:stable}
+  .container>#desktop-result-pane{grid-column:2;grid-row:1;min-width:0;min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;padding-left:2px;scrollbar-gutter:stable}
   #desktop-input-pane>.header-container{margin-bottom:4px;min-height:0}
   #desktop-input-pane>.header-container h1{width:max-content;max-width:100%;box-sizing:border-box;margin:0;padding:6px 14px;font-size:1.15em;line-height:1.15;justify-content:flex-start;border-width:2px;border-radius:6px;gap:7px}
   #desktop-input-pane>.header-container #sawIcon{font-size:.95em}

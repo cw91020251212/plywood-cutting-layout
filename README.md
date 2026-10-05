@@ -12,7 +12,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 
 ## Live app
 
-https://cw91020251212.github.io/cutting_optimizer_v5_auto/
+https://cw91020251212.github.io/plywood-cutting-layout/
 
 ## Notes
 

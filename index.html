@@ -1104,6 +1104,7 @@ select,
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
 <div id="portraitDisplayControls" class="no-print" aria-label="排版圖顯示模式">
 <button id="portraitModeButton" type="button" aria-pressed="false" onclick="calculator.togglePortraitDisplay()">直向滿版</button>
+<button id="boardOverviewButton" type="button" aria-pressed="false" onclick="calculator.toggleBoardOverview()">整塊板全景</button>
 <span id="portraitDisplayHint">圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版只調整顯示大小。</span>
 </div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
@@ -5555,6 +5556,18 @@ class WoodCuttingCalculator {
         return this.portraitDisplayMode ? this.exitPortraitDisplay() : this.enterPortraitDisplay();
     }
 
+    toggleBoardOverview() {
+        const pane = document.getElementById('desktop-result-pane');
+        const button = document.getElementById('boardOverviewButton');
+        if (!pane) return false;
+        const active = pane.classList.toggle('board-overview-active');
+        if (button) {
+            button.textContent = active ? '返回一般排版' : '整塊板全景';
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+        return active;
+    }
+
     setPortraitInertState(enabled) {
         if (enabled) {
             if (this._portraitInertSnapshot) return;
@@ -9372,6 +9385,11 @@ body.wood-dark-mode {
   #desktop-input-pane>.header-container h1{width:max-content;max-width:100%;box-sizing:border-box;margin:0;padding:6px 14px;font-size:1.15em;line-height:1.15;justify-content:flex-start;border-width:2px;border-radius:6px;gap:7px}
   #desktop-input-pane>.header-container #sawIcon{font-size:.95em}
   #desktop-result-pane>#section-results{position:static;max-height:none;overflow:visible}
+  #desktop-result-pane #canvasContainer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+  #desktop-result-pane #canvasContainer .canvas-container{min-width:0;margin:0}
+  #desktop-result-pane.board-overview-active #canvasContainer{align-items:center}
+  #desktop-result-pane.board-overview-active #canvasContainer .canvas-container{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:0}
+  #desktop-result-pane.board-overview-active #canvasContainer .canvas{width:auto!important;max-width:100%;height:auto;max-height:calc(100vh - 260px);object-fit:contain}
 }
 </style>
 </body>

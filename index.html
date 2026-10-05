@@ -808,11 +808,11 @@ select,
 </head>
 <body>
 <div class="container">
+<div id="desktop-input-pane">
 <div class="header-container">
 <h1 id="mainTitle"><span id="sawIcon">🪚</span>木材切割排版</h1>
 
 </div>
-<div id="desktop-input-pane">
 <div class="section" id="section-unit">
 <div class="section-title"><span class="section-heading-label"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3.5 6.5h17v11h-17z"/><path d="M7 6.5v4M10.5 6.5v2.5M14 6.5v4M17.5 6.5v2.5"/></svg><span>單位設定</span></span><span class="step-number">1/4</span></div>
 <p class="section-intro">先選擇量度單位；一般可沿用通常設定。</p>
@@ -9363,12 +9363,12 @@ body.wood-dark-mode {
 </style>
 <style>
 @media (min-width:1100px){
-  .container{grid-template-columns:minmax(360px,420px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);align-items:stretch}
-  .container>.header-container{margin-bottom:4px;min-height:0}
-  .container>.header-container h1{width:max-content;max-width:100%;box-sizing:border-box;margin:0;padding:6px 14px;font-size:1.15em;line-height:1.15;justify-content:flex-start;border-width:2px;border-radius:6px;gap:7px}
-  .container>.header-container #sawIcon{font-size:.95em}
-  .container>#desktop-input-pane{grid-column:1;grid-row:2;min-width:0;max-height:calc(100vh - 76px);overflow:auto;padding-right:4px}
-  .container>#desktop-result-pane{grid-column:2;grid-row:2;min-width:0;max-height:calc(100vh - 76px);overflow:auto;padding-left:2px}
+  .container{height:calc(100vh - 20px);grid-template-columns:minmax(360px,420px) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:stretch;overflow:hidden}
+  .container>#desktop-input-pane{grid-column:1;grid-row:1;min-width:0;min-height:0;overflow:auto;padding-right:4px}
+  .container>#desktop-result-pane{grid-column:2;grid-row:1;min-width:0;min-height:0;overflow:auto;padding-left:2px}
+  #desktop-input-pane>.header-container{margin-bottom:4px;min-height:0}
+  #desktop-input-pane>.header-container h1{width:max-content;max-width:100%;box-sizing:border-box;margin:0;padding:6px 14px;font-size:1.15em;line-height:1.15;justify-content:flex-start;border-width:2px;border-radius:6px;gap:7px}
+  #desktop-input-pane>.header-container #sawIcon{font-size:.95em}
   #desktop-result-pane>#section-results{position:static;max-height:none;overflow:visible}
 }
 </style>

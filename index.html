@@ -5674,9 +5674,6 @@ class WoodCuttingCalculator {
             stage.style.setProperty('--portrait-canvas-width', `${canvasWidth}px`);
             stage.style.setProperty('--portrait-canvas-height', `${canvasHeight}px`);
             laidOut += 1;
-            if (window.PlywoodTrialUI && typeof window.PlywoodTrialUI.redrawBoard === 'function') {
-                window.PlywoodTrialUI.redrawBoard(boardIndex);
-            }
         });
         if (cards.length > 0 && laidOut === cards.length) document.body.classList.remove('portrait-display-layout-pending');
     }
@@ -7654,7 +7651,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if(maxWidth<=0||maxHeight<=0)return;
       let chosenSize=0,metrics=null,chosenPadding=0;
       // 以實際字寬／字高試排，而非用固定的小尺寸門檻提前隱藏；再放不下才留空，圖例仍可查回。
-      for(let size=12;size>=5;size-=.25){
+      for(let size=18;size>=7;size-=.25){
         ctx.font=`600 ${size*dpr}px Arial, sans-serif`;
         const measured=ctx.measureText(label),textWidth=measured.width/dpr,textHeight=size*1.2;
         const padding=Math.max(1,size*.24);

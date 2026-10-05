@@ -116,3 +116,7 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 ## 2026-10-06 — focus 前攔截同組欄位自動滾動
 
 由於部分 Android Chrome／iOS WebKit 會在鍵盤出現後忽略 `focus({preventScroll:true})`，單靠 focusin 後恢復位置仍可能失敗。現改在 pointerdown／touchstart 階段攔截同組長闊欄位，先以 `preventScroll` 手動聚焦，再保留原畫面位置；其他欄位仍走原有自動上移流程。
+
+## 2026-10-06 — 英制闊度欄保留長度欄可見
+
+改用直接的版面規則處理手機輸入：部件及原板的尺／寸／分「闊度」欄，焦點上移目標由頂部改為約 132px 的較低位置；「長度」欄仍使用原本靠近頂部的目標。這樣輸入闊度時，上方同組長度欄會保留在畫面內，不再依賴 focus 後反覆拉回位置。

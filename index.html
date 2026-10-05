@@ -6683,6 +6683,10 @@ window.addEventListener('DOMContentLoaded', () => {
         return match ? match[1] + ':' + match[3] : null;
     }
 
+    function isImperialWidthField(element) {
+        return /^(part|board)Width(Ft|Inch|Fen)$/.test(sourceIdFor(element));
+    }
+
     function clearPairedRestore() {
         pairedRestoreTimers.forEach(function (timer) { window.clearTimeout(timer); });
         pairedRestoreTimers = [];
@@ -6785,9 +6789,12 @@ window.addEventListener('DOMContentLoaded', () => {
         var delta = 0;
         var phonePortraitAlignment = isPhonePortraitFocusViewport();
         if (phonePortraitAlignment) {
-            var targetTop = 32;
-            var targetBandTop = 24;
-            var targetBandBottom = 40;
+            // Imperial width fields deliberately sit lower than the top edge so
+            // the matching length field above remains visible for comparison.
+            var keepLengthVisible = isImperialWidthField(element);
+            var targetTop = keepLengthVisible ? 132 : 32;
+            var targetBandTop = keepLengthVisible ? 116 : 24;
+            var targetBandBottom = keepLengthVisible ? 148 : 40;
             if (fieldTop >= targetBandTop && fieldTop <= targetBandBottom) {
                 smoothScrollActive = false;
                 return false;
@@ -6892,8 +6899,9 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('focusin', function (event) {
         if (!isNarrowTouchViewport() || !isEditableControl(event.target)) return;
         var incomingGroup = imperialDimensionGroup(event.target);
-        var samePairedGroup = !!(incomingGroup && pairedFocusKey === incomingGroup &&
-            activeControl && imperialDimensionGroup(activeControl) === incomingGroup);
+        // Position is controlled by the field type itself; do not suppress the
+        // normal adjustment when switching between the paired length/width fields.
+        var samePairedGroup = false;
         clearPairedRestore();
         cancelPending();
         activeControl = event.target;

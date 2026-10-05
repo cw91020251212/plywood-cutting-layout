@@ -44,3 +44,7 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 ## 2026-10-05 — 大標題白字陰影
 
 為大標題白色文字加入柔和黑色陰影及輕微外暈，提升麻布背景上的閱讀清晰度；保留左對齊及原本標題框外觀。
+
+## 2026-10-05 — 浮動按鈕幼線輪廓
+
+將右上角四個浮動按鈕統一為 1px 深色實線輪廓，取消額外粗外框效果；保留按鈕位置、色彩及內部立體陰影。

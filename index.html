@@ -8722,6 +8722,17 @@ h1#mainTitle::before, h1#mainTitle::after {
   <button id="wood-share-button" type="button">分享連結</button>
   <div class="wood-setting-row"><button id="wood-font-increase" type="button">字體 A+</button><button id="wood-font-decrease" type="button">字體 A−</button></div>
   <div class="wood-setting-row"><button id="wood-theme-toggle" type="button">深色模式</button></div>
+  <div class="wood-opacity-setting">
+    <label id="wood-opacity-label" for="wood-opacity-level-3">上下箭咀透明度</label>
+    <div class="wood-opacity-levels" role="group" aria-label="上下箭咀透明度級數">
+      <button type="button" class="wood-opacity-level" id="wood-opacity-level-1" data-opacity-level="1" aria-label="透明度 1">1</button>
+      <button type="button" class="wood-opacity-level" id="wood-opacity-level-2" data-opacity-level="2" aria-label="透明度 2">2</button>
+      <button type="button" class="wood-opacity-level" id="wood-opacity-level-3" data-opacity-level="3" aria-label="透明度 3">3</button>
+      <button type="button" class="wood-opacity-level" id="wood-opacity-level-4" data-opacity-level="4" aria-label="透明度 4">4</button>
+      <button type="button" class="wood-opacity-level" id="wood-opacity-level-5" data-opacity-level="5" aria-label="透明度 5">5</button>
+    </div>
+    <output id="wood-opacity-current" aria-live="polite">目前透明度：3／5</output>
+  </div>
   <output id="wood-font-current" aria-live="polite">目前字級：100%（預設）</output>
   <p class="wood-setting-note" id="wood-settings-note">百分比以本視窗的預設字級為100%；A+／A−每次調整1 CSS px。</p>
 </div>
@@ -8731,7 +8742,15 @@ h1#mainTitle::before, h1#mainTitle::after {
 <script id="wood-reference-tools-script">
 (function(){
   const $=id=>document.getElementById(id), body=document.body, panel=$('wood-settings-panel'), lang=$('languageSwitchButton');
-  const status=$('wood-status-text'), fontReadout=$('wood-font-current');
+  const status=$('wood-status-text'), fontReadout=$('wood-font-current'), opacityReadout=$('wood-opacity-current');
+  const opacityValues={1:0.24,2:0.40,3:0.56,4:0.72,5:0.88};
+  function setScrollOpacity(level,save=true){
+    const n=Math.max(1,Math.min(5,Number(level)||3)), value=opacityValues[n];
+    document.documentElement.style.setProperty('--wood-scroll-opacity',value);
+    document.querySelectorAll('.wood-opacity-level').forEach(button=>{const selected=Number(button.dataset.opacityLevel)===n;button.classList.toggle('is-selected',selected);button.setAttribute('aria-pressed',String(selected));});
+    if(opacityReadout)opacityReadout.textContent=text('目前透明度：'+n+'／5','Arrow opacity: '+n+'/5');
+    if(save)woodStore.set('wood-scroll-opacity',n);
+  }
   // file:// 頁面有些瀏覽器會拒絕 localStorage；儲存失敗不可阻止按鈕事件初始化。
   const woodStore={get(key){try{return window.localStorage?window.localStorage.getItem(key):null}catch(_){return null}},set(key,value){try{if(window.localStorage)window.localStorage.setItem(key,value)}catch(_){}}};
   const isEnglish=()=>!!(window.calculator&&calculator.currentLanguage==='en');
@@ -8762,6 +8781,7 @@ h1#mainTitle::before, h1#mainTitle::after {
   function refreshFontReadout(){if(fontReadout)fontReadout.textContent=text('目前字級：','Current font size: ')+fontMessage();}
   const savedFont=Number(woodStore.get('wood-font-size')); if(savedFont>=14&&savedFont<=24) body.style.fontSize=savedFont+'px';
   if(woodStore.get('wood-theme')==='dark') body.classList.add('wood-dark-mode');
+  setScrollOpacity(Number(woodStore.get('wood-scroll-opacity'))||3,false);
   $('wood-settings-button').addEventListener('click',function(e){e.stopPropagation();const open=panel.dataset.open!=='true';panel.dataset.open=String(open);panel.setAttribute('aria-hidden',String(!open));this.setAttribute('aria-expanded',String(open));});
   panel.addEventListener('click',e=>e.stopPropagation());
   document.addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');});
@@ -8770,6 +8790,7 @@ h1#mainTitle::before, h1#mainTitle::after {
   $('wood-font-increase').addEventListener('click',()=>changeFont(1));
   $('wood-font-decrease').addEventListener('click',()=>changeFont(-1));
   $('wood-theme-toggle').addEventListener('click',()=>{body.classList.toggle('wood-dark-mode');woodStore.set('wood-theme',body.classList.contains('wood-dark-mode')?'dark':'light');refreshInfo();});
+  document.querySelectorAll('.wood-opacity-level').forEach(button=>button.addEventListener('click',()=>setScrollOpacity(button.dataset.opacityLevel)));
   function rowCount(id){const el=$(id);return el?el.querySelectorAll('tr').length:0;}
   function hasDraft(prefix){
     const re=prefix==='part'?/^(partLength|partWidth)/:/^(boardLength|boardWidth)/;
@@ -8851,6 +8872,8 @@ h1#mainTitle::before, h1#mainTitle::after {
     const en=isEnglish();
     $('wood-settings-title').textContent=en?'Settings':'設定';$('wood-help-open').textContent=en?'Help':'使用說明';
     $('wood-font-increase').textContent=en?'Font A+':'字體 A+';$('wood-font-decrease').textContent=en?'Font A−':'字體 A−';
+    $('wood-opacity-label').textContent=en?'Arrow opacity':'上下箭咀透明度';
+    $('wood-opacity-current').textContent=en?'Arrow opacity: '+(Number(woodStore.get('wood-scroll-opacity'))||3)+'/5':'目前透明度：'+(Number(woodStore.get('wood-scroll-opacity'))||3)+'／5';
     $('wood-theme-toggle').textContent=body.classList.contains('wood-dark-mode')?(en?'Light mode':'明亮模式'):(en?'Dark mode':'深色模式');
     $('wood-settings-note').textContent=en?'100% is the default page font size for this viewport; A+/A− change it by 1 CSS px per step.':'百分比以本視窗的預設字級為100%；A+／A−每次調整1 CSS px。';
     $('wood-settings-button').setAttribute('aria-label',en?'Settings':'設定');
@@ -8900,7 +8923,13 @@ h1#mainTitle::before, h1#mainTitle::after {
   #wood-floating-tools button#wood-settings-button:hover,
   #wood-floating-tools button#wood-settings-button:active{transform:none!important;filter:none!important}
   /* 參考版 ▲▼：白色原型配色，字樣細小，與 44px 按鈕同尺寸。 */
-  #wood-scroll-nav{position:fixed!important;right:calc(12px + env(safe-area-inset-right))!important;bottom:calc(var(--wood-info-h) + 14px + env(safe-area-inset-bottom))!important;z-index:6000!important;display:flex!important;flex-direction:column!important;gap:9px!important;opacity:1!important;pointer-events:auto!important;transition:none!important}
+  .wood-opacity-setting{margin-top:10px;padding-top:9px;border-top:1px solid rgba(0,0,0,.12)}
+  .wood-opacity-setting label{display:block;font-size:.86em;font-weight:700;margin-bottom:6px}
+  .wood-opacity-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+  #wood-settings-panel .wood-opacity-level{min-height:34px;padding:4px 0!important;font-size:.9em!important;background:rgba(77,143,219,.16)!important;color:#234832!important;box-shadow:none!important;border:1px solid rgba(35,72,50,.3)!important}
+  #wood-settings-panel .wood-opacity-level.is-selected{background:#1a75ff!important;color:#fff!important;border-color:#145dc5!important}
+  #wood-opacity-current{display:block;margin-top:5px;font-size:.8em;color:#53636a}
+  #wood-scroll-nav{position:fixed!important;right:calc(12px + env(safe-area-inset-right))!important;bottom:calc(var(--wood-info-h) + 14px + env(safe-area-inset-bottom))!important;z-index:6000!important;display:flex!important;flex-direction:column!important;gap:9px!important;opacity:var(--wood-scroll-opacity,.55)!important;pointer-events:auto!important;transition:opacity .18s ease!important}
   #wood-scroll-nav button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;margin:0!important;padding:0!important;position:relative!important;overflow:hidden!important;border-radius:50%!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;font-size:.92rem!important;font-weight:800!important;line-height:1!important;cursor:pointer!important;text-shadow:none!important;color:#0f172a!important;background:linear-gradient(135deg,#fff 0%,#f8fafc 55%,#f1f5f9 100%)!important;border:1px solid rgba(15,23,42,.22)!important;box-shadow:inset -2px 2px 4px rgba(255,255,255,.75),inset 3px -4px 7px rgba(0,0,0,.10),inset 0 0 0 1px rgba(255,255,255,.35),-8px 11px 0 1px rgba(0,0,0,.22)!important;transition:none!important}
   #wood-scroll-nav button:hover,#wood-scroll-nav button:active{transform:none!important;filter:none!important;color:#0f172a!important}
   @media(max-width:600px){#wood-floating-tools button#languageSwitchButton,#wood-floating-tools button#wood-settings-button,#wood-scroll-nav button{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;font-size:.86rem!important}#wood-floating-tools button#wood-settings-button{font-size:19px!important}}

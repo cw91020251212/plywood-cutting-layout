@@ -9055,6 +9055,28 @@ h1#mainTitle::before, h1#mainTitle::after {
   });
 })();
 </script>
-
+<style id="burlap-background-style">
+  /* 為頁面外圍加入低對比粗麻布紋理；保持深灰底，避免干擾內容閱讀。 */
+  html{background:#343638}
+  body{
+    background-color:#343638!important;
+    background-image:
+      radial-gradient(ellipse at 18% 0%,rgba(255,255,255,.055),transparent 42%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 1px,transparent 1px 4px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 9px)!important;
+    background-size:100% 100%,100% 5px,6px 100%,100% 11px!important;
+    background-attachment:fixed!important;
+  }
+  body.wood-dark-mode{
+    background-color:#24272b!important;
+    background-image:
+      radial-gradient(ellipse at 18% 0%,rgba(255,255,255,.04),transparent 42%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 4px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 9px)!important;
+    background-size:100% 100%,100% 5px,6px 100%,100% 11px!important;
+  }
+</style>
 </body>
 </html>

@@ -30,3 +30,7 @@
 ## 2026-10-05 最終介面調整
 
 將分享功能改放到「設定」面板內的「分享連結」文字按鈕；移除右上角箭咀，保留原本軟件標題。
+
+## 2026-10-05 Icon redesign
+
+Replaced the placeholder brown square and diagonal bar with a polished plywood layout icon showing real sheet sections, cut lines and a circular saw blade. The independent repository now uses the redesigned icon for favicon, browser launch icon and PWA icons.

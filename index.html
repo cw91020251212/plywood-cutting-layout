@@ -511,6 +511,17 @@ th{background:#C0C0C0;color:#2F2F2F}
 .trial-cuts-table th{background:#e5efed;position:sticky;top:0}
 .trial-cuts-table tr.is-current{background:#fff1ca;outline:2px solid #d4a432}
 .trial-material-list{max-width:260px;white-space:normal;line-height:1.4}
+.cut-path-toggle-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:6px 0 10px;padding:7px 10px;border:1px solid #bfd0d4;border-radius:8px;background:#f7fbfc;color:#203943;line-height:1.35}
+.cut-path-toggle-label{display:inline-flex;align-items:center;gap:7px;min-height:28px;font-weight:700;white-space:nowrap}
+.cut-path-toggle-label input{width:20px!important;height:20px!important;margin:0!important;flex:0 0 20px;accent-color:#075a9b}
+.cut-path-toggle-note{font-size:.82em;color:#405761}
+.cut-path-remnants{margin:10px 0;padding:10px;border:1px solid #cbd8d5;border-radius:8px;background:rgba(255,255,255,.82)}
+.cut-path-remnants h3{margin:0 0 5px;color:#234832}
+.cut-path-remnants h4{margin:12px 0 5px;color:#34534b}
+.cut-path-remnants p{margin:5px 0;line-height:1.4}
+.cut-path-remnant-list{margin:4px 0 8px;padding-left:22px}
+.cut-path-remnant-list li{margin:6px 0;line-height:1.4}
+.cut-path-caveat{font-size:.88em;color:#4d5c60}
 #canvasContainer .canvas-container{width:100%;margin:12px auto 22px;padding:8px;border:1px solid #c7d4d5;border-radius:10px;background:#fff}
 #canvasContainer .portrait-canvas-stage{display:flex;justify-content:center;width:100%}
 #canvasContainer .canvas{display:block;width:100%;height:auto;max-width:100%;image-rendering:auto}
@@ -519,7 +530,7 @@ th{background:#C0C0C0;color:#2F2F2F}
 #canvasContainer .canvas-external-controls button{min-width:48px;min-height:42px;padding:7px 12px}
 #colorLegend,#cuttingLegend,#schemeSelector,#results-table-container,#showCutLines,#nextVariationButton,#movePartSection,#alignOptions,.drag-controls-container{display:none!important}
 #trialResults .canvas-label{font-size:1rem}
-@media(max-width:600px){.trial-trim-grid,.trial-edge-grid{grid-template-columns:1fr}.trial-trim-grid label{min-height:42px}.trial-trim-grid input{width:40%!important}.trial-replay-step{min-width:105px}.trial-banner,.trial-summary{font-size:.93em}}
+@media(max-width:600px){.trial-trim-grid,.trial-edge-grid{grid-template-columns:1fr}.trial-trim-grid label{min-height:42px}.trial-trim-grid input{width:40%!important}.trial-replay-step{min-width:105px}.trial-banner,.trial-summary{font-size:.93em}.cut-path-toggle-row{gap:4px 8px;margin:5px 0 8px;padding:5px 7px}.cut-path-toggle-label{min-height:28px;font-size:.9em}.cut-path-toggle-note{flex:1 1 100%;font-size:.74em;line-height:1.25}.cut-path-remnants{padding:8px;margin:8px 0}.cut-path-remnants h3{font-size:1em}.cut-path-remnant-list{padding-left:18px}}
 @media print{.trial-replay-panel{display:none!important}.trial-cuts-wrap{overflow:visible}.trial-cuts-table{min-width:0;font-size:9pt}}
 
 
@@ -7405,6 +7416,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
+<script src="assets/cut-path-overlay.js?v=1"></script>
+
 <script>
 (function(){
   'use strict';
@@ -7414,6 +7427,23 @@ window.addEventListener('DOMContentLoaded', () => {
   const fmtDim=value=>window.calculator&&window.calculator._formatTrialDimension?window.calculator._formatTrialDimension(value):`${nfmt(value)} mm`;
   const fmtArea=value=>window.calculator&&window.calculator._formatTrialArea?window.calculator._formatTrialArea(value):`${nfmt(value)} mm²`;
   const area=r=>Number(r.width)*Number(r.length);
+  const cutOverlay=window.PlywoodCutOverlay;
+  const cutCopy=key=>cutOverlay.copy(key,window.calculator&&window.calculator.currentLanguage||'zh');
+  const CUT_PATH_STORAGE_KEY='plywood-layout-cut-path-overlay-v1';
+  function readCutPathPreference(){try{const value=window.localStorage.getItem(CUT_PATH_STORAGE_KEY);return value==null?true:value==='true';}catch(_){return true;}}
+  function saveCutPathPreference(value){try{window.localStorage.setItem(CUT_PATH_STORAGE_KEY,value?'true':'false');}catch(_){}}
+  let showCutPaths=readCutPathPreference();
+  let activeVerifiedPlan=null;
+  function canShowCutPaths(board,index){return showCutPaths&&!!activeVerifiedPlan&&activeVerifiedPlan===window.calculator.trialPlan&&activeVerifiedPlan.boards[Number(index)]===board;}
+  function refreshCutPathCanvases(){
+    if(!activeVerifiedPlan||activeVerifiedPlan!==window.calculator.trialPlan)return;
+    document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
+      const index=Number(card.dataset.boardIndex),board=activeVerifiedPlan.boards[index],canvas=card.querySelector('canvas.canvas');
+      if(!board||!canvas)return;
+      const replayCount=canvas.dataset.replayCount===''?null:Number(canvas.dataset.replayCount);
+      drawBoard(board,index,card,replayCount,true);
+    });
+  }
   function parseKerf(text){
     const s=String(text||'').trim().toLowerCase().replace(/，/g,',');
     if(!s) throw new Error('請輸入鋸縫寬度');
@@ -7522,6 +7552,26 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle='#17252b';ctx.fillText(label,0,0);ctx.restore();
     });
   }
+  function drawCutPathOverlay(ctx,canvas,board,index,count,projection,X,Y,W){
+    if(!canShowCutPaths(board,index))return;
+    const segments=cutOverlay.cutSegments(board,count,projection.swap);
+    if(!segments.length)return;
+    const cssScale=W/Math.max(1,canvas.clientWidth||W),fontSize=12*cssScale,pad=4*cssScale,tagHeight=18*cssScale;
+    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#075a9b';ctx.lineWidth=2.2*cssScale;ctx.lineCap='round';ctx.setLineDash([8*cssScale,5*cssScale]);ctx.beginPath();
+    segments.forEach(line=>{ctx.moveTo(X(line.x1),Y(line.y1));ctx.lineTo(X(line.x2),Y(line.y2));});ctx.stroke();ctx.setLineDash([]);
+    ctx.font=`bold ${fontSize}px Arial, sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';
+    segments.forEach(line=>{
+      let lx=line.axis==='x'?X(line.x1)+5*cssScale:X(line.x1)+5*cssScale;
+      let ly=line.axis==='x'?Y(line.y1)+tagHeight:Y(line.y1)-tagHeight*.55;
+      lx=Math.min(Math.max(3*cssScale,lx),Math.max(3*cssScale,W-36*cssScale));
+      ly=Math.min(Math.max(tagHeight*.6,ly),Math.max(tagHeight*.6,canvas.height-tagHeight*.6));
+      const label=String(line.number),tagWidth=ctx.measureText(label).width+pad*2;
+      ctx.fillStyle='rgba(255,255,255,.94)';ctx.fillRect(lx-pad,ly-tagHeight/2,tagWidth,tagHeight);
+      ctx.strokeStyle='#075a9b';ctx.lineWidth=1*cssScale;ctx.strokeRect(lx-pad,ly-tagHeight/2,tagWidth,tagHeight);
+      ctx.fillStyle='#064579';ctx.fillText(label,lx,ly);
+    });
+    ctx.restore();
+  }
   function drawBoard(board,index,card,count,quiet){
     const canvas=card.querySelector('canvas');if(!canvas)return;
     const projection=boardDisplayProjection(board),W=1200,H=Math.max(260,Math.round(W*projection.height/projection.width));
@@ -7534,6 +7584,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const parts=board.results.map(projection.rect);
       parts.forEach(p=>{ctx.fillStyle=displayColor(p);ctx.globalAlpha=.78;ctx.fillRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);ctx.globalAlpha=1;ctx.strokeStyle='#245c42';ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
       drawPartLabels(ctx,canvas,board,parts,X,Y,sx,sy);
+      drawCutPathOverlay(ctx,canvas,board,index,board.cuts.length,projection,X,Y,W);
       return;
     }
     const st=replayState(board,count);
@@ -7543,12 +7594,15 @@ window.addEventListener('DOMContentLoaded', () => {
     replayParts.forEach(p=>{const src=board.results.find(x=>x.id===p.id);ctx.fillStyle=src?displayColor(src):'#83bd9f';ctx.globalAlpha=.78;ctx.fillRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);ctx.globalAlpha=1;ctx.strokeStyle='#235843';ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
     st.bands.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(204,45,45,.48)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#a51e1e';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
     drawPartLabels(ctx,canvas,board,replayParts,X,Y,sx,sy);
+    if(canShowCutPaths(board,index))drawCutPathOverlay(ctx,canvas,board,index,count,projection,X,Y,W);
+    else{
     const cssScale=W/Math.max(1,canvas.clientWidth||W),cutLabelFont=14*cssScale,cutLabelInset=16*cssScale;
     ctx.textAlign='left';ctx.font=`bold ${cutLabelFont}px Arial`;ctx.fillStyle='#7e2424';board.cuts.slice(0,count).forEach(step=>{
       if(!projection.swap){if(step.axis==='x')ctx.fillText(String(step.number),X(step.distanceFromDatum),Math.max(cutLabelInset,Y(step.sourceRect.y)+cutLabelInset));else ctx.fillText(String(step.number),Math.max(3*cssScale,X(step.sourceRect.x)+4*cssScale),Y(step.distanceFromDatum));return;}
       if(step.axis==='x')ctx.fillText(String(step.number),Math.max(3*cssScale,X(step.sourceRect.y)+4*cssScale),Math.max(cutLabelInset,Y(step.distanceFromDatum)+cutLabelInset));
       else ctx.fillText(String(step.number),Math.max(3*cssScale,X(step.distanceFromDatum)+4*cssScale),Math.max(cutLabelInset,Y(step.sourceRect.x)+cutLabelInset));
     });
+    }
     const label=$(`replay-step-${index}`);if(label)label.textContent=`回放 ${count} / ${board.cuts.length} 刀`;
     $('cutDetailsContent').querySelectorAll(`[data-cut-row-board="${index}"]`).forEach(row=>row.classList.toggle('is-current',Number(row.dataset.cutRow)===count&&count>0));
   }
@@ -7562,6 +7616,29 @@ window.addEventListener('DOMContentLoaded', () => {
       item.append(swatch,label);legend.appendChild(item);
     });
     return legend;
+  }
+  function partSpecsForRemnants(){
+    return (window.calculator.parts||[]).filter(part=>!part.disabled&&Number(part.width)>0&&Number(part.length)>0&&Number(part.count)>0).map(part=>({width:Number(part.width),length:Number(part.length),orientationPreference:part.orientationPreference||'auto'}));
+  }
+  function remnantDetailsHtml(plan){
+    if(!cutOverlay.isVerifiedPlan(plan))return '';
+    const specs=partSpecsForRemnants();let html=`<section class="cut-path-remnants"><h3>${esc(cutCopy('remnantHeading'))}</h3><p>${esc(cutCopy('remnantIntro'))}</p>`;
+    plan.boards.forEach((board,index)=>{
+      html+=`<h4>${esc(cutCopy('sourceBoard'))} #${index+1}｜${esc(board.boardId)}</h4>`;
+      const remnants=cutOverlay.finalMaterialLeaves(board);
+      if(!remnants.length){html+=`<p>${esc(cutCopy('noRemnants'))}</p>`;return;}
+      html+='<ul class="cut-path-remnant-list">';
+      remnants.forEach(remnant=>{
+        const measurements=cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea);
+        const fits=specs.filter(spec=>cutOverlay.fitsPartSpec(remnant,spec));
+        const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length)} × ${fmtDim(spec.width)}`))];
+        const useText=!specs.length?cutCopy('noSpecs'):uniqueFitSizes.length?`${cutCopy('fitsCurrent')}：${uniqueFitSizes.map(esc).join('、')}`:cutCopy('noCurrentFit');
+        html+=`<li data-remnant-material="${esc(remnant.materialId)}"><strong>${esc(measurements.length)} × ${esc(measurements.width)}</strong>（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
+      });
+      html+='</ul>';
+    });
+    html+=`<p class="cut-path-caveat">${esc(cutCopy('remnantCaveat'))}</p></section>`;
+    return html;
   }
   function redrawBoard(boardIndex){
     const plan=window.calculator&&window.calculator.trialPlan,board=plan&&plan.boards[boardIndex];
@@ -7587,11 +7664,13 @@ window.addEventListener('DOMContentLoaded', () => {
       } else html+='<p>此板沒有鋸切；部件直接使用可用原板邊或整塊板材。</p>';
       html+='</section>';
     });
+    html+=remnantDetailsHtml(plan);
     if(plan.validation.boardIssues.length) html+=`<div class="validation-failed"><strong>驗證問題</strong><br>${plan.validation.boardIssues.map(esc).join('<br>')}</div>`;
     return html;
   }
   function render(plan,selectedLabel){
     const root=$('trialResults'),container=$('canvasContainer'),details=$('cutDetails');
+    const verifiedCutPlan=cutOverlay.isVerifiedPlan(plan);activeVerifiedPlan=verifiedCutPlan?plan:null;
     root.innerHTML='';container.innerHTML='';$('colorLegend').style.display='none';$('cuttingLegend').style.display='none';$('schemeSelector').style.display='none';$('utilizationStats').textContent='';
     details.open=false;details.style.display='block';$('cutDetailsContent').innerHTML=detailHtml(plan,selectedLabel);
     plan.boards.forEach((b,i)=>{let at=b.cuts.length;details.querySelectorAll(`[data-replay-index="${i}"]`).forEach(button=>{button.onclick=()=>{const action=button.dataset.replayAction;if(action==='prev')at=Math.max(0,at-1);else if(action==='next')at=Math.min(b.cuts.length,at+1);else at=b.cuts.length;const card=container.querySelector(`.canvas-container[data-board-index="${i}"]`);if(card)drawBoard(b,i,card,at);};});});
@@ -7601,6 +7680,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const cutTotal=totalCutCount(plan);
     summary.innerHTML=`<div class="headline"><span class="result-number">${isComplete&&pool.length?`方案 ${idx+1}/${pool.length}`:'候選排法'}</span><span class="result-metric">${isComplete?'完整':'未通過完整驗證'}</span><span class="result-metric">板材 ${plan.summary.usedBoardCount} 塊</span><span class="result-metric">切刀 ${cutTotal} 刀</span></div>`;
     root.appendChild(summary);
+    if(verifiedCutPlan){
+      const row=document.createElement('div');row.className='cut-path-toggle-row';
+      row.innerHTML=`<label class="cut-path-toggle-label" for="cutPathToggle"><input id="cutPathToggle" type="checkbox" aria-describedby="cutPathToggleNote"><span>${esc(cutCopy('showPaths'))}</span></label><small id="cutPathToggleNote" class="cut-path-toggle-note">${esc(cutCopy('pathHint'))}</small>`;
+      const checkbox=row.querySelector('#cutPathToggle');checkbox.checked=showCutPaths;
+      checkbox.addEventListener('change',()=>{showCutPaths=checkbox.checked;saveCutPathPreference(showCutPaths);refreshCutPathCanvases();});
+      root.appendChild(row);
+    }
     const warning=document.createElement('div');warning.className='candidate-warning'+(isComplete?'':' incomplete');
     warning.innerHTML=isComplete?`<strong>候選草排：</strong>幾何與逐刀回放已通過程式驗證；仍須師傅實際核對，不代表夾持或機台安全。${esc(plan.safetyStatus)}。`:'<strong>不完整候選：</strong>尚有部件未排入，不能當作完整排法；已排部分亦只供參考。仍須師傅實際核對。';root.appendChild(warning);
     if(plan.unplaced.length){const d=document.createElement('p');d.className='input-hint';d.textContent='未排入部件和原因已列在「切割詳情」。';root.appendChild(d);}

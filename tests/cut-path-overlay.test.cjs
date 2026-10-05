@@ -160,3 +160,68 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.match(html, /cut-path-toggle-row/);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]{0,700}cut-path-toggle/);
 });
+
+
+function loadUnitFormatters(unitSystem) {
+  const dimension = html.match(/function formatDimension\(mm\) \{([\s\S]*?)\n  \}\n  function formatArea/);
+  const area = html.match(/function formatArea\(mm2\) \{([\s\S]*?)\n  \}\n\n  function refreshPartTable/);
+  assert.ok(dimension, 'extract the current repo display dimension formatter');
+  assert.ok(area, 'extract the current repo display area formatter');
+  const context = {};
+  vm.runInNewContext(`
+    const nfmt = n => Number(n).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    const selectedUnit = () => ${JSON.stringify(unitSystem)};
+    function formatDimension(mm) {${dimension[1]}\n    }
+    function formatArea(mm2) {${area[1]}\n    }
+    globalThis.formatters = { formatDimension, formatArea };
+  `, context, { filename: `index.html#formatters-${unitSystem}` });
+  return context.formatters;
+}
+
+test('candidate board caption renders a 72×48 in sheet in the selected unit; metric output remains mm', () => {
+  const captionLine = html.split('\n').find(line => line.includes('原板實際尺寸：'));
+  assert.ok(captionLine, 'find the real candidate board caption in the current renderer');
+  assert.ok(captionLine.includes('${fmtDim(b.width)} × ${fmtDim(b.length)}'), 'caption must format actual width and length through fmtDim');
+  assert.doesNotMatch(captionLine, /toLocaleString|\}\s*mm/, 'caption must not append a hard-coded mm suffix');
+
+  const widthMm = 72 * 25.4, lengthMm = 48 * 25.4;
+  const imperial = loadUnitFormatters('imperial');
+  assert.equal(`${imperial.formatDimension(widthMm)} × ${imperial.formatDimension(lengthMm)}`, '6尺 × 4尺');
+  assert.equal(imperial.formatArea(widthMm * lengthMm), '3,456 吋²');
+
+  const metric = loadUnitFormatters('metric');
+  assert.equal(`${metric.formatDimension(widthMm)} × ${metric.formatDimension(lengthMm)}`, '1,828.8 mm × 1,219.2 mm');
+  assert.equal(metric.formatArea(widthMm * lengthMm), `${Number(widthMm * lengthMm).toLocaleString('zh-TW', { maximumFractionDigits: 2 })} mm²`);
+});
+
+test('saving Imperial restores it after reopening through the same origin localStorage preference', () => {
+  const start = html.indexOf("const UNIT_SYSTEM_STORAGE_KEY = 'plywood-layout-unit-system-v1';");
+  const end = html.indexOf('function readLanguagePreference', start);
+  assert.ok(start >= 0 && end > start, 'extract the actual app unit preference helpers');
+  const preferenceSource = html.slice(start, end);
+  const backingStore = new Map();
+  function loadPreferences() {
+    const localStorage = {
+      getItem(key) { return backingStore.has(key) ? backingStore.get(key) : null; },
+      setItem(key, value) { backingStore.set(key, String(value)); }
+    };
+    const context = { window: { localStorage } };
+    vm.runInNewContext(`${preferenceSource}\nglobalThis.unitPreferences = { key: UNIT_SYSTEM_STORAGE_KEY, read: readUnitSystemPreference, save: saveUnitSystemPreference };`, context, { filename: 'index.html#unit-preference' });
+    return context.unitPreferences;
+  }
+  const firstLoad = loadPreferences();
+  assert.equal(firstLoad.key, 'plywood-layout-unit-system-v1', 'reuse the established unit setting key');
+  assert.equal(firstLoad.save('imperial'), true);
+  const reopenedApp = loadPreferences();
+  assert.equal(reopenedApp.read(), 'imperial');
+  assert.match(html, /saveUnitSystemPreference\(unitSystem\)/, 'unit changes are persisted');
+  assert.match(html, /const restoredUnitSystem = readUnitSystemPreference\(\) \|\| 'metric';\s*unitSystemSelect\.value = restoredUnitSystem;/, 'app init restores the saved preference into the existing selector');
+});
+
+test('kerf, edge trim, cut rectangles and remnant dimensions all use current-unit result formatters', () => {
+  assert.ok(html.includes('fmtDim(plan.kerf)'), 'kerf output is formatted through the selected-unit formatter');
+  assert.ok(html.includes('fmtDim(trim.left)') && html.includes('fmtDim(trim.right)') && html.includes('fmtDim(trim.top)') && html.includes('fmtDim(trim.bottom)'), 'all four trim outputs share that formatter');
+  assert.ok(html.includes('rectText(step.kerfBand)') && html.includes('rectText(step.sourceRect)') && html.includes('outputsText(step)'), 'cut details pass actual cut rectangles and outputs through rectText');
+  assert.ok(html.includes('cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea)'), 'remnant dimensions and area use the same active dimension/area formatters');
+  assert.match(html, /const oldUpdateUnitSystem = calculator\.updateUnitSystem\.bind\(calculator\);[\s\S]*?if \(this\.trialPlan\)\s*\{[\s\S]*?PlywoodTrialUI\.render\(this\.trialPlan/, 'changing units rerenders the existing plan without recomputing cut data');
+});

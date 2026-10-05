@@ -7699,7 +7699,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const card=document.createElement('div');card.className='canvas-container';card.dataset.boardIndex=i;
         const stage=document.createElement('div');stage.className='portrait-canvas-stage';
         const canvas=document.createElement('canvas');canvas.className='canvas';canvas.dataset.boardIndex=i;stage.appendChild(canvas);card.appendChild(stage);
-        const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${Number(b.width).toLocaleString('zh-HK')} × ${Number(b.length).toLocaleString('zh-HK')} mm\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
+        const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${fmtDim(b.width)} × ${fmtDim(b.length)}\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
         container.appendChild(card);
         drawBoard(b,i,card,null,true);
         container.appendChild(createBoardLegend(b,i));

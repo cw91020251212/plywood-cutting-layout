@@ -1148,32 +1148,47 @@ select,
 <div style="max-height:80vh;overflow-y:auto;padding-right:10px;">
 <div id="helpContentZh">
 <h2>🪚 木材切割排版</h2>
-<p>先新增部件，再新增原板，按「計算」查看排到幾件和用了幾塊板。通常設定已足夠；需要時才展開更多板材設定或切割詳情。</p>
-<p>輸出是候選草排，仍須由師傅按實際板材和工具核對；安全支撐寬度目前未知，不會由程式猜測。載入舊 JSON 後，舊排版會清除，須重新計算並通過新引擎驗證。</p>
+<p>先新增部件，再新增原板，按「計算」產生候選排版。通常設定已足夠；需要時才展開更多板材設定、切割詳情或其他操作。</p>
 <div style="background:#e8f4f8;padding:15px;margin:10px 0;border-radius:4px;">
-<h3>🆕 新功能</h3>
-<p><strong>✨ 局部重新排版:</strong> 點擊「重新排版」後輸入板材編號，只重新排版該板材；其他板材保持不變。</p>
-<p><strong>📏 三格分單位輸入:</strong> 長寬輸入改為三格分單位（公制：米/厘米/毫米，英制：尺/寸/分）。</p>
-<p><strong>🎯 3D立體按鈕:</strong> 所有按鈕都有明顯的3D立體效果，提升視覺體驗。</p>
+<h3>功能一覽</h3>
+<p><strong>📏 單位輸入：</strong>公制使用米／厘米／毫米；英制使用尺／寸／分，長度、闊度及數量分開輸入。</p>
+<p><strong>🪚 多種排版：</strong>可選鋸路方向、慳料或開料方便優先；結果會顯示利用率及使用板數。</p>
+<p><strong>🔁 方案及微調：</strong>可查看上一／下一個已驗證候選、旋轉部件、移動部件、對齊，以及只重新排版指定板材。</p>
+<p><strong>📋 詳情及輸出：</strong>可展開逐刀切割詳情、材料帳，儲存／載入 JSON，列印報告及儲存排版圖。</p>
+<p><strong>📱 分享及安裝：</strong>設定內可分享連結；手機支援原生分享表，亦可安裝成 App。</p>
+<p><strong>⚙ 顯示設定：</strong>設定內可切換深色模式、調整字體，以及用 1 至 5 級調校右下角上下箭咀透明度。</p>
 </div>
 <h3>使用步驟</h3>
-<p>1. 設定單位與鋸片厚度。</p>
+<p>1. 設定單位、鋸縫／鋸片厚度及需要的修邊值。</p>
 <p>2. 輸入部件長、闊和數量，按「新增」。</p>
 <p>3. 輸入原板長、闊和數量，按「新增」。</p>
-<p>4. 選擇鋸路方向和排版策略；不確定時沿用預設值。</p>
-<p>5. 按「計算」，再於結果區查看排版圖和利用率。</p>
-<p>6. 如需微調，可展開「其他操作」使用移板、對齊或局部重新排版。</p>
+<p>4. 選擇排版目標及切割策略；不確定時沿用預設值。</p>
+<p>5. 按「計算」，在結果區查看排版圖、利用率、板數及逐刀詳情。</p>
+<p>6. 需要修改時，先按相應的微調功能；修改資料後重新計算並重新核對。</p>
+<h3>重要限制</h3>
+<p>輸出是候選草排，不代表現場開料安全認證；程式不會猜測安全支撐寬度。落料前必須由有經驗的師傅按實際板材、鋸路、支撐及設備核對。</p>
 </div>
 <div id="helpContentEn" style="display:none;">
-<h2>🪚 木材切割排版</h2>
+<h2>🪚 Plywood Cutting Layout</h2>
+<p>Add parts and sheets, then press Calculate to generate a candidate layout. The usual settings are enough for most jobs; expand the advanced sections only when needed.</p>
 <div style="background:#e8f4f8;padding:15px;margin:10px 0;border-radius:4px;">
-<h3>🆕 New Features</h3>
-<p><strong>✨ Local Rearrangement:</strong> Click Rearrange and enter a board number; only that board is rearranged, while other boards remain unchanged.</p>
-<p><strong>📏 Triple Unit Input:</strong> Length/width input uses triple units (metric: m/cm/mm, imperial: ft/inch/fen).</p>
-<p><strong>🎯 3D Button Effects:</strong> All buttons have 3D立体效果.</p>
+<h3>Features</h3>
+<p><strong>📏 Units:</strong> Metric uses metres, centimetres and millimetres; imperial uses feet, inches and fen. Length, width and quantity are separate inputs.</p>
+<p><strong>🪚 Layout strategies:</strong> Choose the cutting direction and whether to prioritise fewer sheets or easier cutting. Results show utilisation and sheet count.</p>
+<p><strong>🔁 Variations and adjustments:</strong> Review checked candidate variations, rotate or move parts, align parts, or rearrange one selected sheet without changing the others.</p>
+<p><strong>📋 Details and output:</strong> Expand cut-by-cut details and material balance, save or load JSON, print a report, and save layout images.</p>
+<p><strong>📱 Share and install:</strong> Share a link from Settings; supported phones open the native share sheet. The site can also be installed as an app.</p>
+<p><strong>⚙ Display settings:</strong> Settings includes dark mode, font-size controls, and five levels for the bottom scroll-arrow opacity.</p>
 </div>
 <h3>Steps</h3>
-<p>1. Set Unit -> 2. Parts -> 3. Boards -> 4. Calculate -> 5. Click Rearrange and enter the board number to rearrange that board</p>
+<p>1. Set units, kerf/blade thickness and any edge trims.</p>
+<p>2. Enter part length, width and quantity, then press Add.</p>
+<p>3. Enter sheet length, width and quantity, then press Add.</p>
+<p>4. Choose the layout objective and cutting strategy; keep the defaults if unsure.</p>
+<p>5. Press Calculate and review the layout, utilisation, sheet count and cut details.</p>
+<p>6. After any adjustment, calculate again and verify the new candidate.</p>
+<h3>Important limitation</h3>
+<p>The output is a candidate layout, not a workshop-safety certification. The app does not guess safe support widths. An experienced woodworker must verify the actual sheets, kerf, supports and equipment before cutting.</p>
 </div>
 </div>
 </div>

@@ -825,6 +825,91 @@ select,
   }
 }
 </style>
+<style id="rounded-ui-surfaces">
+/* 統一介面圓角：表格以外層裁切，避免 border-collapse 令四角仍然變直角。 */
+.section,
+.section-title,
+.container,
+.simple-more-settings,
+.trial-board-rules,
+.objective-box,
+.advanced-actions,
+.search-help,
+#cutDetails,
+#canvasContainer,
+#canvasContainer .canvas-container,
+.trial-empty,
+.trial-banner,
+.trial-summary,
+.trial-board-heading,
+.candidate-warning,
+.validation-failed,
+.error,
+.suggestion,
+.progress,
+.status {
+  border-radius: 14px !important;
+}
+.section {
+  overflow: hidden;
+}
+.section-title {
+  overflow: hidden;
+}
+.table-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 0;
+  border: 2px solid #A9A9A9;
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #fff;
+}
+#partsTable,
+#boardsTable {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+#partsTable th:first-child,
+#boardsTable th:first-child { border-top-left-radius: 10px; }
+#partsTable th:last-child,
+#boardsTable th:last-child { border-top-right-radius: 10px; }
+#partsTable tbody tr:last-child td:first-child,
+#boardsTable tbody tr:last-child td:first-child { border-bottom-left-radius: 10px; }
+#partsTable tbody tr:last-child td:last-child,
+#boardsTable tbody tr:last-child td:last-child { border-bottom-right-radius: 10px; }
+.section button,
+#calculateButton,
+#loadButton,
+#saveButton,
+#printButton,
+#resetResultsButton,
+.scheme-button,
+.board-btn,
+.small-action-btn,
+.trial-replay-panel button {
+  border-radius: 12px !important;
+}
+.dimension-input,
+.section input,
+.section select,
+select {
+  border-radius: 12px !important;
+}
+#errorMessage,
+#suggestionMessage,
+#progressMessage,
+#status {
+  overflow-wrap: anywhere;
+}
+</style>
 </head>
 <body>
 <div class="container">

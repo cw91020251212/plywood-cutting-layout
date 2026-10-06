@@ -8680,6 +8680,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const raf = window.requestAnimationFrame || (callback => window.setTimeout(callback, 0));
     raf(() => applyResponsiveBoardOrientation());
   }
+  function scrollToFirstLayout() {
+    const target = document.querySelector('#canvasContainer .canvas-container') || document.getElementById('canvasContainer');
+    if (!target) return;
+    const raf = window.requestAnimationFrame || (callback => window.setTimeout(callback, 0));
+    // 等結果 DOM、畫布尺寸及手機版排版完成後才捲動，避免停在錯誤位置。
+    raf(() => raf(() => {
+      const top = target.getBoundingClientRect().top + window.scrollY - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }));
+  }
   const originalRender = ui.render;
   if (typeof originalRender === 'function' && !originalRender.__responsivePortraitBoards) {
     const wrappedRender = function (...args) {
@@ -8706,6 +8716,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const wrapped = function (...args) {
       const result = original.apply(this, args);
       scheduleLayout();
+      if (name === 'calculateCutting' && result && document.querySelector('#canvasContainer .canvas-container')) {
+        scrollToFirstLayout();
+      }
       return result;
     };
     wrapped.__responsivePortraitBoards = true;

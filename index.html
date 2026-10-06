@@ -9695,5 +9695,30 @@ body.wood-dark-mode #wood-app-footer a{color:#ffd166!important}
   body.portrait-display-active #desktop-result-pane #canvasContainer{display:block!important}
 }
 </style>
+<style id="wood-opacity-outline-style">
+/* 透明度只套用於底色；外框、文字、箭咀和陰影保持清晰，避免按鈕輪廓消失。 */
+#wood-floating-tools,
+#wood-scroll-nav {
+  opacity: 1 !important;
+}
+#wood-floating-tools button#languageSwitchButton {
+  background: linear-gradient(135deg,
+    rgb(191 240 207 / var(--wood-floating-opacity, .56)) 0%,
+    rgb(123 211 154 / var(--wood-floating-opacity, .56)) 55%,
+    rgb(67 184 116 / var(--wood-floating-opacity, .56)) 100%) !important;
+}
+#wood-floating-tools button#wood-settings-button {
+  background: linear-gradient(135deg,
+    rgb(216 232 255 / var(--wood-floating-opacity, .56)) 0%,
+    rgb(134 183 241 / var(--wood-floating-opacity, .56)) 55%,
+    rgb(77 143 219 / var(--wood-floating-opacity, .56)) 100%) !important;
+}
+#wood-scroll-nav button {
+  background: linear-gradient(135deg,
+    rgb(255 255 255 / var(--wood-scroll-opacity, .56)) 0%,
+    rgb(248 250 252 / var(--wood-scroll-opacity, .56)) 55%,
+    rgb(241 245 249 / var(--wood-scroll-opacity, .56)) 100%) !important;
+}
+</style>
 </body>
 </html>

@@ -1017,6 +1017,8 @@ select,
     <option value="partFirstTree">按成品安排</option>
   </select>
   <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
+  <label class="display-unit-option"><input type="checkbox" id="autoDisplayUnits" onchange="calculator.updateDisplayUnitMode()"> 自動換算顯示單位</label>
+  <p class="input-hint">關閉時，部件表格及排版圖會沿用你新增時輸入的尺／寸／分或米／厘米／毫米；開啟後才統一換算顯示。</p>
 </details>
 
 <div id="calculationCounter" style="text-align: center; font-size: 0.9em; color: #2F2F2F; margin-bottom: 5px; font-weight: bold; display: none;"></div>
@@ -1208,6 +1210,7 @@ select,
 const unitConversions = { mm: 1, cm: 10, m: 1000, inch: 25.4, ft: 304.8 };
 // App preferences are stored independently; no project/scheme unit is used as the preference source.
 const UNIT_SYSTEM_STORAGE_KEY = 'plywood-layout-unit-system-v1';
+const DISPLAY_UNIT_MODE_STORAGE_KEY = 'plywood-layout-auto-display-units-v1';
 const LANGUAGE_STORAGE_KEY = 'plywood-layout-language-v1';
 function normalizeUnitSystem(value) { return value === 'metric' || value === 'imperial' ? value : null; }
 function readUnitSystemPreference() {
@@ -1218,6 +1221,14 @@ function saveUnitSystemPreference(value) {
     const normalized = normalizeUnitSystem(value);
     if (!normalized) return false;
     try { window.localStorage.setItem(UNIT_SYSTEM_STORAGE_KEY, normalized); return true; }
+    catch (_) { return false; }
+}
+function readAutoDisplayUnitsPreference() {
+    try { return window.localStorage.getItem(DISPLAY_UNIT_MODE_STORAGE_KEY) === 'true'; }
+    catch (_) { return false; }
+}
+function saveAutoDisplayUnitsPreference(value) {
+    try { window.localStorage.setItem(DISPLAY_UNIT_MODE_STORAGE_KEY, value ? 'true' : 'false'); return true; }
     catch (_) { return false; }
 }
 function readLanguagePreference() {
@@ -2709,6 +2720,9 @@ class WoodCuttingCalculator {
             const restoredUnitSystem = readUnitSystemPreference() || 'metric';
             unitSystemSelect.value = restoredUnitSystem;
             this.unitSystem = restoredUnitSystem;
+            this.autoDisplayUnits = readAutoDisplayUnitsPreference();
+            const autoDisplayUnits = document.getElementById('autoDisplayUnits');
+            if (autoDisplayUnits) autoDisplayUnits.checked = this.autoDisplayUnits;
             this.lastPartUnitSystem = restoredUnitSystem;
             this.lastBoardUnitSystem = restoredUnitSystem;
             this.updatePartsTable();
@@ -3347,6 +3361,20 @@ class WoodCuttingCalculator {
         }
     }
     
+    updateDisplayUnitMode() {
+        const checkbox = document.getElementById('autoDisplayUnits');
+        this.autoDisplayUnits = !!(checkbox && checkbox.checked);
+        saveAutoDisplayUnitsPreference(this.autoDisplayUnits);
+        this.updatePartsTable();
+        this.updateBoardsTable();
+        if (this.trialPlan && window.PlywoodTrialUI && typeof window.PlywoodTrialUI.render === 'function') {
+            const index = Number(this._trialCandidateIndex || 0);
+            const candidate = (this._trialCandidates || [])[index];
+            const label = (candidate && candidate.label) || this._trialCandidateLabel || `按已選工序「${this.trialMode || this.trialPlan.mode}」`;
+            window.PlywoodTrialUI.render(this.trialPlan, label);
+        }
+    }
+
     updateUnitSystem() {
         const unitSelect = document.getElementById("unitSystem");
         const unitSystem = normalizeUnitSystem(unitSelect.value) || 'metric';
@@ -3596,6 +3624,16 @@ class WoodCuttingCalculator {
         }
     }
     
+    formatStoredDimensionInputs(inputs, unitSystem) {
+        if (!inputs) return '';
+        const units = unitSystem === 'imperial'
+            ? [['ft', '尺'], ['inch', '寸'], ['fen', '分']]
+            : [['m', 'm'], ['cm', 'cm'], ['mm', 'mm']];
+        return units.filter(([key]) => String(inputs[key] ?? '').trim() !== '')
+            .map(([key, label]) => `${String(inputs[key]).trim()}${label}`)
+            .join(' ');
+    }
+
     detectUnitSystem(input) {
         if (input.match(/(呎|吋|分|尺|寸)/)) return 'imperial';
         if (input.match(/(mm|cm|m)/)) return 'metric';
@@ -3807,29 +3845,10 @@ class WoodCuttingCalculator {
                 // 使用保存的原始輸入值或重新計算顯示值
                 let displayWidth, displayLength;
                 
-                if (part.originalWidthInputs && part.originalLengthInputs) {
-                    // 如果有保存的原始輸入值，使用它們
-                    if (unitSystem === 'metric') {
-                        const widthDisplay = this.formatTripleDisplay(part.width, unitSystem);
-                        const lengthDisplay = this.formatTripleDisplay(part.length, unitSystem);
-                        
-                        displayWidth = (widthDisplay.m ? widthDisplay.m + 'm ' : '') + 
-                                     (widthDisplay.cm ? widthDisplay.cm + 'cm ' : '') + 
-                                     (widthDisplay.mm ? widthDisplay.mm + 'mm' : '');
-                        displayLength = (lengthDisplay.m ? lengthDisplay.m + 'm ' : '') + 
-                                      (lengthDisplay.cm ? lengthDisplay.cm + 'cm ' : '') + 
-                                      (lengthDisplay.mm ? lengthDisplay.mm + 'mm' : '');
-                    } else {
-                        const widthDisplay = this.formatTripleDisplay(part.width, unitSystem);
-                        const lengthDisplay = this.formatTripleDisplay(part.length, unitSystem);
-                        
-                        displayWidth = (widthDisplay.ft ? widthDisplay.ft + '尺 ' : '') + 
-                                     (widthDisplay.inch ? widthDisplay.inch + '寸 ' : '') + 
-                                     (widthDisplay.fen ? widthDisplay.fen + '分' : '');
-                        displayLength = (lengthDisplay.ft ? lengthDisplay.ft + '尺 ' : '') + 
-                                      (lengthDisplay.inch ? lengthDisplay.inch + '寸 ' : '') + 
-                                      (lengthDisplay.fen ? lengthDisplay.fen + '分' : '');
-                    }
+                if (!this.autoDisplayUnits && part.originalWidthInputs && part.originalLengthInputs) {
+                    const displaySystem = part.displayUnitSystem || unitSystem;
+                    displayWidth = this.formatStoredDimensionInputs(part.originalWidthInputs, displaySystem);
+                    displayLength = this.formatStoredDimensionInputs(part.originalLengthInputs, displaySystem);
                 } else {
                     // 否則使用格式化的值
                     displayWidth = this.formatDimension(part.width, part.displayUnitSystem || unitSystem);
@@ -4096,29 +4115,10 @@ class WoodCuttingCalculator {
                 // 使用保存的原始輸入值或重新計算顯示值
                 let displayWidth, displayLength;
                 
-                if (board.originalWidthInputs && board.originalLengthInputs) {
-                    // 如果有保存的原始輸入值，使用它們
-                    if (unitSystem === 'metric') {
-                        const widthDisplay = this.formatTripleDisplay(board.width, unitSystem);
-                        const lengthDisplay = this.formatTripleDisplay(board.length, unitSystem);
-                        
-                        displayWidth = (widthDisplay.m ? widthDisplay.m + 'm ' : '') + 
-                                     (widthDisplay.cm ? widthDisplay.cm + 'cm ' : '') + 
-                                     (widthDisplay.mm ? widthDisplay.mm + 'mm' : '');
-                        displayLength = (lengthDisplay.m ? lengthDisplay.m + 'm ' : '') + 
-                                      (lengthDisplay.cm ? lengthDisplay.cm + 'cm ' : '') + 
-                                      (lengthDisplay.mm ? lengthDisplay.mm + 'mm' : '');
-                    } else {
-                        const widthDisplay = this.formatTripleDisplay(board.width, unitSystem);
-                        const lengthDisplay = this.formatTripleDisplay(board.length, unitSystem);
-                        
-                        displayWidth = (widthDisplay.ft ? widthDisplay.ft + '尺 ' : '') + 
-                                     (widthDisplay.inch ? widthDisplay.inch + '寸 ' : '') + 
-                                     (widthDisplay.fen ? widthDisplay.fen + '分' : '');
-                        displayLength = (lengthDisplay.ft ? lengthDisplay.ft + '尺 ' : '') + 
-                                      (lengthDisplay.inch ? lengthDisplay.inch + '寸 ' : '') + 
-                                      (lengthDisplay.fen ? lengthDisplay.fen + '分' : '');
-                    }
+                if (!this.autoDisplayUnits && board.originalWidthInputs && board.originalLengthInputs) {
+                    const displaySystem = board.displayUnitSystem || unitSystem;
+                    displayWidth = this.formatStoredDimensionInputs(board.originalWidthInputs, displaySystem);
+                    displayLength = this.formatStoredDimensionInputs(board.originalLengthInputs, displaySystem);
                 } else {
                     // 否則使用格式化的值
                     displayWidth = this.formatDimension(board.width, board.displayUnitSystem || unitSystem);
@@ -7629,7 +7629,15 @@ window.addEventListener('DOMContentLoaded', () => {
     return {width:Number.isFinite(width)&&width>0?width:0,length:Number.isFinite(length)&&length>0?length:0};
   }
   function nominalSizeKey(part){const d=nominalDimensions(part);return `${d.width}|${d.length}`;}
-  function nominalSizeText(part){const d=nominalDimensions(part);return `${fmtDim(d.width)} × ${fmtDim(d.length)}`;}
+  function nominalSizeText(part){
+    const d=nominalDimensions(part);
+    if(!calculator.autoDisplayUnits&&typeof calculator.formatStoredDimensionInputs==='function'&&part.originalWidthInputs&&part.originalLengthInputs){
+      const system=part.displayUnitSystem||selectedUnit();
+      const width=calculator.formatStoredDimensionInputs(part.originalWidthInputs,system),length=calculator.formatStoredDimensionInputs(part.originalLengthInputs,system);
+      if(width&&length)return `${width} × ${length}`;
+    }
+    return `${fmtDim(d.width)} × ${fmtDim(d.length)}`;
+  }
   function setDisplayColors(plan){
     const keys=new Set();(plan.boards||[]).forEach(board=>(board.results||[]).forEach(part=>keys.add(nominalSizeKey(part))));
     const used=new Set();displayColorsBySize=new Map();
@@ -7981,6 +7989,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     return tokens.join(' ');
   }
+  function formatUserDimension(value, item, inputs) {
+    if (!calculator.autoDisplayUnits && inputs && typeof calculator.formatStoredDimensionInputs === 'function') {
+      const raw = calculator.formatStoredDimensionInputs(inputs, item && (item.displayUnitSystem || item.unitSystem) || selectedUnit());
+      if (raw) return raw;
+    }
+    return formatDimension(value);
+  }
   function formatArea(mm2) {
     const value = Number(mm2);
     if (!Number.isFinite(value)) return '—';
@@ -7995,8 +8010,8 @@ window.addEventListener('DOMContentLoaded', () => {
     [...tbody.rows].forEach((row, index) => {
       const part = calculator.parts[index];
       if (!part || row.cells.length < 3) return;
-      row.cells[1].textContent = formatDimension(part.width);
-      row.cells[2].textContent = formatDimension(part.length);
+      row.cells[1].textContent = formatUserDimension(part.width, part, part.originalWidthInputs);
+      row.cells[2].textContent = formatUserDimension(part.length, part, part.originalLengthInputs);
     });
   }
   function refreshBoardTable() {
@@ -8005,8 +8020,8 @@ window.addEventListener('DOMContentLoaded', () => {
     [...tbody.rows].forEach((row, index) => {
       const board = calculator.boards[index];
       if (!board || row.cells.length < 2) return;
-      row.cells[0].textContent = formatDimension(board.width);
-      row.cells[1].textContent = formatDimension(board.length ?? board.height);
+      row.cells[0].textContent = formatUserDimension(board.width, board, board.originalWidthInputs);
+      row.cells[1].textContent = formatUserDimension(board.length ?? board.height, board, board.originalLengthInputs);
     });
   }
   const oldUpdatePartsTable = calculator.updatePartsTable.bind(calculator);

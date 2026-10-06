@@ -715,11 +715,11 @@ select,
   #section-boards .dimension-unit-row:not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 12px;
+    column-gap: 28px;
     row-gap: 0;
     align-items: center;
-    width: calc(100% - 8px) !important;
-    max-width: calc(100% - 8px);
+    width: calc(100% - 32px) !important;
+    max-width: calc(100% - 32px);
     min-width: 0;
     margin-left: auto;
     margin-right: auto;
@@ -742,22 +742,22 @@ select,
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: 48px;
-    height: 48px;
-    padding: 8px 5px;
+    min-height: 44px;
+    height: 44px;
+    padding: 8px 28px 8px 3px;
     margin: 6px 0;
     box-sizing: border-box;
   }
   #section-parts .dimension-unit-field > .unit-label,
   #section-boards .dimension-unit-field > .unit-label {
     position: absolute;
-    left: calc(100% + 4px);
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
     display: block;
-    width: 24px;
-    min-width: 24px;
-    max-width: 24px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
     margin: 0;
     padding: 0;
     font-size: 12px;
@@ -1102,10 +1102,6 @@ select,
 </div>
 </div>
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
-<div id="portraitDisplayControls" class="no-print" aria-label="排版圖顯示模式" style="display:none">
-<button id="portraitModeButton" type="button" aria-pressed="false" onclick="calculator.togglePortraitDisplay()">直向滿版</button>
-<span id="portraitDisplayHint">圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版只調整顯示大小。</span>
-</div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
@@ -7541,9 +7537,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const fmtDim=value=>window.calculator&&window.calculator._formatTrialDimension?window.calculator._formatTrialDimension(value):`${nfmt(value)} mm`;
   const fmtArea=value=>window.calculator&&window.calculator._formatTrialArea?window.calculator._formatTrialArea(value):`${nfmt(value)} mm²`;
   const area=r=>Number(r.width)*Number(r.length);
-  // Overlay 是輔助顯示功能；即使瀏覽器快取／載入延遲，也不能阻止主計算流程。
+  // 輔助資產未載入時仍保留基本驗證及逐刀線，不能令主計算失敗。
   const cutOverlay=window.PlywoodCutOverlay||{
-    // 資產未載入時仍保留基本鋸路線顯示，不讓輔助層變成空白。
     isVerifiedPlan:plan=>!!(plan&&plan.status==='candidate'&&plan.validation&&plan.validation.ok&&Array.isArray(plan.boards)&&plan.boards.length),
     cutSegments:(board,count,transpose)=>{
       if(!board||!Array.isArray(board.cuts))return [];
@@ -7552,14 +7547,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const source=step.sourceRect||{},position=Number(step.distanceFromDatum),vertical=(step.axis==='x')!==swap;
         const projected=swap?{x:Number(source.y),y:Number(source.x),width:Number(source.length),length:Number(source.width)}:source;
         return vertical
-          ? {number:index+1,boardId:step.boardId,sourceMaterialId:step.sourceMaterialId,cut:step,axis:'x',x1:position,y1:Number(projected.y),x2:position,y2:Number(projected.y)+Number(projected.length)}
-          : {number:index+1,boardId:step.boardId,sourceMaterialId:step.sourceMaterialId,cut:step,axis:'y',x1:Number(projected.x),y1:position,x2:Number(projected.x)+Number(projected.width),y2:position};
+          ? {number:index+1,axis:'x',x1:position,y1:Number(projected.y),x2:position,y2:Number(projected.y)+Number(projected.length)}
+          : {number:index+1,axis:'y',x1:Number(projected.x),y1:position,x2:Number(projected.x)+Number(projected.width),y2:position};
       });
     },
-    finalMaterialLeaves:()=>[],
-    fitsPartSpec:()=>false,
-    formatRemnantMeasurements:()=>null,
-    copy:key=>key
+    finalMaterialLeaves:()=>[],fitsPartSpec:()=>false,formatRemnantMeasurements:()=>null,copy:key=>key
   };
   const cutCopy=key=>cutOverlay.copy(key,window.calculator&&window.calculator.currentLanguage||'zh');
   const CUT_PATH_STORAGE_KEY='plywood-layout-cut-path-overlay-v1';
@@ -7669,7 +7661,9 @@ window.addEventListener('DOMContentLoaded', () => {
       if(maxWidth<=0||maxHeight<=0)return;
       let chosenSize=0,metrics=null,chosenPadding=0;
       // 以實際字寬／字高試排，而非用固定的小尺寸門檻提前隱藏；再放不下才留空，圖例仍可查回。
-      for(let size=18;size>=7;size-=.25){
+      // 按部件在畫布上的短邊比例設定上限；細件跟住縮細，仍保留最低可辨識字體。
+      const proportionalCap=Math.min(12,Math.max(4.5,Math.min(maxWidth,maxHeight)*.12));
+      for(let size=proportionalCap;size>=4.5;size-=.25){
         ctx.font=`600 ${size*dpr}px Arial, sans-serif`;
         const measured=ctx.measureText(label),textWidth=measured.width/dpr,textHeight=size*1.2;
         const padding=Math.max(1,size*.24);
@@ -7803,8 +7797,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function render(plan,selectedLabel){
     const root=$('trialResults'),container=$('canvasContainer'),details=$('cutDetails');
-    const portraitControls=$('portraitDisplayControls');
-    if(portraitControls)portraitControls.style.display='flex';
     const verifiedCutPlan=cutOverlay.isVerifiedPlan(plan);activeVerifiedPlan=verifiedCutPlan?plan:null;
     root.innerHTML='';container.innerHTML='';$('colorLegend').style.display='none';$('cuttingLegend').style.display='none';$('schemeSelector').style.display='none';$('utilizationStats').textContent='';
     details.open=false;details.style.display='block';$('cutDetailsContent').innerHTML=detailHtml(plan,selectedLabel);
@@ -7838,10 +7830,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const canvas=document.createElement('canvas');canvas.className='canvas';canvas.dataset.boardIndex=i;stage.appendChild(canvas);card.appendChild(stage);
         const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${fmtDim(b.width)} × ${fmtDim(b.length)}\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
         group.appendChild(card);
+        // 必須先加入頁面，讓 clientWidth 有實際值；否則首次繪圖的字體及鋸線會縮到極細。
+        container.appendChild(group);
         drawBoard(b,i,card,null,true);
         group.appendChild(createBoardLegend(b,i));
         if(window.calculator._createTrialRotationControls) group.appendChild(window.calculator._createTrialRotationControls(b,i));
-        container.appendChild(group);
       });
       details.addEventListener('toggle',function onToggle(){if(!details.open)return;details.removeEventListener('toggle',onToggle);});
     }
@@ -7898,7 +7891,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateVariationControls();return true;
   }
   function calculate(){
-    clearMessages();$('boardAddedNotification').style.display='none';clearCandidatePool();const portraitControls=$('portraitDisplayControls');if(portraitControls)portraitControls.style.display='none';
+    clearMessages();$('boardAddedNotification').style.display='none';clearCandidatePool();
     try{
       const uiSettings=readSettings();const modes=uiSettings.mode==='auto'?['ripThenCrosscut','partFirstTree']:[uiSettings.mode];
       const overrides={...(window.calculator._trialFixedOrientationOverrides||{})};const attempts=[];const errors=[];
@@ -7937,7 +7930,7 @@ window.addEventListener('DOMContentLoaded', () => {
       $('trialResults').innerHTML='<p class="trial-empty">JSON 已載入。舊方案不會視作已驗證切序；按「計算」重新排料及驗證。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';clearMessages();
     }catch(err){$('errorMessage').textContent=`JSON 載入失敗：${err.message}`;}};reader.readAsText(file);};input.click();
   }
-  function resetResults(){clearCandidatePool();if(window.calculator.portraitDisplayMode)window.calculator.exitPortraitDisplay();window.calculator.trialPlan=null;window.calculator.schemes=[];const portraitControls=$('portraitDisplayControls');if(portraitControls)portraitControls.style.display='none';$('trialResults').innerHTML='<p class="trial-empty">加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
+  function resetResults(){clearCandidatePool();window.calculator.trialPlan=null;window.calculator.schemes=[];$('trialResults').innerHTML='<p class="trial-empty">加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
   function showModeDescription(){const m=$('cuttingStrategy').value;const texts={auto:'我會比較兩種工序，只採用通過幾何與逐刀驗證的候選。',ripThenCrosscut:'先分出長條，再逐條截成所需部件。',partFirstTree:'按成品逐刀安排，每刀只切當時可用的材料。'};$('modeNote').textContent=texts[m]||texts.auto;}
   window.calculator.calculateCutting=calculate;window.calculator.saveProject=saveProject;window.calculator.loadProject=loadProject;window.calculator.resetResults=resetResults;
   window.calculator.redrawCurrentScheme=function(){};window.calculator.displayScheme=function(){if(this.trialPlan)render(this.trialPlan,`按已選工序「${this.trialMode}」`);};window.calculator.selectScheme=window.calculator.displayScheme;

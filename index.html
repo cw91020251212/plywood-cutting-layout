@@ -7067,7 +7067,12 @@ window.addEventListener('DOMContentLoaded', () => {
       if (p.disabled) return;
       const width = Number(p.width), length = Number(p.length), count = Math.floor(Number(p.count));
       if (!(width > 0 && length > 0 && count > 0 && Number.isFinite(width) && Number.isFinite(length))) throw new Error(`部件列 ${rowIndex + 1} 的長、闊或數量無效`);
-      for (let i = 0; i < count; i++) out.push({ id: `P${String(ordinal).padStart(3, '0')}`, sourceRow: rowIndex + 1, sourceUnit: i + 1, width, length, orientationPreference: p.orientationPreference || 'auto', color: p.color || '#4b8a77' }), ordinal++;
+      for (let i = 0; i < count; i++) out.push({
+        id: `P${String(ordinal).padStart(3, '0')}`, sourceRow: rowIndex + 1, sourceUnit: i + 1,
+        width, length, orientationPreference: p.orientationPreference || 'auto', color: p.color || '#4b8a77',
+        displayUnitSystem: p.displayUnitSystem, originalWidthInputs: p.originalWidthInputs,
+        originalLengthInputs: p.originalLengthInputs
+      }), ordinal++;
     });
     return out.sort((a, b) => (b.width * b.length - a.width * a.length) || (Math.max(b.width, b.length) - Math.max(a.width, a.length)) || a.id.localeCompare(b.id));
   }
@@ -7103,7 +7108,11 @@ window.addEventListener('DOMContentLoaded', () => {
     return step;
   }
   function emitPart(b, token, r, materialIdValue, direct = false) {
-    const p = { id: token.id, sourceRow: token.sourceRow, sourceUnit: token.sourceUnit, width: r.width, length: r.length, x: r.x, y: r.y, rotated: token.rotated, originalWidth: token.width, originalLength: token.length, orientationPreference: token.orientationPreference, color: token.color, boardId: b.boardId, sourceMaterialId: materialIdValue, directFit: direct };
+    const source = global.calculator && Array.isArray(global.calculator.parts) ? global.calculator.parts[(Number(token.sourceRow) || 1) - 1] : null;
+    const displayUnitSystem = token.displayUnitSystem || source?.displayUnitSystem;
+    const originalWidthInputs = token.originalWidthInputs || source?.originalWidthInputs;
+    const originalLengthInputs = token.originalLengthInputs || source?.originalLengthInputs;
+    const p = { id: token.id, sourceRow: token.sourceRow, sourceUnit: token.sourceUnit, width: r.width, length: r.length, x: r.x, y: r.y, rotated: token.rotated, originalWidth: token.width, originalLength: token.length, orientationPreference: token.orientationPreference, color: token.color, displayUnitSystem, originalWidthInputs, originalLengthInputs, boardId: b.boardId, sourceMaterialId: materialIdValue, directFit: direct };
     b.results.push(p);
     if (direct) b.terminals.push({ materialId: materialIdValue, partId: token.id, rect: cloneRect(r) });
     return p;

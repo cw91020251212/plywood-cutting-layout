@@ -9078,9 +9078,11 @@ body.wood-dark-mode {
   #wood-floating-tools button:hover,#wood-floating-tools button:active{transform:none!important;filter:none!important}
   #wood-language-button{font-size:.92rem!important}
   #wood-settings-button{background:linear-gradient(135deg,#d8e8ff 0%,#86b7f1 55%,#4d8fdb 100%)!important;color:#123258!important}
-  #wood-settings-panel{position:fixed;top:calc(78px + env(safe-area-inset-top));right:calc(62px + env(safe-area-inset-right));z-index:6001;width:min(260px,calc(100vw - 86px));display:none;padding:12px;background:rgba(255,255,255,.96);border:1px solid #a9a9a9;border-radius:12px;box-shadow:-5px 7px 0 rgba(0,0,0,.22);color:#263238}
+  #wood-settings-panel{position:fixed;top:calc(78px + env(safe-area-inset-top));right:calc(62px + env(safe-area-inset-right));z-index:6001;width:min(260px,calc(100vw - 86px));display:none;padding:12px;background:#fff;border:1px solid #a9a9a9;border-radius:12px;box-shadow:-5px 7px 0 rgba(0,0,0,.22);color:#263238}
   #wood-settings-panel[data-open="true"]{display:block}
   #wood-settings-panel h3{margin:0 0 9px;font-size:1.05em;color:#234832}
+  #wood-settings-close{position:absolute;top:7px;right:8px;width:36px!important;min-height:36px!important;height:36px;padding:0!important;margin:0!important;border:0!important;background:transparent!important;color:#d71920!important;box-shadow:none!important;font-size:32px!important;font-weight:400;line-height:1;cursor:pointer}
+  #wood-settings-close:hover{background:rgba(215,25,32,.08)!important;border-radius:50%!important}
   #wood-settings-panel .wood-setting-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
   #wood-settings-panel button{width:100%;min-height:42px;margin:0!important;padding:7px 9px!important;border-radius:7px!important;border:1px solid rgba(0,0,0,.25)!important;background:linear-gradient(135deg,#4da6ff,#1a75ff)!important;color:#fff!important;box-shadow:0 2px 4px rgba(0,0,0,.3)!important;font-size:.95em!important}
   #wood-settings-panel #wood-help-open,#wood-settings-panel #wood-share-button{grid-column:1/-1}
@@ -9106,7 +9108,7 @@ body.wood-dark-mode {
   body.wood-dark-mode .section,body.wood-dark-mode .simple-more-settings,body.wood-dark-mode .trial-board-rules,body.wood-dark-mode .objective-box,body.wood-dark-mode .advanced-actions,body.wood-dark-mode .simple-result,body.wood-dark-mode #cutDetails{background:rgba(42,49,56,.92);border-color:#68737d;color:#edf2f7}
   body.wood-dark-mode .section label,body.wood-dark-mode .section-intro,body.wood-dark-mode .input-hint,body.wood-dark-mode .objective-note,body.wood-dark-mode .dimension-input-group label{color:#dbe5ec}
   body.wood-dark-mode input,body.wood-dark-mode select,body.wood-dark-mode .contenteditable-number-editor{background:#f7fafc;color:#111}
-  body.wood-dark-mode #wood-settings-panel{background:rgba(38,44,51,.98);color:#edf2f7;border-color:#77838d}
+  body.wood-dark-mode #wood-settings-panel{background:#262c33;color:#edf2f7;border-color:#77838d}
   body.wood-dark-mode #wood-settings-panel h3,body.wood-dark-mode #wood-settings-panel .wood-setting-note{color:#edf2f7}
   @media(max-width:600px){#wood-floating-tools{top:calc(16px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));gap:7px}#wood-floating-tools button,#wood-scroll-nav button{width:38px;height:38px;min-height:38px;font-size:17px}#wood-language-button{font-size:.86rem!important}#wood-settings-panel{top:calc(64px + env(safe-area-inset-top));right:calc(50px + env(safe-area-inset-right));width:min(240px,calc(100vw - 72px))}#wood-info-bar{padding-left:12px;padding-right:12px}}
 </style>
@@ -9115,6 +9117,7 @@ body.wood-dark-mode {
   <button id="wood-settings-button" type="button" aria-label="設定" aria-expanded="false">⚙</button>
 </div>
 <div id="wood-settings-panel" role="dialog" aria-label="設定" aria-hidden="true">
+  <button id="wood-settings-close" type="button" aria-label="關閉設定">×</button>
   <h3 id="wood-settings-title">設定</h3>
   <button id="wood-help-open" type="button">使用說明</button>
   <button id="wood-share-button" type="button">分享連結</button>
@@ -9122,6 +9125,10 @@ body.wood-dark-mode {
   <div class="wood-setting-row"><button id="wood-theme-toggle" type="button">深色模式</button></div>
   <div class="wood-opacity-setting">
     <label id="wood-opacity-label" for="wood-opacity-level-3">上下箭咀透明度</label>
+    <div class="wood-opacity-targets" role="group" aria-label="選擇要調整的工具">
+      <button type="button" class="wood-opacity-target is-selected" id="wood-opacity-target-scroll" data-opacity-target="scroll" aria-pressed="true">上下箭咀</button>
+      <button type="button" class="wood-opacity-target" id="wood-opacity-target-floating" data-opacity-target="floating" aria-pressed="false">EN／設定</button>
+    </div>
     <div class="wood-opacity-levels" role="group" aria-label="上下箭咀透明度級數">
       <button type="button" class="wood-opacity-level" id="wood-opacity-level-1" data-opacity-level="1" aria-label="透明度 1">1</button>
       <button type="button" class="wood-opacity-level" id="wood-opacity-level-2" data-opacity-level="2" aria-label="透明度 2">2</button>
@@ -9142,12 +9149,21 @@ body.wood-dark-mode {
   const $=id=>document.getElementById(id), body=document.body, panel=$('wood-settings-panel'), lang=$('languageSwitchButton');
   const status=$('wood-status-text'), fontReadout=$('wood-font-current'), opacityReadout=$('wood-opacity-current');
   const opacityValues={1:0.24,2:0.40,3:0.56,4:0.72,5:0.88};
+  let opacityTarget='scroll';
   function setScrollOpacity(level,save=true){
     const n=Math.max(1,Math.min(5,Number(level)||3)), value=opacityValues[n];
-    document.documentElement.style.setProperty('--wood-scroll-opacity',value);
+    const key=opacityTarget==='floating'?'wood-floating-opacity':'wood-scroll-opacity';
+    document.documentElement.style.setProperty(opacityTarget==='floating'?'--wood-floating-opacity':'--wood-scroll-opacity',value);
     document.querySelectorAll('.wood-opacity-level').forEach(button=>{const selected=Number(button.dataset.opacityLevel)===n;button.classList.toggle('is-selected',selected);button.setAttribute('aria-pressed',String(selected));});
+    document.querySelectorAll('.wood-opacity-target').forEach(button=>{const selected=button.dataset.opacityTarget===opacityTarget;button.classList.toggle('is-selected',selected);button.setAttribute('aria-pressed',String(selected));});
+    if($('wood-opacity-label'))$('wood-opacity-label').textContent=text(opacityTarget==='floating'?'EN／設定按鈕透明度':'上下箭咀透明度',opacityTarget==='floating'?'EN / Settings button opacity':'Arrow opacity');
     if(opacityReadout)opacityReadout.textContent=text('目前透明度：'+n+'／5','Arrow opacity: '+n+'/5');
-    if(save)woodStore.set('wood-scroll-opacity',n);
+    if(save)woodStore.set(key,n);
+  }
+  function selectOpacityTarget(target){
+    opacityTarget=target==='floating'?'floating':'scroll';
+    const key=opacityTarget==='floating'?'wood-floating-opacity':'wood-scroll-opacity';
+    setScrollOpacity(Number(woodStore.get(key))||3,false);
   }
   // file:// 頁面有些瀏覽器會拒絕 localStorage；儲存失敗不可阻止按鈕事件初始化。
   const woodStore={get(key){try{return window.localStorage?window.localStorage.getItem(key):null}catch(_){return null}},set(key,value){try{if(window.localStorage)window.localStorage.setItem(key,value)}catch(_){}}};
@@ -9179,16 +9195,19 @@ body.wood-dark-mode {
   function refreshFontReadout(){if(fontReadout)fontReadout.textContent=text('目前字級：','Current font size: ')+fontMessage();}
   const savedFont=Number(woodStore.get('wood-font-size')); if(savedFont>=14&&savedFont<=24) body.style.fontSize=savedFont+'px';
   if(woodStore.get('wood-theme')==='dark') body.classList.add('wood-dark-mode');
+  document.documentElement.style.setProperty('--wood-floating-opacity',opacityValues[Number(woodStore.get('wood-floating-opacity'))||3]);
   setScrollOpacity(Number(woodStore.get('wood-scroll-opacity'))||3,false);
   $('wood-settings-button').addEventListener('click',function(e){e.stopPropagation();const open=panel.dataset.open!=='true';panel.dataset.open=String(open);panel.setAttribute('aria-hidden',String(!open));this.setAttribute('aria-expanded',String(open));});
   panel.addEventListener('click',e=>e.stopPropagation());
+  $('wood-settings-close').addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');});
   document.addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');});
   $('wood-help-open').addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');if(window.calculator&&typeof calculator.showHelp==='function')calculator.showHelp();});
   function changeFont(delta){const current=parseFloat(getComputedStyle(body).fontSize)||18;const n=Math.max(14,Math.min(24,current+delta));body.style.fontSize=n+'px';woodStore.set('wood-font-size',n);refreshInfo();}
   $('wood-font-increase').addEventListener('click',()=>changeFont(1));
   $('wood-font-decrease').addEventListener('click',()=>changeFont(-1));
   $('wood-theme-toggle').addEventListener('click',()=>{body.classList.toggle('wood-dark-mode');woodStore.set('wood-theme',body.classList.contains('wood-dark-mode')?'dark':'light');refreshInfo();});
-  document.querySelectorAll('.wood-opacity-level').forEach(button=>button.addEventListener('click',()=>setScrollOpacity(button.dataset.opacityLevel)));
+  document.querySelectorAll('.wood-opacity-target').forEach(button=>button.addEventListener('click',()=>selectOpacityTarget(button.dataset.opacityTarget)));
+  document.querySelectorAll('.wood-opacity-level').forEach(button=>button.addEventListener('click',()=>setScrollOpacity(button.dataset.opacityLevel,true)));
   function rowCount(id){const el=$(id);return el?el.querySelectorAll('tr').length:0;}
   function hasDraft(prefix){
     const re=prefix==='part'?/^(partLength|partWidth)/:/^(boardLength|boardWidth)/;
@@ -9270,8 +9289,12 @@ body.wood-dark-mode {
     const en=isEnglish();
     $('wood-settings-title').textContent=en?'Settings':'設定';$('wood-help-open').textContent=en?'Help':'使用說明';
     $('wood-font-increase').textContent=en?'Font A+':'字體 A+';$('wood-font-decrease').textContent=en?'Font A−':'字體 A−';
-    $('wood-opacity-label').textContent=en?'Arrow opacity':'上下箭咀透明度';
-    $('wood-opacity-current').textContent=en?'Arrow opacity: '+(Number(woodStore.get('wood-scroll-opacity'))||3)+'/5':'目前透明度：'+(Number(woodStore.get('wood-scroll-opacity'))||3)+'／5';
+    $('wood-opacity-label').textContent=opacityTarget==='floating'?(en?'EN / Settings button opacity':'EN／設定按鈕透明度'):(en?'Arrow opacity':'上下箭咀透明度');
+    const opacityKey=opacityTarget==='floating'?'wood-floating-opacity':'wood-scroll-opacity';
+    const opacityLevel=Number(woodStore.get(opacityKey))||3;
+    $('wood-opacity-current').textContent=en?((opacityTarget==='floating'?'EN / Settings button opacity: ':'Arrow opacity: ')+opacityLevel+'/5'):('目前透明度：'+opacityLevel+'／5');
+    $('wood-opacity-target-scroll').textContent=en?'Up/down arrows':'上下箭咀';
+    $('wood-opacity-target-floating').textContent=en?'EN / Settings':'EN／設定';
     $('wood-theme-toggle').textContent=body.classList.contains('wood-dark-mode')?(en?'Light mode':'明亮模式'):(en?'Dark mode':'深色模式');
     $('wood-settings-note').textContent=en?'100% is the default page font size for this viewport; A+/A− change it by 1 CSS px per step.':'百分比以本視窗的預設字級為100%；A+／A−每次調整1 CSS px。';
     $('wood-settings-button').setAttribute('aria-label',en?'Settings':'設定');
@@ -9297,6 +9320,7 @@ body.wood-dark-mode {
 <!-- 最終對齊參考版：浮動鍵使用原型的短字樣、硬邊投影、高光及常駐頁面導航。 -->
 <style id="wood-reference-parity-final">
   /* 參考版 languageToggle 原型：44px 圓形、短字樣、不可溢出。 */
+  #wood-floating-tools{opacity:var(--wood-floating-opacity,.56)!important}
   #wood-floating-tools button#languageSwitchButton,
   #wood-floating-tools button#wood-settings-button{
     width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
@@ -9323,6 +9347,9 @@ body.wood-dark-mode {
   /* 參考版 ▲▼：白色原型配色，字樣細小，與 44px 按鈕同尺寸。 */
   .wood-opacity-setting{margin-top:10px;padding-top:9px;border-top:1px solid rgba(0,0,0,.12)}
   .wood-opacity-setting label{display:block;font-size:.86em;font-weight:700;margin-bottom:6px}
+  .wood-opacity-targets{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:7px}
+  #wood-settings-panel .wood-opacity-target{min-height:32px;padding:4px 5px!important;font-size:.78em!important;background:rgba(77,143,219,.10)!important;color:#234832!important;box-shadow:none!important;border:1px solid rgba(35,72,50,.25)!important}
+  #wood-settings-panel .wood-opacity-target.is-selected{background:#d8ebff!important;color:#14508a!important;border-color:#4d8fdb!important;font-weight:700}
   .wood-opacity-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
   #wood-settings-panel .wood-opacity-level{min-height:34px;padding:4px 0!important;font-size:.9em!important;background:rgba(77,143,219,.16)!important;color:#234832!important;box-shadow:none!important;border:1px solid rgba(35,72,50,.3)!important}
   #wood-settings-panel .wood-opacity-level.is-selected{background:#1a75ff!important;color:#fff!important;border-color:#145dc5!important}

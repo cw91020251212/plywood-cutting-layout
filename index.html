@@ -690,6 +690,26 @@ select,
 @media(max-width:600px){#calculateButton .calculate-label{font-size:24px}}
 </style>
 
+<style id="settings-switch-style">
+/* 更多設定：下拉選單和二態開關必須是兩種清楚不同的控制。 */
+.setting-block{margin:10px 0;padding:10px 12px;border:1px solid #c8d1d4;border-radius:9px;background:rgba(255,255,255,.82);box-sizing:border-box}
+.cutting-flow-setting>label{display:block;margin:0 0 5px;font-weight:700;color:#2f3e43}
+.cutting-flow-setting>select{margin:0;width:100%}
+.display-unit-setting{padding:0;overflow:hidden;background:#f7fbfc}
+.setting-switch-row{display:flex!important;align-items:center;justify-content:space-between;gap:14px;width:100%!important;min-height:72px;margin:0!important;padding:12px 14px;box-sizing:border-box;cursor:pointer}
+.setting-switch-copy{display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left}
+.setting-switch-copy strong{font-size:1.05em;color:#26383e}
+.setting-switch-copy small{font-size:.82em;line-height:1.35;color:#5d6b70;font-weight:400}
+.switch-control{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;width:58px;height:32px}
+.switch-control input{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;opacity:0!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+.switch-slider{position:relative;display:block;width:58px;height:32px;border-radius:999px;background:#87949a;box-shadow:inset 0 1px 3px rgba(0,0,0,.3);transition:background .18s ease}
+.switch-slider::after{content:'';position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .18s ease}
+.switch-control input:checked + .switch-slider{background:#159447}
+.switch-control input:checked + .switch-slider::after{transform:translateX(26px)}
+.switch-control input:focus-visible + .switch-slider{outline:3px solid rgba(35,129,255,.35);outline-offset:2px}
+@media(max-width:600px){.setting-switch-row{min-height:78px;padding:12px 10px}.setting-switch-copy small{font-size:.78em}.switch-control{width:54px}.switch-slider{width:54px}.switch-control input:checked + .switch-slider::after{transform:translateX(22px)}}
+</style>
+
 <style id="mobile-input-balance">
 /* 手機尺寸輸入均衡：部件與板材共用；桌面版及計算行為不變。 */
 .dimension-unit-field{display:contents}
@@ -1010,15 +1030,21 @@ select,
 </div>
 <details class="simple-more-settings" id="moreCutSettings">
   <summary>更多設定</summary>
-  <label for="cuttingStrategy">切割流程</label>
-  <select id="cuttingStrategy" aria-describedby="modeNote">
-    <option value="auto" selected>自動（比較兩種工序）</option>
-    <option value="ripThenCrosscut">先分條再截件</option>
-    <option value="partFirstTree">按成品安排</option>
-  </select>
-  <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
-  <label class="display-unit-option"><input type="checkbox" id="autoDisplayUnits" onchange="calculator.updateDisplayUnitMode()"> 自動換算顯示單位</label>
-  <p class="input-hint">關閉時，部件表格及排版圖會沿用你新增時輸入的尺／寸／分或米／厘米／毫米；開啟後才統一換算顯示。</p>
+  <div class="setting-block cutting-flow-setting">
+    <label for="cuttingStrategy">切割流程</label>
+    <select id="cuttingStrategy" aria-describedby="modeNote">
+      <option value="auto" selected>自動（比較兩種工序）</option>
+      <option value="ripThenCrosscut">先分條再截件</option>
+      <option value="partFirstTree">按成品安排</option>
+    </select>
+    <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
+  </div>
+  <div class="setting-block display-unit-setting">
+    <label class="setting-switch-row" for="autoDisplayUnits">
+      <span class="setting-switch-copy"><strong>自動換算顯示單位</strong><small>開啟後統一換算；關閉時保留新增時輸入的尺／寸／分或米／厘米／毫米。</small></span>
+      <span class="switch-control"><input type="checkbox" id="autoDisplayUnits" onchange="calculator.updateDisplayUnitMode()"><span class="switch-slider" aria-hidden="true"></span></span>
+    </label>
+  </div>
 </details>
 
 <div id="calculationCounter" style="text-align: center; font-size: 0.9em; color: #2F2F2F; margin-bottom: 5px; font-weight: bold; display: none;"></div>

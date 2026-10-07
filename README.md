@@ -28,6 +28,10 @@ The result is a computer-generated candidate layout, not a workshop-safety certi
 
 See [the 2026-10-07 release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, ranking and remnant fixes, search limits, and remaining limitations.
 
+## AI handoff
+
+See [the complete table-saw algorithm, code map, evidence, safety boundaries, tests, and next-step handoff](AI_HANDOFF_鋸枱排料.md) before making future changes.
+
 ## Checks
 
 ```sh

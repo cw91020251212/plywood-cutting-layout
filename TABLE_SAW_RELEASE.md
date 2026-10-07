@@ -1,9 +1,9 @@
 # 傳統鋸枱排料更新
 
-日期：2026-10-07
+日期：2026-10-08
 引擎：`plywood-trial-1.1.0`
 輔助模組：`table-saw-1.0.0`、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=4`
-目前 PWA 快取：`2026-10-07-leftover-dimensions-1`
+目前 PWA 快取：`2026-10-08-calculate-button-sheen-1`
 
 ## 今次正式整合
 
@@ -107,3 +107,9 @@ node --test tests/*.test.cjs
 - 檢查：`node scripts/check-inline-scripts.cjs` 通過（12 個 inline scripts、4 個正式 JS assets），`node --test tests/*.test.cjs` **39/39 通過**。本機瀏覽器案例：603 × 1000 mm 原板、300 × 440 mm 成品、3 mm 鋸縫、四邊各修 10 mm；驗證通過的一板方案有 6 刀。全尺寸清單列出 4 條 7 mm 寬修邊餘料及兩塊終局剩料（280 × 980 mm、300 × 537 mm），R 編號、面積和四邊標籤均與資料相符。
 
 - 正式部署：commit [`f595157`](https://github.com/cw91020251212/plywood-cutting-layout/commit/f59515736aa56ad57b5f3b45747da30b3577aae4) 的 GitHub Actions [37640833306](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37640833306) 成功；公開 HTML、排料模組、餘料模組與 Service Worker 均核對符合該版本。
+
+## 計算按鈕低頻反光提示（2026-10-08）
+
+- 保留原有綠色計算按鈕，只新增窄幅、柔和的左至右白色反光。純 CSS 每 10 秒一輪，約 1.8 秒滑過，淡出後停歇約 7 秒；不改排料、按鈕位置或尺寸。反光不攔截點擊，文字／圖示置於反光上層。
+- 按鈕停用時停止動畫；系統設定 `prefers-reduced-motion: reduce` 時停用動畫。PWA 快取版號更新至 `2026-10-08-calculate-button-sheen-1`。
+- 驗證：回歸測試 **41/41 通過**；隔離瀏覽器讀到 `calculateButtonSheen`、10 秒週期和非停用按鈕，取樣 transform X 約由 −408 px 移至 +713 px，確認實際左至右移動。

@@ -4,7 +4,7 @@
 
 | 項目 | 資料 |
 | --- | --- |
-| 最後核對日期 | 2026-10-07（香港時間） |
+| 最後核對日期 | 2026-10-08（香港時間） |
 | 產品名稱 | 木材切割排版｜夾板簡易排料 |
 | GitHub 專案英文名稱 | `plywood-cutting-layout`；CutNest 只係過往 GitHub／PWA 技術名稱，**畫面產品名稱仍係原本中文名**。 |
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
@@ -371,3 +371,21 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 - 隔離本機瀏覽器實測 603 × 1000 mm 原板、單件 300 × 440 mm、鋸縫 3 mm、四邊各修 10 mm：得到一塊通過驗證的板、6 刀；全部模式顯示 1 件成品與 6 件餘料（4 件 7 mm 寬修邊料、兩塊最終剩料 280 × 980 mm 及 300 × 537 mm），共 7 行；各列列出四邊尺寸與類型。測試後已還原本機預覽原有儲存資料及偏好。這只是覆蓋用例，唔代表所有板料都一定可再利用。
 
 - 正式部署：功能程式 commit [`f595157`](https://github.com/cw91020251212/plywood-cutting-layout/commit/f59515736aa56ad57b5f3b45747da30b3577aae4)；GitHub Actions [37640833306](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37640833306) 成功。公開 HTML、排料模組、刀路／餘料模組與 Service Worker 已按此 commit 核對。
+
+
+## 17. 計算按鈕低頻反光提示（2026-10-08）
+
+### 使用者體驗與原理
+
+計算是主要操作；按鈕現有綠色漸層保持不變，只加窄幅白色高光從左向右斜掃。每個動畫週期 **10 秒**：反光約 1.8 秒完成掃過、漸淡後停歇約 7 秒，不會一直閃爍；高光 `pointer-events:none`，標籤／圖示疊在高光上層，不會遮字或攔截點擊。純 CSS，無 JavaScript 計時器，不改按鈕尺寸、位置、排料行為或使用者輸入。
+
+### 實作與維護
+
+- `index.html` 中 `#calculateButton::before` 為高光薄帶；`@keyframes calculateButtonSheen` 控制左至右移動；`.calculate-content` 使用較高 z-index 確保字及圖示可讀。
+- 按鈕停用時動畫停止；`@media (prefers-reduced-motion: reduce)` 完全停用高光動畫。不要移除減少動態效果規則，也不要令高光 `pointer-events` 開啟。
+- `tests/calculate-button-sheen.test.cjs` 覆蓋 10 秒週期、移動方向、停歇、pointer-events、disabled 及 reduced-motion；`tests/table-saw-optimizer.test.cjs` 亦鎖定頁面動畫與 PWA 版本。
+- Service Worker 快取版本：`2026-10-08-calculate-button-sheen-1`；此變更在單頁 `index.html`，無新增外部資產。
+
+### 驗證
+
+`git diff --check`、`node scripts/check-inline-scripts.cjs`（12 inline scripts、4 production JS assets）及完整 `node --test tests/*.test.cjs` **41/41 通過**。隔離瀏覽器預覽實讀計算按鈕 `::before`：`animationName=calculateButtonSheen`、`duration=10s`、按鈕可用、標籤存在、`pointer-events=none`；約 1.75 秒連續取樣，transform X 由約 −408 px 移至 +713 px，確認反光實際由左向右滑過。

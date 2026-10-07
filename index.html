@@ -244,6 +244,13 @@ table,th,td{border:1px solid #A9A9A9;padding:8px;text-align:center;font-size:1em
 .section label{width:100%;text-align:left;margin-bottom:4px;font-size:1em;color:#2F2F2F}
 #calculateButton{background:#2C5D8A;border:1px solid #1E3D5E;box-shadow:0 3px 8px rgba(0,0,0,0.3);background:linear-gradient(135deg,#28a745,#1e7e34);font-weight:bold;font-size:1.2em;text-shadow:1px 1px 2px rgba(0,0,0,0.3);position:relative;overflow:hidden;z-index:1}
 #calculateButton::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,rgba(255,255,255,0.1),rgba(255,255,255,0.3),rgba(255,255,255,0.1));transform:rotate(30deg);z-index:-1;transition:all 0.5s}
+/* 主要「計算」操作：短暫掃過一束窄反光，之後留長停頓；不蓋字、不截點擊。 */
+#calculateButton::before{content:'';position:absolute;top:-45%;bottom:-45%;left:0;width:28%;border-radius:inherit;background:linear-gradient(108deg,transparent 0%,rgba(255,255,255,.08) 22%,rgba(255,255,255,.54) 50%,rgba(255,255,255,.08) 78%,transparent 100%);transform:translateX(-180%) skewX(-20deg);opacity:0;pointer-events:none;z-index:2}
+#calculateButton .calculate-content{position:relative;z-index:3}
+#calculateButton:not(:disabled)::before{animation:calculateButtonSheen 10s ease-in-out infinite}
+@keyframes calculateButtonSheen{0%,3%,100%{transform:translateX(-180%) skewX(-20deg);opacity:0}5%{opacity:.82}23%{transform:translateX(470%) skewX(-20deg);opacity:.68}27%{opacity:0}}
+#calculateButton:disabled::before{animation:none;opacity:0}
+@media(prefers-reduced-motion:reduce){#calculateButton::before{animation:none!important;opacity:0!important}}
 #calculateButton:hover::after{transform:rotate(30deg) translateX(100%)}
 #printButton{background:#007bff}
 #saveButton{background:#17a2b8}

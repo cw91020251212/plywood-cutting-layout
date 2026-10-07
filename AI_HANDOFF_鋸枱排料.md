@@ -10,8 +10,8 @@
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
 | 儲存庫 | <https://github.com/cw91020251212/plywood-cutting-layout> |
 | 預設分支 | `main`，GitHub Pages 由 GitHub Actions 部署。 |
-| 已發布程式基準 | `9374b56`，引擎 `plywood-trial-1.1.0`，鋸枱模組 `table-saw-1.0.0`，外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=1`；PWA 快取 `2026-10-07-part-dimensions-2`。 |
-| 已驗證正式部署 | GitHub Actions [37609241945](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37609241945) 成功；公開 HTML、排料模組、刀路／餘料模組及 service worker 與指定 commit 相符；部件尺寸模組 SHA-256 亦與本機檔案一致。 |
+| 已發布程式基準 | `f595157`，引擎 `plywood-trial-1.1.0`，鋸枱模組 `table-saw-1.0.0`，外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=4`；PWA 快取 `2026-10-07-leftover-dimensions-1`。 |
+| 已驗證正式部署 | GitHub Actions [37640833306](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37640833306) 成功；公開 HTML、排料模組、刀路／餘料模組與 service worker 均符合 commit `f59515736aa56ad57b5f3b45747da30b3577aae4`。 |
 
 ---
 
@@ -369,3 +369,5 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 - `git diff --check`、`node --check assets/cut-path-overlay.js`、`node scripts/check-inline-scripts.cjs` 通過；完整 `node --test tests/*.test.cjs` **39/39 通過**。
 - 隔離本機瀏覽器實測 603 × 1000 mm 原板、單件 300 × 440 mm、鋸縫 3 mm、四邊各修 10 mm：得到一塊通過驗證的板、6 刀；全部模式顯示 1 件成品與 6 件餘料（4 件 7 mm 寬修邊料、兩塊最終剩料 280 × 980 mm 及 300 × 537 mm），共 7 行；各列列出四邊尺寸與類型。測試後已還原本機預覽原有儲存資料及偏好。這只是覆蓋用例，唔代表所有板料都一定可再利用。
+
+- 正式部署：功能程式 commit [`f595157`](https://github.com/cw91020251212/plywood-cutting-layout/commit/f59515736aa56ad57b5f3b45747da30b3577aae4)；GitHub Actions [37640833306](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37640833306) 成功。公開 HTML、排料模組、刀路／餘料模組與 Service Worker 已按此 commit 核對。

@@ -105,3 +105,5 @@ node --test tests/*.test.cjs
 - 修正執行時會把 `partDimensionHint` 改回舊文案的覆寫，繁中／英文提示現均說明 R 編號及細料清單。
 - PWA 快取升至 `2026-10-07-leftover-dimensions-1`，刀路模組 URL 升至 `assets/cut-path-overlay.js?v=4`；新增覆蓋修邊及最終餘料來源的回歸測試。
 - 檢查：`node scripts/check-inline-scripts.cjs` 通過（12 個 inline scripts、4 個正式 JS assets），`node --test tests/*.test.cjs` **39/39 通過**。本機瀏覽器案例：603 × 1000 mm 原板、300 × 440 mm 成品、3 mm 鋸縫、四邊各修 10 mm；驗證通過的一板方案有 6 刀。全尺寸清單列出 4 條 7 mm 寬修邊餘料及兩塊終局剩料（280 × 980 mm、300 × 537 mm），R 編號、面積和四邊標籤均與資料相符。
+
+- 正式部署：commit [`f595157`](https://github.com/cw91020251212/plywood-cutting-layout/commit/f59515736aa56ad57b5f3b45747da30b3577aae4) 的 GitHub Actions [37640833306](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37640833306) 成功；公開 HTML、排料模組、餘料模組與 Service Worker 均核對符合該版本。

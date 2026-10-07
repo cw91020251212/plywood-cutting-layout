@@ -198,7 +198,7 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<option value="ripThenCrosscut" selected>/);
   assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=1"><\/script>/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-07-table-saw-1'));
+  assert.ok(sw.includes('2026-10-07-table-saw-2'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=1'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=3'));
 });
@@ -229,5 +229,25 @@ test('each PWA core asset exists in the deployed repository',()=>{
   for(const match of list.matchAll(/'([^']+)'/g)){
     const asset=match[1].split('?')[0];
     assert.ok(fs.existsSync(path.join(root,asset)),asset+' must exist');
+  }
+});
+
+test('table-saw guidance is bilingual, exposes the actual process and preserves customary feet-inch-fen inputs',()=>{
+  assert.match(html,/id="tableSawWorkflowHint"[^>]*>鋸枱提示：預設/);
+  assert.match(html,/Table-saw note: defaults to rip, then crosscut/);
+  assert.match(html,/['"]今次採用工序：['"],['"]Process used:['"]/);
+  assert.match(html,/查看逐刀刀序與餘料/);
+  assert.match(html,/Review cut order and offcuts/);
+  assert.match(html,/detailButton\.setAttribute\('aria-controls','cutDetails'\)/);
+  assert.match(html,/target\.open=true/);
+  const expected=['partLengthFt','partLengthInch','partLengthFen','partWidthFt','partWidthInch','partWidthFen',
+    'boardLengthFt','boardLengthInch','boardLengthFen','boardWidthFt','boardWidthInch','boardWidthFen'];
+  for(const id of expected){
+    const field=new RegExp('<input\\b(?=[^>]*\\bid="'+id+'")[^>]*>\\s*<span class="unit-label">(尺|寸|分)<\\/span>');
+    assert.match(html,field,id+' must retain its traditional imperial field and unit label');
+  }
+  for(const id of ['partLengthFen','partWidthFen','boardLengthFen','boardWidthFen']){
+    const start=html.indexOf('id="'+id+'"');
+    assert.ok(start>=0&&html.slice(start-100,start+180).includes('max="7"')&&html.slice(start-100,start+180).includes('step="1"'),id+' still accepts eighth-inch fractions');
   }
 });

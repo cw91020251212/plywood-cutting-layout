@@ -578,6 +578,11 @@ th{background:#C0C0C0;color:#2F2F2F}
 .simple-result .headline{font-size:1.15em;font-weight:bold;color:#244c36}
 .simple-result.incomplete .headline{color:#8b4513}
 .simple-result .used-sheets{font-weight:bold;margin-left:7px}
+.table-saw-workflow-hint{margin:9px 0;padding:9px 11px;border-left:4px solid #23758a;background:rgba(237,247,250,.88);line-height:1.5}
+.result-process-line{margin:8px 0;padding:8px 10px;border-left:4px solid #21844a;background:rgba(232,244,235,.82);line-height:1.5}
+.section .result-details-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:2px 0 8px;padding:8px 12px;border:1px solid #17664c!important;border-radius:5px;background:#1f7958!important;color:#fff!important;font-weight:700;cursor:pointer}
+.result-details-button:hover{background:#185f46}
+.result-details-button:focus-visible{outline:3px solid #f0b642;outline-offset:2px}
 .candidate-warning{margin:8px 0;padding:9px 10px;background:#fff4d6;border:1px solid #d3a33c;border-left:5px solid #d3a33c;border-radius:4px;line-height:1.45;color:#503e18}
 .candidate-warning.incomplete{background:#fff0ec;border-color:#c95c49;border-left-color:#c95c49;color:#5b2a22}
 .validation-failed{margin:8px 0;padding:9px;background:#ffe8e6;border:1px solid #d84b3f;border-radius:4px;color:#702b24}
@@ -1089,6 +1094,7 @@ select {
 <div class="section" id="section-results">
 <div class="section-title"><span class="section-heading-label"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M4 10h16M10 4.5V10M15 10v9.5M4 15h11"/><path d="m6.5 17.2 1.7 1.7 3-3.2"/></svg><span>切割結果</span></span><span class="step-number">4/4</span></div>
 <p class="section-intro">不確定如何設定時，保留預設選項即可開始計算。</p>
+<p id="tableSawWorkflowHint" class="input-hint strategy-hint table-saw-workflow-hint">鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。</p>
 <div class="board-added-notification" id="boardAddedNotification"></div>
 <div class="feature-panel">
 <label>鋸路方向:</label>
@@ -7958,6 +7964,14 @@ window.addEventListener('DOMContentLoaded', () => {
     const stats=plan.stripSearch||{};
     summary.innerHTML=`<div class="headline"><span class="result-number">${isComplete&&pool.length?`方案 ${idx+1}/${pool.length}`:'候選排法'}</span><span class="result-metric">${isComplete?'完整':'未通過完整驗證'}</span><span class="result-metric">板材 ${plan.summary.usedBoardCount} 塊</span><span class="result-metric">切刀 ${cutTotal} 刀</span></div>`;
     root.appendChild(summary);
+    const processLine=document.createElement('p');processLine.className='input-hint strategy-hint result-process-line';
+    const processLabel=document.createElement('strong');processLabel.textContent='今次採用工序：';
+    const processValue=document.createElement('span');processValue.textContent=selectedLabel||'';
+    processLine.append(processLabel,document.createTextNode(' '),processValue);root.appendChild(processLine);
+    const detailButton=document.createElement('button');detailButton.type='button';detailButton.className='result-details-button';
+    detailButton.textContent='查看逐刀刀序與餘料';detailButton.setAttribute('aria-controls','cutDetails');
+    detailButton.addEventListener('click',()=>{const target=$('cutDetails');if(!target)return;target.open=true;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;target.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});const heading=target.querySelector('summary');if(heading&&typeof heading.focus==='function')heading.focus({preventScroll:true});});
+    root.appendChild(detailButton);
     if(stats.limited||stats.unavailable){const info=document.createElement('p');info.className='input-hint';info.textContent=stats.unavailable?'同闊組合模組未載入，已保留貪婪候選；請重新整理。':'同闊組合搜尋達到上限，部分條料已保留貪婪候選；不代表全局最優。';root.appendChild(info);}
     if(verifiedCutPlan){
       const row=document.createElement('div');row.className='cut-path-toggle-row';
@@ -8937,6 +8951,11 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(['刀位（工件／原板）','Cut position (workpiece / sheet)'],['相對工件','Relative to the workpiece '],['鋸縫中心','Kerf center'],['鋸縫邊界','Kerf edges'],['原板全局中心','Original-sheet global center'],['刀位是幾何資料，不是靠山設定值；需核對切削側、成品尺寸及機台。每刀須切穿當時工件，不是在完整原板中間停刀。','Cut positions are geometry, not fence settings. Check the cutting side, finished size, and machine. Each cut crosses the current workpiece; do not stop in the original sheet.'],['同闊組合模組未載入，已保留貪婪候選；請重新整理。','Strip-combination module unavailable; greedy candidates retained. Refresh the page.'],['同闊組合搜尋達到上限，部分條料已保留貪婪候選；不代表全局最優。','Strip search reached its limit; some strips retain greedy candidates. Not a global-optimum guarantee.']);
   dict.push(['開啟','Open'],['Guillotine切割','Guillotine cutting'],['Guillotine切割Layout','Guillotine cutting layout'],['kerf width（預設 3 mm）','Kerf (default: 3 mm)'],['最窄safe support width（mm；未知可留空）','Minimum safe support width (mm; leave blank if unknown)'],['Move part編號','Part number to move'],['part編號','Part number'],['部件編號','Part number'],['板材編號','Sheet number'],['編號','number'],['（米）','(m)'],['（厘米）','(cm)'],['（毫米）','(mm)'],['（尺）','(ft)'],['（呎）','(ft)'],['（寸）','(in)'],['（分）','(eighths of an inch)']);
   dict.push(['庫存原板','stock sheet'],['原板實際尺寸：','Real sheet size: '],['原板實際尺寸','Real sheet size'],['原板 ','Sheet '],['本板成品 ','Parts on this sheet '],['本板成品','Parts on this sheet'],['板面積','sheet area'],['刀序','cut order'],['回放驗證：通過','replay check: passed'],['回放驗證：未通過','replay check: failed'],['回放驗證','replay check'],['通過','passed'],['未通過','failed'],['顏色尺寸圖例','color and size legend'],['分出長條','Rip strip'],['長條待截餘料','strip offcut to crosscut'],['待截件長條料','strip to crosscut'],['待分條原板餘料','sheet offcut to rip'],['從長條','From the strip'],['長條料','strip stock'],['長條','strip'],['原板餘料','sheet offcut'],['待分條','to rip'],['待截件','to crosscut'],['庫存原板 #','stock sheet #'],['回放驗證：','Replay check: '],['截出','cut out'],['排料微調','layout controls'],['微調','adjustments'],['請至少新增一件有效部件','Add at least one valid part'],['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical'],['單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。','Rotating one part succeeded. The layout was re-planned and passed geometry and cut-by-cut replay checks.'],['｜單件旋轉後重排',' | one-part rotation and re-plan']);
+  dict.push(
+    ['鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to rip, then crosscut; every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
+    ['今次採用工序：','Process used:'],
+    ['查看逐刀刀序與餘料','Review cut order and offcuts']
+  );
   const exactOnly=new Set(['可','米','厘米','毫米','尺','呎','寸','分']);
   const order=[...dict].filter(([zh])=>!exactOnly.has(zh)).sort((a,b)=>b[0].length-a[0].length);
   function translateText(value,lang){
@@ -9571,10 +9590,13 @@ body.wood-dark-mode {
   body.wood-dark-mode .search-help,
   body.wood-dark-mode .variation-seq,
   body.wood-dark-mode .welcome-hint,
+  body.wood-dark-mode .table-saw-workflow-hint,
+  body.wood-dark-mode .result-process-line,
   body.wood-dark-mode .cut-board-detail,
   body.wood-dark-mode .cut-metrics{
     background:#293139!important;color:#e8eef2!important;border-color:#596771!important
   }
+  body.wood-dark-mode .result-details-button{background:#21684d!important;color:#fff!important;border-color:#82c4a4!important}
   body.wood-dark-mode .trial-support-control *,
   body.wood-dark-mode .cut-path-toggle-row *,
   body.wood-dark-mode .cut-path-remnants *,

@@ -10,8 +10,8 @@
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
 | 儲存庫 | <https://github.com/cw91020251212/plywood-cutting-layout> |
 | 預設分支 | `main`，GitHub Pages 由 GitHub Actions 部署。 |
-| 已發布程式基準 | `3c473db`，引擎 `plywood-trial-1.2.0`，鋸枱模組 `table-saw-1.1.0`（asset v2），外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=4`；PWA 快取 `2026-10-08-remnant-integrity-1`。 |
-| 已驗證正式部署 | GitHub Actions [37665383156](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37665383156) 成功；公開 HTML、排料模組、刀路／餘料模組與 service worker 均符合 commit `3c473db8983ee3d6af64f98d291a5100236546ec`。 |
+| 已發布程式基準 | `14f65bc`，引擎 `plywood-trial-1.3.0`，鋸枱模組 `table-saw-1.1.0`（asset v2），外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=4`；PWA 快取 `2026-10-08-layout-diversity-1`。 |
+| 已驗證正式部署 | GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) 成功；公開 HTML、排料模組、刀路／餘料模組與 service worker 均符合 commit `14f65bc410279e13beec93b8c429c8a40e22381c`。 |
 
 ---
 
@@ -470,3 +470,5 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 引擎 `plywood-trial-1.3.0`；PWA `2026-10-08-layout-diversity-1`，四個 JS 資產 URL 版本不變。核心位置是 `index.html` 的 `diversityRank()`、`comparePriority()`、`packRipBoard()`／`packTreeBoard()`、`candidateSignature()`、`diversityProfiles()`、`buildCandidatePool()`、`updateVariationControls()`、`searchMoreCandidates()`、`clearCandidatePool()` 及 `rotateTrialPartAndReplan()`；正式測試在 `tests/table-saw-optimizer.test.cjs`。
 
 這仍是有限啟發式搜尋，**不是所有排列的枚舉**；沒有保證每單至少幾個方案。大量反覆追加時池與選單／排序成本會增長，沒有硬截斷候選數；如日後實測超時，才評估 worker、分頁或完整 beam/Pareto 搜尋，不能默默刪掉師傅想要的較低排名方案。本次沒有新增設定項，不改已有偏好的持久化方式，也不新增永久候選池或跨重載的方案選取復原。若將來增加同尺寸不同板種、木紋、封邊或用途，須將有實際意義的需求屬性加入 signature，避免錯誤合併。
+
+正式程式 commit：`14f65bc410279e13beec93b8c429c8a40e22381c`；GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) **success**。公開 HTML、兩個排料／刀路模組及 Service Worker 已逐檔核對與該版本一致。

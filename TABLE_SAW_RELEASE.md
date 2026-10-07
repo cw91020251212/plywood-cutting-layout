@@ -143,3 +143,5 @@ node --test tests/*.test.cjs
 | 正式回歸 | 54/54，跨工序相同實際開料去重亦通過 |
 
 引擎 `plywood-trial-1.3.0`；PWA `2026-10-08-layout-diversity-1`。單件旋轉亦已修正候選 index 與實際顯示不一致的問題，並沿用旋轉後的模式／方向限制追加搜尋。先少用板、同等用料保留最大完整矩形餘料的推薦排序完全不變。仍非全部方案枚舉／最優解／機台安全認證；單一 seed 同步計算完成後才可停止，反覆搜尋的池與選單成本會增長。
+
+正式程式 commit：`14f65bc410279e13beec93b8c429c8a40e22381c`；GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) **success**。公開 HTML、兩個排料／刀路模組及 Service Worker 已逐檔核對與該版本一致。

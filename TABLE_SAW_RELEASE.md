@@ -2,8 +2,8 @@
 
 日期：2026-10-08
 引擎：`plywood-trial-1.3.0`
-輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=2`
-目前 PWA 快取：`2026-10-08-compact-layout-3`
+輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=4`
+目前 PWA 快取：`2026-10-08-compact-layout-5`
 
 ## 今次正式整合
 
@@ -146,10 +146,12 @@ node --test tests/*.test.cjs
 
 正式程式 commit：`14f65bc410279e13beec93b8c429c8a40e22381c`；GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) **success**。公開 HTML、兩個排料／刀路模組及 Service Worker 已逐檔核對與該版本一致。
 
-## 單位保留、簡潔板圖與兩鍵方案比較（2026-10-08）
+## 單位保留、簡潔板圖與可關閉方案遙控器（2026-10-08）
 
 - **尺寸：**排版圖、四邊、圖例、餘料及原板表會帶原始闊／長輸入的單位上下文。輸入寸維持寸；由尺輸入而得到的 8 尺（96 寸）內尺寸亦以寸顯示。計算產生而沒有原輸入可參考的尺寸，才按目前來源單位顯示。內部幾何、鋸縫與驗證仍一律以 mm 進行。
 - **旋轉映射：**四邊顯示先按實際投影判斷該物理邊屬原始長或闊，再取相應原輸入單位；這涵蓋已轉件、橫向觀看的原板，以及長闊剛好相同但輸入單位不同的部件／餘料。
 - **收納與穩定性：**非必要的設定、診斷、板材資料、回放及尺寸清單收進原生 `details`；排版圖和圖例保留在外面。餘料尺寸開關同時隱藏圖中 R／四邊文字、圖下餘料列及切割詳情的餘料清單。
-- **方案操作：**右側 fixed 控制只保留兩個 42 px 箭嘴：上一個／下一個方案。它的唯一用途是工人望住排版圖時即時前後比較，沒有啟動按鈕、標題、選板、拖動、關閉或搜尋控制，並在只有一個方案時隱藏。直選方案與追加／停止搜尋仍可用，但收在預設關閉的「更多方案工具」；兩個箭嘴只觸發既有切換控制，不會重新排料、修改方案 JSON、幾何或切刀序。
-- **離線與檢查：**加入更新的 `assets/layout-view.js?v=2`、`assets/layout-view.css?v=2` 與 `cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-3`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。功能 commit [`0c9bdcd`](https://github.com/cw91020251212/plywood-cutting-layout/commit/0c9bdcd009c23fd6b231ed3445a93c6856eafa29) 的 GitHub Actions [37699444785](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37699444785) **success**；公開 HTML、Service Worker、兩個 layout-view v2 資產的 SHA-256 均與本機相同。正式站以 10 個候選實測由方案 1 切方案 2，排料引擎呼叫數為 0。
+- **方案操作：**右側 fixed 控制保留兩個 42 px 箭嘴：上一個／下一個方案，並加一個不佔主面積的紅色 `×` 關閉鈕。用途是工人望住排版圖前後比較；`×` 只收起遙控器，不改已揀候選。下一次按「計算」才會重新顯示。只有一個方案時整個遙控器隱藏。兩個箭嘴只觸發既有切換控制，不會重新排料、修改方案 JSON、幾何或切刀序。
+- **不再製造圖下區塊：**「更多方案工具」已移除，不會在排版圖／結果下面長出額外面板。原有直選／追加搜尋控制保留在不可見的穩定停車位，讓候選狀態和右側箭嘴在重新計算後正常工作；這輪不把它們重新顯示為另一塊介面。
+- **透明度：**右上角 `⚙ 設定` 的既有透明度選擇新增「方案遙控器」，可選 1–5 級並以本機 `wood-layout-remote-opacity` 記住；只改視覺透明度，不改方案或排料。
+- **離線與檢查：**更新 `assets/layout-view.js?v=4`、`assets/layout-view.css?v=4` 與 `cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-5`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。功能 commit [`0245ff6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/0245ff6ddeb80ba7ba010d00f338621b74e65321) 的 GitHub Actions [37701274641](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37701274641) **success**；公開 HTML、Service Worker、兩個 layout-view v4 資產的 SHA-256 均與本機相同。正式站以 10 個候選實測：`×` 關閉後候選不變、下次計算重開；透明度第 4 級為 0.72；方案 1 轉 2 時排料引擎呼叫數為 0。

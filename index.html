@@ -1258,7 +1258,7 @@ select {
     </select>
   </div>
   <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
-  <p class="part-appearance-hint" id="partDimensionHint">點選模式可點圖中單件查看尺寸；全部模式會逐件標號，並列出尺寸清單。</p>
+  <p class="part-appearance-hint" id="partDimensionHint">點選／全部模式都會沿四條邊標尺寸；長邊兩側標「長」、闊邊兩側標「闊」，細件可查逐邊清單。</p>
 </div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
@@ -7716,7 +7716,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script src="assets/cut-path-overlay.js?v=3"></script>
 <script src="assets/part-appearance.js?v=3"></script>
-<script src="assets/part-dimension-display.js?v=1"></script>
+<script src="assets/part-dimension-display.js?v=2"></script>
 
 <script>
 (function(){
@@ -7874,6 +7874,48 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=6*dpr;ctx.strokeRect(x,y,width,height);
     ctx.strokeStyle='#e66a00';ctx.lineWidth=3*dpr;ctx.strokeRect(x,y,width,height);ctx.restore();
   }
+  function edgeDimensionName(edge,english){
+    return edge.dimension==='length'?(english?'L':'長'):edge.dimension==='width'?(english?'W':'闊'):(english?'Edge':'邊');
+  }
+  function drawEdgeMeasure(ctx,text,centerX,centerY,edgeLength,thickness,angle,dpr){
+    const vertical=Math.abs(angle)>0.5,minFont=6*dpr,maxFont=Math.min(8*dpr,thickness*.58);
+    let layout=null;
+    for(let fontSize=maxFont;fontSize>=minFont;fontSize-=.5*dpr){
+      ctx.font=`700 ${fontSize}px Arial, sans-serif`;
+      const metrics=ctx.measureText(text),padX=Math.max(.7*dpr,fontSize*.12),padY=Math.max(.5*dpr,fontSize*.1);
+      const boxWidth=metrics.width+padX*2,boxHeight=fontSize*1.2+padY*2;
+      const along=vertical?boxHeight:boxWidth,across=vertical?boxWidth:boxHeight;
+      if(along<=edgeLength-4*dpr&&across<=thickness-2*dpr){layout={metrics,fontSize,padX,padY,boxWidth,boxHeight};break;}
+    }
+    if(!layout)return false;
+    ctx.save();ctx.globalAlpha=1;ctx.translate(centerX,centerY);ctx.rotate(angle);
+    ctx.font=`700 ${layout.fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    const left=-layout.boxWidth/2,top=-layout.boxHeight/2;
+    ctx.fillStyle='rgba(255,255,255,.96)';ctx.fillRect(left,top,layout.boxWidth,layout.boxHeight);
+    ctx.strokeStyle='rgba(23,37,43,.82)';ctx.lineWidth=Math.max(.65*dpr,.7);ctx.strokeRect(left,top,layout.boxWidth,layout.boxHeight);
+    ctx.fillStyle='#17252b';ctx.fillText(text,0,0);ctx.restore();return true;
+  }
+  function drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr){
+    if(!dimensionDisplay)return 0;
+    const edges=dimensionDisplay.edgeDimensions(part),bySide=new Map(edges.map(edge=>[edge.side,edge]));
+    if(!edges.length)return 0;
+    const english=window.calculator&&calculator.currentLanguage==='en';
+    const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy,inset=2*dpr;
+    let drawn=0;
+    const draw=(side,angle,edgeLength,thickness,cx,cy)=>{
+      const edge=bySide.get(side);if(!edge)return;
+      const text=`${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`;
+      if(drawEdgeMeasure(ctx,text,cx,cy,edgeLength,thickness,angle,dpr))drawn++;
+    };
+    // Put a measurement on each physical edge; opposite edges intentionally repeat the same value.
+    const horizontalBoxHeight=Math.min(8*dpr,height*.58*1.2+2*dpr);
+    const verticalBoxHeight=Math.min(8*dpr,width*.58*1.2+2*dpr);
+    draw('top',0,width,height,x+width/2,y+inset+horizontalBoxHeight/2);
+    draw('right',Math.PI/2,height,width,x+width-inset-verticalBoxHeight/2,y+height/2);
+    draw('bottom',0,width,height,x+width/2,y+height-inset-horizontalBoxHeight/2);
+    draw('left',-Math.PI/2,height,width,x+inset+verticalBoxHeight/2,y+height/2);
+    return drawn;
+  }
   function drawPartLabels(ctx,canvas,board,boardIndex,parts,X,Y,sx,sy){
     const cssWidth=Math.max(1,canvas.clientWidth||canvas.width),cssHeight=Math.max(1,canvas.clientHeight||canvas.height);
     const scaleX=canvas.width/cssWidth,scaleY=canvas.height/cssHeight,dpr=(scaleX+scaleY)/2;
@@ -7883,15 +7925,21 @@ window.addEventListener('DOMContentLoaded', () => {
     const uprightAngle=(parseInt(canvas.dataset.rotation,10)||0)%360;
     const radians=uprightAngle*Math.PI/180,cos=Math.abs(Math.cos(radians)),sin=Math.abs(Math.sin(radians));
     labelParts.forEach(part=>{
-      const rectWidthCss=part.width*sx/scaleX,rectHeightCss=part.length*sy/scaleY;
       const ordinal=dimensionDisplay?dimensionDisplay.ordinal(board.results,part.id):0;
-      const sizeText=nominalSizeText(part)+(part.rotated?'  ↻':'');
-      const label=(mode!=='auto'&&ordinal)?`#${ordinal} · ${sizeText}`:sizeText;
       const isSelected=mode==='selected'&&selectedId!=null&&String(part.id)===String(selectedId);
+      if(mode!=='auto'){
+        drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr);
+        if(mode==='all'||isSelected)drawPartIndexBadge(ctx,part,ordinal,X,Y,sx,sy,dpr);
+        if(isSelected)drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr);
+        return;
+      }
+      const rectWidthCss=part.width*sx/scaleX,rectHeightCss=part.length*sy/scaleY;
+      const sizeText=nominalSizeText(part)+(part.rotated?'  ↻':'');
+      const label=sizeText;
       const maxWidth=rectWidthCss-2,maxHeight=rectHeightCss-2;
       if(maxWidth<=0||maxHeight<=0){if(mode==='all'||isSelected)drawPartIndexBadge(ctx,part,ordinal,X,Y,sx,sy,dpr);if(isSelected)drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr);return;}
       let chosenSize=0,metrics=null,chosenPadding=0;
-      // 按畫面實際寬高試排。全部模式放不下全文時，以件號標記，並在圖下列出逐件尺寸。
+      // 自動模式保留原有中心尺寸標籤；其他模式改用每邊長度標註。
       const proportionalCap=Math.min(12,Math.max(4.5,Math.min(maxWidth,maxHeight)*.12));
       for(let size=proportionalCap;size>=4.5;size-=.25){
         ctx.font=`600 ${size*dpr}px Arial, sans-serif`;
@@ -7969,36 +8017,42 @@ window.addEventListener('DOMContentLoaded', () => {
     const label=$(`replay-step-${index}`);if(label)label.textContent=`回放 ${count} / ${board.cuts.length} 刀`;
     $('cutDetailsContent').querySelectorAll(`[data-cut-row-board="${index}"]`).forEach(row=>row.classList.toggle('is-current',Number(row.dataset.cutRow)===count&&count>0));
   }
-  function partDimensionLabel(board,part){
+  function partDimensionLabel(board,part,english){
     const number=dimensionDisplay?dimensionDisplay.ordinal(board.results,part.id):0;
-    return `#${number} · ${nominalSizeText(part)}${part.rotated?' ↻':''}`;
+    const projected=boardDisplayProjection(board).rect(part);
+    const edges=dimensionDisplay?dimensionDisplay.edgeDimensions(projected):[];
+    const sideName={top:english?'Top':'上邊',right:english?'Right':'右邊',bottom:english?'Bottom':'下邊',left:english?'Left':'左邊'};
+    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`).join(' · ');
+    return `#${number} · ${measurements||nominalSizeText(part)}${part.rotated?' ↻':''}`;
   }
   function createPartDimensionList(board,index){
     const list=document.createElement('div');list.className='part-dimension-all-list';list.dataset.boardIndex=index;list.hidden=true;
-    list.setAttribute('aria-label','全部部件尺寸');
+    const english=window.calculator&&calculator.currentLanguage==='en';
+    list.setAttribute('aria-label',english?'All four edge dimensions':'全部部件四邊尺寸');
     (board.results||[]).forEach((part,partIndex)=>{
       const item=document.createElement('span');item.className='part-dimension-all-item';item.dataset.partId=part.id;item.dataset.partNumber=String(partIndex+1);
       const swatch=document.createElement('span');swatch.className='part-dimension-all-swatch';swatch.style.backgroundColor=displayColor(part);swatch.setAttribute('aria-hidden','true');
-      const label=document.createElement('span');label.textContent=partDimensionLabel(board,part);item.append(swatch,label);list.appendChild(item);
+      const label=document.createElement('span');label.className='part-dimension-all-label';label.textContent=partDimensionLabel(board,part,english);item.append(swatch,label);list.appendChild(item);
     });
     return list;
   }
   function updateDimensionPanels(){
     const plan=window.calculator&&window.calculator.trialPlan,mode=dimensionDisplay?dimensionDisplay.normalizeMode(partDimensionMode):'auto';
+    const english=window.calculator&&calculator.currentLanguage==='en',hint=$('partDimensionHint');
+    if(hint)hint.textContent=english?'Selected/all modes label all four edges; opposite edges for length show L, and width show W. Use the per-edge list for small parts.':'點選／全部模式會在四條邊各標數值；代表長度的相對兩邊標「長」，代表闊度的相對兩邊標「闊」，細件查逐邊清單。';
     document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
       const index=Number(card.dataset.boardIndex),board=plan&&plan.boards[index],canvas=card.querySelector('canvas.canvas');
       const list=card.querySelector('.part-dimension-all-list'),note=card.querySelector('.part-dimension-selection');
       if(list)list.hidden=mode!=='all';
-      const english=window.calculator&&calculator.currentLanguage==='en';
-      if(list)list.setAttribute('aria-label',english?'All part dimensions':'全部部件尺寸');
-      if(canvas){canvas.style.cursor=mode==='selected'?'crosshair':'';canvas.setAttribute('aria-label',mode==='selected'?(english?'Layout diagram; click a part to see its size':'排版圖；點選部件查看尺寸'):(english?'Layout diagram':'排版圖'));}
+      if(list)list.setAttribute('aria-label',english?'All four edge dimensions':'全部部件四邊尺寸');
+      if(canvas){canvas.style.cursor=mode==='selected'?'crosshair':'';canvas.setAttribute('aria-label',mode==='selected'?(english?'Layout diagram; click a part to see all four edge dimensions':'排版圖；點選部件查看四邊尺寸'):(english?'Layout diagram':'排版圖'));}
       if(!note)return;
       note.hidden=mode!=='selected';
       if(mode!=='selected'||!board)return;
       const selected=selectedDimensionPart&&selectedDimensionPart.boardIndex===index?board.results.find(part=>String(part.id)===String(selectedDimensionPart.partId)):null;
       const count=canvas&&canvas.dataset.replayCount!==''?Number(canvas.dataset.replayCount):null;
       const visible=selected&&canvas?boardDisplayParts(board,boardDisplayProjection(board),count).some(part=>String(part.id)===String(selected.id)):!!selected;
-      note.textContent=visible?partDimensionLabel(board,selected):(english?'Click a part in the diagram to view its dimensions.':'請點選圖中一件部件查看尺寸。');
+      note.textContent=visible?partDimensionLabel(board,selected,english):(english?'Click a part in the diagram to view all four edge dimensions.':'請點選圖中一件部件查看四邊尺寸。');
     });
   }
   function normalizedCanvasPoint(canvas,event){
@@ -8273,7 +8327,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('cuttingStrategy').addEventListener('change',showModeDescription);
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
-  window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate,dimensionLabelMode:partDimensionMode};
+  window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate,updateDimensionPanels,dimensionLabelMode:partDimensionMode};
   function rerenderCurrentTrial(){
     const c=window.calculator,plan=c&&c.trialPlan;if(!plan||!window.PlywoodTrialUI||typeof window.PlywoodTrialUI.render!=='function')return;
     const index=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[index];
@@ -9140,9 +9194,9 @@ window.addEventListener('DOMContentLoaded', () => {
     ['自動（適合時顯示）','Automatic (show when it fits)'],
     ['點選單件顯示尺寸','Click one part to show its dimensions'],
     ['全部部件顯示尺寸','Show dimensions for all parts'],
-    ['點選模式可點圖中單件查看尺寸；全部模式會逐件標號，並列出尺寸清單。','In click mode, select a part in the diagram to view its dimensions. In all mode, every part is numbered and listed.'],
-    ['全部部件尺寸','All part dimensions'],
-    ['請點選圖中一件部件查看尺寸。','Click a part in the diagram to view its dimensions.'],
+    ['點選／全部模式會在四條邊各標數值；代表長度的相對兩邊標「長」，代表闊度的相對兩邊標「闊」，細件查逐邊清單。','Selected/all modes label all four edges; opposite edges for length show L, and width show W. Use the per-edge list for small parts.'],
+    ['全部部件四邊尺寸','All four edge dimensions'],
+    ['請點選圖中一件部件查看四邊尺寸。','Click a part in the diagram to view all four edge dimensions.'],
     ['立體漸層','3D gradient'],
     ['金屬光澤','Metallic sheen'],
     ['原色平面','Original flat colors'],
@@ -9217,6 +9271,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const pageTitle=document.querySelector('head title');if(pageTitle)pageTitle.textContent=lang==='en'?'Plywood Cutting Layout | Simple Plywood Planner':'木材切割排版｜夾板簡易排料';
     if(helpZh)helpZh.style.display=lang==='zh'?'':'none';if(helpEn)helpEn.style.display=lang==='en'?'':'none';
     translateTree(document.body,lang);localizeTables(lang);
+    if(window.PlywoodTrialUI&&window.PlywoodTrialUI.updateDimensionPanels)window.PlywoodTrialUI.updateDimensionPanels();
     if(redraw&&c.trialPlan&&window.PlywoodTrialUI&&typeof window.PlywoodTrialUI.render==='function'){
       const plan=c.trialPlan,idx=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[idx];
       const label=(candidate&&candidate.label)||c._trialCandidateLabel||`按已選工序「${c.trialMode||plan.mode}」${c._trialRotationLabel||''}`;

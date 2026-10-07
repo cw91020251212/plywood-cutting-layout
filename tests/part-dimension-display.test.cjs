@@ -43,8 +43,23 @@ test('part numbers remain tied to the full board order when replay shows only so
   assert.equal(display.ordinal(parts, 'missing'), 0);
 });
 
+test('edge dimensions label each of four sides and keep length/width identity after rotation', () => {
+  const upright = { width: 300, length: 500, originalWidth: 300, originalLength: 500 };
+  assert.deepEqual(display.edgeDimensions(upright), [
+    { side: 'top', dimension: 'width', mm: 300 },
+    { side: 'right', dimension: 'length', mm: 500 },
+    { side: 'bottom', dimension: 'width', mm: 300 },
+    { side: 'left', dimension: 'length', mm: 500 }
+  ]);
+  const rotated = { width: 500, length: 300, originalWidth: 300, originalLength: 500, rotated: true };
+  assert.deepEqual(display.edgeDimensions(rotated).map(edge => [edge.side, edge.dimension, edge.mm]), [
+    ['top', 'length', 500], ['right', 'width', 300], ['bottom', 'length', 500], ['left', 'width', 300]
+  ]);
+  assert.deepEqual(display.edgeDimensions({ width: 0, length: 500 }), []);
+});
+
 test('dimension controls are bilingual, accessible, and connected to the canvas and all-part list', () => {
-  assert.match(html, /<script src="assets\/part-dimension-display\.js\?v=1"><\/script>/);
+  assert.match(html, /<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html, /<label id="partDimensionLabel" for="partDimensionMode">部件尺寸標示<\/label>/);
   assert.match(html, /<option value="auto" selected>自動（適合時顯示）<\/option>/);
   assert.match(html, /<option value="selected">點選單件顯示尺寸<\/option>/);
@@ -55,6 +70,20 @@ test('dimension controls are bilingual, accessible, and connected to the canvas 
   assert.match(html, /handleDimensionCanvasClick/);
   assert.match(html, /part-dimension-all-list/);
   assert.match(html, /dimensionDisplay\.visibleParts/);
+  assert.match(html, /dimensionDisplay\.edgeDimensions\(part\)/);
+  assert.match(html, /Selected\/all modes label all four edges/);
+  assert.match(html, /上邊|Top/);
+});
+
+test('selected and all modes draw a measurement beside each of the four edges and list side names', () => {
+  const start = html.indexOf('function drawPartEdgeDimensions');
+  const end = html.indexOf('\n  function drawPartLabels', start);
+  const source = html.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'four-edge canvas renderer exists');
+  for (const side of ['top', 'right', 'bottom', 'left']) assert.match(source, new RegExp(`draw\\('${side}'`));
+  assert.match(html, /sideName=\{top:english\?'Top':'上邊',right:english\?'Right':'右邊',bottom:english\?'Bottom':'下邊',left:english\?'Left':'左邊'\}/);
+  assert.match(html, /partDimensionLabel\(board,selected,english\)/);
+  assert.match(html, /partDimensionLabel\(board,part,english\)/);
 });
 
 test('changing dimension mode is display-only and preserves the current replay position', () => {

@@ -309,13 +309,13 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 ### 需求與使用方式
 
-使用者發現闊度／長度相近的部件在排版圖上難以分辨，要求能選單件看尺寸，亦要可選擇所有部件顯示尺寸。結果工具列提供三個模式：
+使用者發現闊度／長度相近的部件在排版圖上難以分辨，要求能選單件看尺寸，亦要可選擇所有部件顯示尺寸。使用者後來澄清：「我要知的是長及闊的尺寸，每條邊的尺寸。」**初版只把長 × 闊放在部件中央，是需求理解錯誤；目前選取／全部模式已改成沿四條邊逐邊標尺寸。**結果工具列提供三個模式：
 
 - `auto`（預設）：保持目前自動嘗試在矩形內顯示尺寸的方式。
-- `selected`：點選排版圖內目前可見的成品；該件會顯示 `#件號 · 名義尺寸`，並以白色外框及橙色內框加強標示。再次點背景或未切出的區域會清除選擇。
-- `all`：在可用空間容納時於每件部件中顯示件號和尺寸；細窄件改畫件號徽章，並在圖下列出本板完整的件號、尺寸及識別色，避免文字互相遮住。
+- `selected`：點選排版圖內目前可見的成品；該件沿上、右、下、左四邊各顯示一個尺寸，對應需求「長度」的相對兩邊標長、對應需求「闊度」的相對兩邊標闊；上方訊息也逐側列出值。該件另以白色外框及橙色內框加強標示。再次點背景或未切出的區域會清除選擇。
+- `all`：每件部件的四邊都嘗試標示各自邊長，中央以件號徽章對照；圖下清單逐件列出上／右／下／左四個值及顏色。字標太細放不下時，四側完整數值仍可由清單核對。
 
-清單中的件號以原板 `board.results` 完整順序編定；逐刀回放只顯示已完成的部件，件號仍對應整板清單，不會因未完成的其他部件而重新編號。切到另一刀或重新計算會清除目前單件選取，避免畫面標示與當前可見材料不符。尺寸走原有 `nominalSizeText()`／目前單位 formatter；方向標記 `↻` 仍照原有旋轉資訊顯示。
+清單中的件號以原板 `board.results` 完整順序編定；逐刀回放只顯示已完成的部件，件號仍對應整板清單，不會因未完成的其他部件而重新編號。切到另一刀或重新計算會清除目前單件選取，避免畫面標示與當前可見材料不符。每條邊的數值以投影後 `part.width`／`part.length`（mm）為真值，透過 `originalWidth`／`originalLength` 判定該邊對應原始長度或闊度欄位，再用現有單位 formatter 顯示；因此旋轉或橫板視覺換軸時，標籤仍對應正確需求欄位。方向標記 `↻` 仍照原有旋轉資訊顯示。
 
 ### 原理及重要不變條件
 
@@ -327,18 +327,18 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 ### 程式地圖與版本
 
-- `assets/part-dimension-display.js`：`MODES`、`normalizeMode()`、`visibleParts()`、`ordinal()`、`hitTest()`；幾何函式以 mm／板內座標工作，不依賴 DOM。
-- `index.html`：`PART_DIMENSION_MODE_STORAGE_KEY`、`drawPartLabels()`、`drawPartIndexBadge()`、`drawSelectedPartOutline()`、`boardDisplayParts()`、`normalizedCanvasPoint()`、`handleDimensionCanvasClick()`、`updateDimensionPanels()`、`rerenderCurrentTrial()` 及工具列事件。
+- `assets/part-dimension-display.js`：`MODES`、`normalizeMode()`、`visibleParts()`、`ordinal()`、`hitTest()`、`edgeDimensions()`；邊長映射以 mm 為單位，不依賴 DOM。
+- `index.html`：`PART_DIMENSION_MODE_STORAGE_KEY`、`drawPartLabels()`、`drawPartEdgeDimensions()`／`drawEdgeMeasure()`、`edgeDimensionName()`、`drawPartIndexBadge()`、`drawSelectedPartOutline()`、`boardDisplayParts()`、`normalizedCanvasPoint()`、`handleDimensionCanvasClick()`、`updateDimensionPanels()`、`rerenderCurrentTrial()` 及工具列事件。
 - `tests/part-dimension-display.test.cjs`：模式篩選、最上層命中、件號穩定、雙語/無障礙 markup，以及模式切換只重繪而不重算的回歸測試。
 - `scripts/check-inline-scripts.cjs`：12 個 inline scripts + 4 個正式 JavaScript assets。
-- `sw.js`：PWA app-shell cache version `2026-10-07-part-dimensions-2`；尺寸模組資產 URL `assets/part-dimension-display.js?v=1`。更新 HTML/UI 時提高 cache version，更新模組本身時再一併提升其 URL query 並更新 PWA／測試斷言。
+- `sw.js`：PWA app-shell cache version `2026-10-07-part-dimensions-3`；四邊標註模組資產 URL `assets/part-dimension-display.js?v=2`。更新 HTML/UI 時提高 cache version，更新模組本身時再一併提升其 URL query 並更新 PWA／測試斷言。
 
 ### 本輪驗證結果
 
-- `node scripts/check-inline-scripts.cjs` 通過；`node --test tests/*.test.cjs` **35/35 通過**。程式碼已部署 commit `9374b56`，Actions `37609241945` 成功。
-- 本機瀏覽器以 603 × 1000 mm 板、250 × 400 mm 與 252 × 400 mm 兩件近尺寸部件實際測試。`all` 模式顯示兩件各自編號和尺寸；切換 `selected` 並點第一件後，狀態提示顯示 `#1 · 250 mm × 400 mm ↻`、畫布 cursor 變為 crosshair。結果同時確認 `calculator.trialPlan` 物件仍為同一參照，所有 board cuts JSON 完全一致，證明只改顯示而沒有重新排料。
-- 瀏覽器測試只寫入本機臨時 `calculator.parts`／`calculator.boards`，完成後刪除模式偏好並重新載入空白頁；正式網站、專案 JSON 與使用者訂單資料沒有被修改。
+- `node scripts/check-inline-scripts.cjs` 通過；本次四邊修正的 `node --test tests/*.test.cjs` **37/37 通過**。初版部署 commit `9374b56`（35 項測試，Actions `37609241945`）只供版本歷史參照；本次修正部署 commit／Actions 需在發布完成後填入。
+- 本機瀏覽器以 603 × 1000 mm 板、300 × 440 mm 與 300 × 250 mm 部件實測。全部模式捕捉到 **8 個邊標籤（每件 4 個）**；點選第一件後，上方逐側顯示 `#1 · 上邊: 闊 300 mm · 右邊: 長 440 mm · 下邊: 闊 300 mm · 左邊: 長 440 mm`。旋轉件亦按輸入長／闊欄位標記，非只比較數值大小。
+- 瀏覽器測試只在隔離本機預覽寫入暫時 `calculator.parts`／`calculator.boards`，並還原尺寸模式偏好；正式網站、專案 JSON 與使用者訂單資料沒有被修改。
 
 ### 尚未承諾的能力
 
-本功能不是圖面尺寸線、標尺或工件打印標籤；它係將原有部件需求尺寸顯示在排版圖上。Canvas 空間不足時仍須靠件號清單查閱，不能保證每塊極細小或極密排的部件都能在矩形內顯示完整字串。件號只在本次顯示的原板方案中有效，不是刻入木件的實體標籤、庫存 ID 或跨方案永久 ID。若日後要輸出標籤／尺寸線圖，先確認是否需列印、匯出圖片、跨板唯一編號及回放中如何表示未完成部件，再分開規劃。
+這是沿四邊放置量度文字的排版輔助，不是含延伸線／箭頭、按比例出圖的工程尺寸圖，也不是工件打印標籤。Canvas 空間不足時仍須靠逐邊清單查閱，不能保證每塊極細小或極密排的部件都能在矩形內顯示完整字串。件號只在本次顯示的原板方案中有效，不是刻入木件的實體標籤、庫存 ID 或跨方案永久 ID。若日後要輸出標籤／工程尺寸圖，先確認是否需列印、匯出圖片、跨板唯一編號及回放中如何表示未完成部件，再分開規劃。

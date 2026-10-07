@@ -35,11 +35,36 @@
     return null;
   }
 
+  function edgeDimensions(part) {
+    if (!part) return [];
+    const width = Number(part.width);
+    const length = Number(part.length ?? part.height);
+    if (![width, length].every(Number.isFinite) || width <= 0 || length <= 0) return [];
+
+    const sourceWidth = Number(part.originalWidth ?? width);
+    const sourceLength = Number(part.originalLength ?? length);
+    const nearlyEqual = (a, b) => Number.isFinite(b) && Math.abs(a - b) <= Math.max(1e-7, Math.abs(b) * 1e-9);
+    const nameFor = value => {
+      if (nearlyEqual(sourceWidth, sourceLength)) return 'edge';
+      if (nearlyEqual(value, sourceLength)) return 'length';
+      if (nearlyEqual(value, sourceWidth)) return 'width';
+      return Math.abs(value - sourceLength) < Math.abs(value - sourceWidth) ? 'length' : 'width';
+    };
+
+    // Values are the actual displayed edges in millimetres; opposite sides repeat their measurement.
+    return [
+      { side: 'top', dimension: nameFor(width), mm: width },
+      { side: 'right', dimension: nameFor(length), mm: length },
+      { side: 'bottom', dimension: nameFor(width), mm: width },
+      { side: 'left', dimension: nameFor(length), mm: length }
+    ];
+  }
+
   function ordinal(parts, partId) {
     if (!Array.isArray(parts) || partId == null) return 0;
     const index = parts.findIndex(part => part && part.id != null && String(part.id) === String(partId));
     return index < 0 ? 0 : index + 1;
   }
 
-  return Object.freeze({ MODES, normalizeMode, visibleParts, hitTest, ordinal });
+  return Object.freeze({ MODES, normalizeMode, visibleParts, hitTest, edgeDimensions, ordinal });
 });

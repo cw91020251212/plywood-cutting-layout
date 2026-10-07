@@ -35,3 +35,7 @@
 - [x] 將「方案遙控器」加入 `⚙ 設定` 的既有透明度目標，可選 1–5 級並以 `wood-layout-remote-opacity` 記住；不改方案、切序或幾何。
 
 驗證：64/64 測試通過；功能 commit `0245ff6`，GitHub Actions `37701274641` 成功；公開 HTML、Service Worker、`layout-view.js?v=4`／`layout-view.css?v=4` SHA-256 均與本機相符。正式瀏覽器 10 候選案例確認右側只有 `×`／`‹`／`›`，沒有 `layoutPlanTools`；關閉後候選 index 不變、下次計算重開；透明度第 4 級讀為 0.72 並持久化；方案 1 → 2 不呼叫排料引擎。
+
+- [x] 將直接影響排版圖的「圖面與尺寸設定」從結果區頂部向下移，放在方案摘要之後、排版圖容器的直接上方；使用者改外觀、尺寸、餘料尺寸或切線後可以即時對照同一張圖。
+
+驗證：64/64 測試通過；功能 commit `7d56151`，GitHub Actions `37703072769` 成功；公開 HTML、Service Worker、`layout-view.js?v=5` SHA-256 均與本機相符。正式 10 候選案例確認 `layoutDisplaySettings.nextElementSibling === canvasContainer`，設定底部 683 px、畫布容器頂部 691 px。

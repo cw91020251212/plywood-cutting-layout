@@ -2,8 +2,8 @@
 
 日期：2026-10-08
 引擎：`plywood-trial-1.3.0`
-輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=4`
-目前 PWA 快取：`2026-10-08-compact-layout-5`
+輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=5`
+目前 PWA 快取：`2026-10-08-compact-layout-6`
 
 ## 今次正式整合
 
@@ -154,4 +154,6 @@ node --test tests/*.test.cjs
 - **方案操作：**右側 fixed 控制保留兩個 42 px 箭嘴：上一個／下一個方案，並加一個不佔主面積的紅色 `×` 關閉鈕。用途是工人望住排版圖前後比較；`×` 只收起遙控器，不改已揀候選。下一次按「計算」才會重新顯示。只有一個方案時整個遙控器隱藏。兩個箭嘴只觸發既有切換控制，不會重新排料、修改方案 JSON、幾何或切刀序。
 - **不再製造圖下區塊：**「更多方案工具」已移除，不會在排版圖／結果下面長出額外面板。原有直選／追加搜尋控制保留在不可見的穩定停車位，讓候選狀態和右側箭嘴在重新計算後正常工作；這輪不把它們重新顯示為另一塊介面。
 - **透明度：**右上角 `⚙ 設定` 的既有透明度選擇新增「方案遙控器」，可選 1–5 級並以本機 `wood-layout-remote-opacity` 記住；只改視覺透明度，不改方案或排料。
+- **圖面設定位置：**「圖面與尺寸設定」不再放在切割結果頂部；它現在是 `#canvasContainer` 的直接上一項，放在方案摘要之後、排版圖之前。外觀、四邊尺寸、餘料尺寸與切線開關一開便可立即看見同一張圖的效果。
 - **離線與檢查：**更新 `assets/layout-view.js?v=4`、`assets/layout-view.css?v=4` 與 `cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-5`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。功能 commit [`0245ff6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/0245ff6ddeb80ba7ba010d00f338621b74e65321) 的 GitHub Actions [37701274641](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37701274641) **success**；公開 HTML、Service Worker、兩個 layout-view v4 資產的 SHA-256 均與本機相同。正式站以 10 個候選實測：`×` 關閉後候選不變、下次計算重開；透明度第 4 級為 0.72；方案 1 轉 2 時排料引擎呼叫數為 0。
+- **離線與檢查（位置修正）：**`layout-view.js` 升至 `v=5`，PWA cache 為 `2026-10-08-compact-layout-6`；完整回歸仍為 **64/64 通過**。功能 commit [`7d56151`](https://github.com/cw91020251212/plywood-cutting-layout/commit/7d5615149e8d70c19e1072c05500e9fe72dba025) 的 GitHub Actions [37703072769](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37703072769) **success**；公開 HTML、Service Worker 及 layout-view v5 SHA-256 已核對。正式 10 候選案例確認設定是 `canvasContainer` 的直接上一個元素，設定底部 683 px、圖面容器頂部 691 px。

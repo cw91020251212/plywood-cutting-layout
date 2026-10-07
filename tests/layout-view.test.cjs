@@ -51,12 +51,11 @@ test('the actual result formatter receives per-part original width/length input 
   assert.match(html,/formatEdgeDimension\(projected,edge\)/);
   assert.match(html,/c\._formatTrialDimension\(b\.length\?\?b\.height,b,'length'\)/,'language switching must not revert board length to the old formatter');
 });
-test('compact preferences reject malformed storage and clamp remembered panel positions',()=>{
+test('compact preferences reject malformed storage and retain only folded-section state',()=>{
   const bad={getItem:()=>'{broken'};
-  assert.deepEqual(view.readPreferences(bad),{remoteOpen:false,position:null,expanded:[]});
+  assert.deepEqual(view.readPreferences(bad),{expanded:[]});
   const good={getItem:()=>JSON.stringify({remoteOpen:true,position:{x:6,y:-2},expanded:['layoutDisplaySettings',7]})};
-  assert.deepEqual(view.readPreferences(good),{remoteOpen:true,position:{x:1,y:0},expanded:['layoutDisplaySettings']});
-  assert.deepEqual(view.clampPosition(-4,2000,340,400,360,640),{x:8,y:232});
+  assert.deepEqual(view.readPreferences(good),{expanded:['layoutDisplaySettings']});
 });
 test('input unit policy migrates auto conversion off once, then remembers explicit user choices',()=>{
   const store=new Map([['plywood-layout-auto-display-units-v1','true']]);
@@ -85,17 +84,21 @@ test('a vertical dimension text box cannot spill past the physical edge',()=>{
   const context={};vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawEdgeMeasure`,context);
   assert.equal(context.draw({measureText:()=>({width:40})},'a long label',0,0,20,50,Math.PI/2,1),false);
 });
-test('diagram metadata is folded, the legend stays outside, and real controls move into a fixed modeless panel',()=>{
+test('diagram metadata is folded, the legend stays outside, and two fixed arrows only switch real layouts',()=>{
   assert.match(js,/displaySettings.append\(d.querySelector\('\.part-appearance-toolbar'\)/);
   assert.match(js,/el!==card&&el!==legend&&el!==extras/);
-  assert.match(js,/remote.appendChild\(controls\)/);
+  assert.match(js,/planTools.append\(controls\)/,'advanced choice and search controls stay folded');
+  assert.match(js,/id="remotePreviousVariation"/);
+  assert.match(js,/id="remoteNextVariation"/);
+  assert.match(js,/remotePrevious.addEventListener\('click',\(\)=>previous.click\(\)\)/);
+  assert.match(js,/remoteNext.addEventListener\('click',\(\)=>next.click\(\)\)/);
+  assert.match(js,/switchable=ready&&\(!previous.disabled\|\|!next.disabled\)/,'arrows disappear when there is nothing to compare');
   assert.match(js,/simple-result:not\(\.incomplete\)/,'incomplete errors must not be folded');
   assert.match(js,/error.setAttribute\('role','alert'\)/);
-  assert.match(js,/prefs.remoteOpen=false;save\(\);sync\(\)/);
-  assert.match(js,/setPointerCapture/);
-  assert.match(css,/\.layout-remote\{position:fixed/);
+  assert.doesNotMatch(js,/layoutRemoteLauncher|closeLayoutRemote|remoteBoard|setPointerCapture/,'the remote has no launcher, close panel, board selector or drag behaviour');
+  assert.match(css,/\.layout-remote\{position:fixed;right:/);
   assert.match(html,/const scope=card.closest\('\.board-display-group'\)\|\|card/);
   assert.doesNotMatch(js,/\.plan\(|\.calculateCutting\(/,'view organization must not invoke a new solver');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  for(const asset of ['layout-view.js?v=1','layout-view.css?v=1'])assert.ok(sw.includes(asset)&&html.includes(asset));
+  for(const asset of ['layout-view.js?v=2','layout-view.css?v=2'])assert.ok(sw.includes(asset)&&html.includes(asset));
 });

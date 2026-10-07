@@ -8,31 +8,16 @@
 #canvasContainer .board-display-group>.compact-details .canvas-label{font-size:.85em;padding:6px;white-space:pre-line}
 #canvasContainer .board-display-group>.compact-details .part-dimension-selection{margin:5px 0}
 .output-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.layout-remote-launcher{width:auto!important;height:auto!important;min-height:38px;margin:0!important;padding:7px 12px!important;border-radius:6px;background:#166044!important;color:#fff!important;font-size:.9em!important}
-.layout-remote{position:fixed;z-index:20020;width:min(360px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;background:#fbfdfb;color:#263b40;border:1px solid #658b76;border-radius:10px;box-shadow:0 6px 28px rgba(0,0,0,.3);padding:0 10px 10px}
-.layout-remote[hidden],#layoutRemoteLauncher[hidden]{display:none!important}
-.layout-remote-handle{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:move;touch-action:none;position:sticky;top:0;background:#e3eee6;margin:0 -10px;padding:8px 10px;z-index:1;border-radius:9px 9px 0 0}
-.layout-remote button{width:auto!important;height:auto!important;min-height:36px;margin:0!important;padding:6px 9px!important;background:#245a43!important;color:#fff!important;border-radius:5px;font-size:.88em!important}
-.layout-remote .remote-hint{font-size:.77em;line-height:1.35;margin:6px 0;color:#52695b}
-.remote-board-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:5px;font-size:.85em}
-.remote-board-row select{flex:1;min-width:60px;padding:5px;font-size:1em}
-#layoutRemote #variationControls{margin:3px 0!important;padding:0!important;gap:5px!important}
-#layoutRemote #variationControls .scheme-button{min-width:0;flex:1 1 40%;font-size:.88em!important}
-#layoutRemote #variationControls .variation-counter{font-size:.86em}
-#layoutRemote #variationControls .candidate-chooser{font-size:.8em}
-#layoutRemote #variationControls small{font-size:.72em}
+#layoutPlanTools{margin-top:4px}
+.layout-remote{position:fixed;right:max(8px,env(safe-area-inset-right));top:50%;z-index:20020;display:flex;flex-direction:column;gap:6px;transform:translateY(-50%);padding:4px;background:rgba(251,253,251,.94);border:1px solid #658b76;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+.layout-remote[hidden]{display:none!important}
+.layout-remote button{width:42px!important;height:42px!important;min-height:42px;margin:0!important;padding:0!important;background:#245a43!important;color:#fff!important;border-radius:5px;font-size:30px!important;font-weight:700!important;line-height:1}
+.layout-remote button:disabled{background:#89968e!important;color:#dce2dd!important;opacity:.7}
 body.wood-dark-mode .compact-details{background:#26332d;border-color:#637769}
 body.wood-dark-mode .compact-details>summary{color:#e6efe8}
 body.wood-dark-mode #trialResults .compact-safety{color:#dfc898}
-body.wood-dark-mode .layout-remote{background:#24302a;color:#edf6ee;border-color:#91b09b}
-body.wood-dark-mode .layout-remote-handle{background:#314b3c}
-body.wood-dark-mode .layout-remote .remote-hint{color:#c5d6ca}
-body.wood-dark-mode .remote-board-row select{background:#243140;color:#eef5fa}
-body.wood-dark-mode #layoutRemote .variation-counter,body.wood-dark-mode #layoutRemote .candidate-chooser-label{color:#eef5fa}
-body.wood-dark-mode #layoutRemote .variation-status{color:#dbc69b}
-@media(max-width:600px){.compact-details{padding:6px 8px}.output-heading h2{font-size:1.15em}.layout-remote{width:min(340px,calc(100vw - 16px))}}
-@media print{.layout-remote,.layout-remote-launcher,#layoutDisplaySettings,#layoutInputSettings,#layoutDiagnostics{display:none!important}.compact-details{border:0;box-shadow:none}.compact-details>summary{display:none}.compact-details::details-content{content-visibility:visible!important}}
+body.wood-dark-mode .layout-remote{background:rgba(36,48,42,.96);border-color:#91b09b}
+@media(max-width:600px){.compact-details{padding:6px 8px}.output-heading h2{font-size:1.15em}.layout-remote{right:5px;gap:4px;padding:3px}.layout-remote button{width:38px!important;height:38px!important;min-height:38px;font-size:27px!important}}
+@media print{.layout-remote,#layoutDisplaySettings,#layoutPlanTools,#layoutInputSettings,#layoutDiagnostics{display:none!important}.compact-details{border:0;box-shadow:none}.compact-details>summary{display:none}.compact-details::details-content{content-visibility:visible!important}}
 
 .part-dimension-all-item[hidden]{display:none!important}
-
-body.portrait-display-active #layoutRemoteLauncher{font-size:12px!important;padding:4px 6px!important;min-height:32px;flex:0 0 auto;white-space:nowrap}

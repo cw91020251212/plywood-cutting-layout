@@ -155,8 +155,8 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.match(overlay.copy('remnantCaveat', 'zh'), /不保證未來用途或安全認證/);
   assert.match(html, /cutOverlay\.formatRemnantMeasurements\([^\n]*fmtDim[^\n]*fmtArea\)/);
   assert.match(html, /<\/strong>&nbsp;（\$\{esc\(cutCopy\('remnantSize'\)\)\}）/);
-  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=2"><\/script>/);
-  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=2'"));
+  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=3"><\/script>/);
+  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=3'"));
   assert.match(html, /cut-path-toggle-row/);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]{0,700}cut-path-toggle/);
 });

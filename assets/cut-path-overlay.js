@@ -83,6 +83,11 @@
         if (output.kind === 'material') leaves.set(output.materialId, { ...output.rect });
       }
     }
+    // Exact-fit terminal parts consume existing material without another saw cut.
+    // They must not be offered again as remnants after replaying cuts[].
+    for (const terminal of board.terminals || []) {
+      if (terminal.partId) leaves.delete(terminal.materialId);
+    }
     return [...leaves.entries()]
       .filter(([, rect]) => validRect(rect))
       .map(([materialId, rect]) => ({ materialId, boardId: board.boardId, rect: { ...rect }, area: rect.width * rect.length }));

@@ -11,8 +11,9 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 - Metric and imperial triple-unit input for parts and sheets
 - Kerf/blade thickness and four-side edge-trim settings
 - Fewer-sheets or easier-cutting objectives and multiple layout strategies
+- Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
 - Candidate validation, layout variations, utilisation and sheet count
-- Part rotation, movement, alignment and single-sheet rearrangement
+- One-part rotation followed by full replanning and validation (manual dragging is disabled)
 - Cut-by-cut replay, cut tree and material-balance details
 - Save/load JSON, print reports and save layout images
 - Native share sheet on supported phones, with clipboard fallback
@@ -22,3 +23,16 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 ## Important limitation
 
 The result is a computer-generated candidate layout, not a workshop-safety certification or a guarantee of globally optimal material use. An experienced woodworker must verify the actual sheet, kerf, supports, tools and machine safety before cutting.
+
+## Table-saw update
+
+See [the 2026-10-07 release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, ranking and remnant fixes, search limits, and remaining limitations.
+
+## Checks
+
+```sh
+node scripts/check-inline-scripts.cjs
+node --test tests/*.test.cjs
+```
+
+GitHub Pages runs these checks before deployment.

@@ -14,6 +14,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 - Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
 - Candidate validation, layout variations, utilisation and sheet count
 - Part diagram appearance selector: flat color, same-hue 3D gradient (e.g. dark red to light red, dark blue to light blue), or metallic sheen (visual only; no gray overlay)
+- Part dimension labels: automatic fit, click one part to highlight and read its exact size, or show numbered labels and a full per-sheet dimension list; visual-only and not part of cutting optimization
 - One-part rotation followed by full replanning and validation (manual dragging is disabled)
 - Cut-by-cut replay, cut tree and material-balance details
 - Save/load JSON, print reports and save layout images

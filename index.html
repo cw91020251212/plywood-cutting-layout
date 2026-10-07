@@ -315,11 +315,18 @@ th{background:#C0C0C0;color:#2F2F2F}
 .legend-with-spec{display:flex;flex-direction:column;align-items:center;margin:5px}
 .legend-color-box{width:25px;height:25px;border:1px solid #000;margin-bottom:5px}
 .legend-spec{font-size:12px;text-align:center;max-width:100px}
-.part-appearance-toolbar{display:grid;grid-template-columns:minmax(8rem,auto) minmax(12rem,1fr);align-items:center;gap:7px 12px;margin:12px 0;padding:10px 12px;border:1px solid #c4ced2;border-left:4px solid #34758a;border-radius:8px;background:rgba(255,255,255,.82)}
-.part-appearance-toolbar>label{margin:0;font-weight:700}
+.part-appearance-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:10px 14px;margin:12px 0;padding:10px 12px;border:1px solid #c4ced2;border-left:4px solid #34758a;border-radius:8px;background:rgba(255,255,255,.82)}
+.part-appearance-control{display:grid;grid-template-columns:1fr;gap:5px;min-width:0}
+.part-appearance-control>label{margin:0;font-weight:700}
 .part-appearance-toolbar select{width:100%;min-width:0;min-height:42px}
 .part-appearance-hint{grid-column:1/-1;margin:0;color:#52616a;font-size:.88em;line-height:1.4}
- @media(max-width:600px){.part-appearance-toolbar{grid-template-columns:1fr;gap:5px}.part-appearance-hint{grid-column:1}}
+@media(max-width:600px){.part-appearance-toolbar{grid-template-columns:1fr;gap:8px}.part-appearance-hint{grid-column:1}}
+.part-dimension-selection{margin:5px 0;padding:8px 10px;border-left:4px solid #e78321;border-radius:4px;background:#fff4df;color:#51360f;font-weight:700;line-height:1.4}
+.part-dimension-all-list{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px;padding:6px 2px;max-height:160px;overflow:auto}
+.part-dimension-all-item{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid #cbd5d8;border-radius:5px;background:#fff;color:#26363c;font-size:.88em;line-height:1.35}
+.part-dimension-all-swatch{width:12px;height:12px;flex:0 0 12px;border:1px solid rgba(20,35,35,.58);border-radius:3px}
+#canvasContainer .part-dimension-selection[hidden],#canvasContainer .part-dimension-all-list[hidden]{display:none!important}
+@media print{#canvasContainer .part-dimension-all-list{max-height:none;overflow:visible}}
 .printable-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin-top:15px;padding:10px;background:rgba(255,255,255,0.9);border-radius:8px;font-size:14px;border:1px solid #ccc}
 .tooltip{position:relative;display:inline-block;cursor:help}
 .tooltip .tooltiptext{visibility:hidden;width:200px;background:#555;color:#fff;text-align:center;border-radius:6px;padding:5px;position:absolute;z-index:1;bottom:125%;left:50%;margin-left:-100px;opacity:0;transition:opacity 0.3s}
@@ -638,8 +645,11 @@ th{background:#C0C0C0;color:#2F2F2F}
 #canvasContainer .board-size-legend-swatch{width:16px;height:16px;flex:0 0 16px;border:1px solid rgba(20,35,35,.58);border-radius:3px;box-sizing:border-box}
 #canvasContainer .board-size-legend-label{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;font-size:.9em;line-height:1.3}
 body.wood-dark-mode .part-appearance-toolbar{background:#293139!important;border-color:#65737c!important;color:#e8eef2!important}
-body.wood-dark-mode .part-appearance-toolbar>label{color:#e8eef2!important}
-body.wood-dark-mode #partAppearanceStyle{background:#aeb7c0!important;color:#17212b!important;border-color:#74818b!important}
+body.wood-dark-mode .part-appearance-control>label{color:#e8eef2!important}
+body.wood-dark-mode #partAppearanceStyle,body.wood-dark-mode #partDimensionMode{background:#aeb7c0!important;color:#17212b!important;border-color:#74818b!important}
+body.wood-dark-mode .part-dimension-selection{background:#493d20!important;color:#fff0c2!important;border-color:#d49a39!important}
+body.wood-dark-mode .part-dimension-all-item{background:#293139!important;color:#e8eef2!important;border-color:#65737c!important}
+body.wood-dark-mode .part-dimension-all-swatch{border-color:#aeb7c0!important}
 body.portrait-display-active #canvasContainer .board-size-legend{flex:0 0 auto;justify-content:center;margin:0 0 4px;padding:4px 2px}
 body.portrait-display-layout-pending #canvasContainer .portrait-canvas-stage{visibility:hidden!important}
 
@@ -1230,14 +1240,25 @@ select {
 </div>
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
-<div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel">
-  <label id="partAppearanceLabel" for="partAppearanceStyle">部件顏色風格</label>
-  <select id="partAppearanceStyle" aria-describedby="partAppearanceHint">
-    <option value="glossy" selected>立體漸層</option>
-    <option value="metallic">金屬光澤</option>
-    <option value="flat">原色平面</option>
-  </select>
+<div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel partDimensionLabel">
+  <div class="part-appearance-control" role="group" aria-labelledby="partAppearanceLabel">
+    <label id="partAppearanceLabel" for="partAppearanceStyle">部件顏色風格</label>
+    <select id="partAppearanceStyle" aria-describedby="partAppearanceHint">
+      <option value="glossy" selected>立體漸層</option>
+      <option value="metallic">金屬光澤</option>
+      <option value="flat">原色平面</option>
+    </select>
+  </div>
+  <div class="part-appearance-control" role="group" aria-labelledby="partDimensionLabel">
+    <label id="partDimensionLabel" for="partDimensionMode">部件尺寸標示</label>
+    <select id="partDimensionMode" aria-describedby="partDimensionHint">
+      <option value="auto" selected>自動（適合時顯示）</option>
+      <option value="selected">點選單件顯示尺寸</option>
+      <option value="all">全部部件顯示尺寸</option>
+    </select>
+  </div>
   <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
+  <p class="part-appearance-hint" id="partDimensionHint">點選模式可點圖中單件查看尺寸；全部模式會逐件標號，並列出尺寸清單。</p>
 </div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
@@ -5773,6 +5794,7 @@ class WoodCuttingCalculator {
 
             const label = card.querySelector('.canvas-label');
             const controls = card.querySelector('.canvas-external-controls');
+            const dimensionPanel = card.querySelector('.part-dimension-selection:not([hidden]), .part-dimension-all-list:not([hidden])');
             const cardStyle = window.getComputedStyle(card);
             const px = value => Number.parseFloat(value) || 0;
             const occupiedHeight = element => {
@@ -5783,10 +5805,11 @@ class WoodCuttingCalculator {
             };
             const labelHeight = occupiedHeight(label);
             const controlsHeight = occupiedHeight(controls);
-            const rowCount = 1 + (labelHeight > 0 ? 1 : 0) + (controlsHeight > 0 ? 1 : 0);
+            const dimensionPanelHeight = occupiedHeight(dimensionPanel);
+            const rowCount = 1 + (labelHeight > 0 ? 1 : 0) + (controlsHeight > 0 ? 1 : 0) + (dimensionPanelHeight > 0 ? 1 : 0);
             const availableWidth = Math.max(40, card.clientWidth - px(cardStyle.paddingLeft) - px(cardStyle.paddingRight));
             const availableHeight = Math.max(80,
-                card.clientHeight - px(cardStyle.paddingTop) - px(cardStyle.paddingBottom) - labelHeight - controlsHeight - Math.max(0, rowCount - 1) * px(cardStyle.rowGap));
+                card.clientHeight - px(cardStyle.paddingTop) - px(cardStyle.paddingBottom) - labelHeight - controlsHeight - dimensionPanelHeight - Math.max(0, rowCount - 1) * px(cardStyle.rowGap));
             const targetAngle = 0; // 畫布已直接繪製投影，不再以 CSS 旋轉。
             const currentAngle = 0;
             const stageAngle = 0;
@@ -7693,6 +7716,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script src="assets/cut-path-overlay.js?v=3"></script>
 <script src="assets/part-appearance.js?v=3"></script>
+<script src="assets/part-dimension-display.js?v=1"></script>
 
 <script>
 (function(){
@@ -7792,9 +7816,15 @@ window.addEventListener('DOMContentLoaded', () => {
   let displayColorsBySize=new Map();
   const appearanceRenderer=window.PlywoodPartAppearance||null;
   const PART_APPEARANCE_STORAGE_KEY='plywood-layout-part-appearance-v1';
+  const dimensionDisplay=window.PlywoodPartDimensionDisplay||null;
+  const PART_DIMENSION_MODE_STORAGE_KEY='plywood-layout-part-dimension-mode-v1';
   function readPartAppearancePreference(){try{return appearanceRenderer?appearanceRenderer.normalizeStyle(window.localStorage.getItem(PART_APPEARANCE_STORAGE_KEY)):'flat';}catch(_){return appearanceRenderer?appearanceRenderer.defaultStyle:'flat';}}
   function savePartAppearancePreference(value){try{window.localStorage.setItem(PART_APPEARANCE_STORAGE_KEY,value);}catch(_){/* Local storage may be unavailable in private browsing. */}}
+  function readPartDimensionMode(){try{return dimensionDisplay?dimensionDisplay.normalizeMode(window.localStorage.getItem(PART_DIMENSION_MODE_STORAGE_KEY)):'auto';}catch(_){return 'auto';}}
+  function savePartDimensionMode(value){try{window.localStorage.setItem(PART_DIMENSION_MODE_STORAGE_KEY,value);}catch(_){/* Local storage may be unavailable in private browsing. */}}
   let partAppearanceStyle=readPartAppearancePreference();
+  let partDimensionMode=readPartDimensionMode();
+  let selectedDimensionPart=null;
   function nominalDimensions(part){
     const width=Number(part.originalWidth??part.width),length=Number(part.originalLength??part.length??part.height);
     return {width:Number.isFinite(width)&&width>0?width:0,length:Number.isFinite(length)&&length>0?length:0};
@@ -7830,20 +7860,38 @@ window.addEventListener('DOMContentLoaded', () => {
     const rect=r=>{const x=Number(r.x),y=Number(r.y),w=Number(r.width),h=Number(r.length??r.height),out=swap?{...r,x:y,y:x,width:h,length:w}:{...r,x,y,width:w,length:h};if(swap&&Object.prototype.hasOwnProperty.call(r,'rotated'))out.rotated=!r.rotated;return out;};
     return {swap,width:swap?height:width,height:swap?width:height,rect};
   }
-  function drawPartLabels(ctx,canvas,board,parts,X,Y,sx,sy){
+  function drawPartIndexBadge(ctx,part,ordinal,X,Y,sx,sy,dpr){
+    if(!ordinal)return;
+    const width=part.width*sx,height=part.length*sy,minSide=Math.min(width,height),diameter=Math.min(18*dpr,Math.max(10*dpr,minSide*.76));
+    if(width<diameter||height<diameter)return;
+    const x=X(part.x+part.width/2),y=Y(part.y+part.length/2),fontSize=Math.min(10*dpr,diameter*.57);
+    ctx.save();ctx.globalAlpha=1;ctx.beginPath();ctx.arc(x,y,diameter/2,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.96)';ctx.fill();ctx.strokeStyle='#a64b00';ctx.lineWidth=Math.max(1,dpr);ctx.stroke();
+    ctx.font=`700 ${fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#532800';ctx.fillText(String(ordinal),x,y);ctx.restore();
+  }
+  function drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr){
+    const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy;
+    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=6*dpr;ctx.strokeRect(x,y,width,height);
+    ctx.strokeStyle='#e66a00';ctx.lineWidth=3*dpr;ctx.strokeRect(x,y,width,height);ctx.restore();
+  }
+  function drawPartLabels(ctx,canvas,board,boardIndex,parts,X,Y,sx,sy){
     const cssWidth=Math.max(1,canvas.clientWidth||canvas.width),cssHeight=Math.max(1,canvas.clientHeight||canvas.height);
     const scaleX=canvas.width/cssWidth,scaleY=canvas.height/cssHeight,dpr=(scaleX+scaleY)/2;
-    const calculator=window.calculator;
+    const mode=dimensionDisplay?dimensionDisplay.normalizeMode(partDimensionMode):'auto';
+    const selectedId=selectedDimensionPart&&selectedDimensionPart.boardIndex===boardIndex?selectedDimensionPart.partId:null;
+    const labelParts=dimensionDisplay?dimensionDisplay.visibleParts(parts,mode,selectedId):parts;
     const uprightAngle=(parseInt(canvas.dataset.rotation,10)||0)%360;
     const radians=uprightAngle*Math.PI/180,cos=Math.abs(Math.cos(radians)),sin=Math.abs(Math.sin(radians));
-    parts.forEach(part=>{
+    labelParts.forEach(part=>{
       const rectWidthCss=part.width*sx/scaleX,rectHeightCss=part.length*sy/scaleY;
-      const label=nominalSizeText(part)+(part.rotated?'  ↻':'');
+      const ordinal=dimensionDisplay?dimensionDisplay.ordinal(board.results,part.id):0;
+      const sizeText=nominalSizeText(part)+(part.rotated?'  ↻':'');
+      const label=(mode!=='auto'&&ordinal)?`#${ordinal} · ${sizeText}`:sizeText;
+      const isSelected=mode==='selected'&&selectedId!=null&&String(part.id)===String(selectedId);
       const maxWidth=rectWidthCss-2,maxHeight=rectHeightCss-2;
-      if(maxWidth<=0||maxHeight<=0)return;
+      if(maxWidth<=0||maxHeight<=0){if(mode==='all'||isSelected)drawPartIndexBadge(ctx,part,ordinal,X,Y,sx,sy,dpr);if(isSelected)drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr);return;}
       let chosenSize=0,metrics=null,chosenPadding=0;
-      // 以實際字寬／字高試排，而非用固定的小尺寸門檻提前隱藏；再放不下才留空，圖例仍可查回。
-      // 按部件在畫布上的短邊比例設定上限；細件跟住縮細，仍保留最低可辨識字體。
+      // 按畫面實際寬高試排。全部模式放不下全文時，以件號標記，並在圖下列出逐件尺寸。
       const proportionalCap=Math.min(12,Math.max(4.5,Math.min(maxWidth,maxHeight)*.12));
       for(let size=proportionalCap;size>=4.5;size-=.25){
         ctx.font=`600 ${size*dpr}px Arial, sans-serif`;
@@ -7852,13 +7900,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const boundsWidth=cos*(textWidth+padding*2)+sin*(textHeight+padding*2),boundsHeight=sin*(textWidth+padding*2)+cos*(textHeight+padding*2);
         if(boundsWidth<=maxWidth&&boundsHeight<=maxHeight){chosenSize=size;metrics=measured;chosenPadding=padding;break;}
       }
-      if(!chosenSize||!metrics)return;
+      if(!chosenSize||!metrics){if(mode==='all'||isSelected)drawPartIndexBadge(ctx,part,ordinal,X,Y,sx,sy,dpr);if(isSelected)drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr);return;}
       const centerX=X(part.x+part.width/2),centerY=Y(part.y+part.length/2),fontSize=chosenSize*dpr;
       ctx.save();ctx.globalAlpha=1;ctx.translate(centerX,centerY);ctx.rotate(-radians);
       ctx.font=`600 ${fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
       const pad=chosenPadding*dpr,boxHeight=fontSize*1.25+pad*2;
       ctx.fillStyle='rgba(255,255,255,.88)';ctx.fillRect(-metrics.width/2-pad,-boxHeight/2,metrics.width+pad*2,boxHeight);
       ctx.fillStyle='#17252b';ctx.fillText(label,0,0);ctx.restore();
+      if(isSelected)drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr);
     });
   }
   function drawCutPathOverlay(ctx,canvas,board,index,count,projection,X,Y,W){
@@ -7881,6 +7930,11 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     ctx.restore();
   }
+  function boardDisplayParts(board,projection,count,replay){
+    if(count==null)return (board.results||[]).map(projection.rect);
+    const state=replay||replayState(board,count);
+    return state.parts.map(part=>{const source=board.results.find(item=>item.id===part.id);return projection.rect(source?{...source,...part}:part);});
+  }
   function drawBoard(board,index,card,count,quiet){
     const canvas=card.querySelector('canvas');if(!canvas)return;
     const projection=boardDisplayProjection(board),W=1200,H=Math.max(260,Math.round(W*projection.height/projection.width));
@@ -7890,19 +7944,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctx=canvas.getContext('2d'),sx=W/projection.width,sy=H/projection.height,X=x=>x*sx,Y=y=>y*sy;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#303030';ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
     if(count==null){
-      const parts=board.results.map(projection.rect);
+      const parts=boardDisplayParts(board,projection,null);
       parts.forEach(p=>{drawStyledPart(ctx,p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#245c42');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
-      drawPartLabels(ctx,canvas,board,parts,X,Y,sx,sy);
+      drawPartLabels(ctx,canvas,board,index,parts,X,Y,sx,sy);
       drawCutPathOverlay(ctx,canvas,board,index,board.cuts.length,projection,X,Y,W);
       return;
     }
     const st=replayState(board,count);
     st.offcuts.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(155,166,166,.28)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#9aa8a8';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
     st.leaves.forEach(r=>{const q=projection.rect(r);ctx.fillStyle='rgba(48,150,111,.05)';ctx.fillRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.strokeStyle='rgba(28,121,84,.4)';ctx.setLineDash([7,5]);ctx.strokeRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.setLineDash([]);});
-    const replayParts=st.parts.map(part=>{const source=board.results.find(item=>item.id===part.id);return projection.rect(source?{...source,...part}:part);});
+    const replayParts=boardDisplayParts(board,projection,count,st);
     replayParts.forEach(p=>{const src=board.results.find(x=>x.id===p.id);drawStyledPart(ctx,src?{...src,...p}:p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#235843');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
     st.bands.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(204,45,45,.48)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#a51e1e';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
-    drawPartLabels(ctx,canvas,board,replayParts,X,Y,sx,sy);
+    drawPartLabels(ctx,canvas,board,index,replayParts,X,Y,sx,sy);
     if(canShowCutPaths(board,index))drawCutPathOverlay(ctx,canvas,board,index,count,projection,X,Y,W);
     else{
     const cssScale=W/Math.max(1,canvas.clientWidth||W),cutLabelFont=14*cssScale,cutLabelInset=16*cssScale;
@@ -7914,6 +7968,67 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const label=$(`replay-step-${index}`);if(label)label.textContent=`回放 ${count} / ${board.cuts.length} 刀`;
     $('cutDetailsContent').querySelectorAll(`[data-cut-row-board="${index}"]`).forEach(row=>row.classList.toggle('is-current',Number(row.dataset.cutRow)===count&&count>0));
+  }
+  function partDimensionLabel(board,part){
+    const number=dimensionDisplay?dimensionDisplay.ordinal(board.results,part.id):0;
+    return `#${number} · ${nominalSizeText(part)}${part.rotated?' ↻':''}`;
+  }
+  function createPartDimensionList(board,index){
+    const list=document.createElement('div');list.className='part-dimension-all-list';list.dataset.boardIndex=index;list.hidden=true;
+    list.setAttribute('aria-label','全部部件尺寸');
+    (board.results||[]).forEach((part,partIndex)=>{
+      const item=document.createElement('span');item.className='part-dimension-all-item';item.dataset.partId=part.id;item.dataset.partNumber=String(partIndex+1);
+      const swatch=document.createElement('span');swatch.className='part-dimension-all-swatch';swatch.style.backgroundColor=displayColor(part);swatch.setAttribute('aria-hidden','true');
+      const label=document.createElement('span');label.textContent=partDimensionLabel(board,part);item.append(swatch,label);list.appendChild(item);
+    });
+    return list;
+  }
+  function updateDimensionPanels(){
+    const plan=window.calculator&&window.calculator.trialPlan,mode=dimensionDisplay?dimensionDisplay.normalizeMode(partDimensionMode):'auto';
+    document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
+      const index=Number(card.dataset.boardIndex),board=plan&&plan.boards[index],canvas=card.querySelector('canvas.canvas');
+      const list=card.querySelector('.part-dimension-all-list'),note=card.querySelector('.part-dimension-selection');
+      if(list)list.hidden=mode!=='all';
+      const english=window.calculator&&calculator.currentLanguage==='en';
+      if(list)list.setAttribute('aria-label',english?'All part dimensions':'全部部件尺寸');
+      if(canvas){canvas.style.cursor=mode==='selected'?'crosshair':'';canvas.setAttribute('aria-label',mode==='selected'?(english?'Layout diagram; click a part to see its size':'排版圖；點選部件查看尺寸'):(english?'Layout diagram':'排版圖'));}
+      if(!note)return;
+      note.hidden=mode!=='selected';
+      if(mode!=='selected'||!board)return;
+      const selected=selectedDimensionPart&&selectedDimensionPart.boardIndex===index?board.results.find(part=>String(part.id)===String(selectedDimensionPart.partId)):null;
+      const count=canvas&&canvas.dataset.replayCount!==''?Number(canvas.dataset.replayCount):null;
+      const visible=selected&&canvas?boardDisplayParts(board,boardDisplayProjection(board),count).some(part=>String(part.id)===String(selected.id)):!!selected;
+      note.textContent=visible?partDimensionLabel(board,selected):(english?'Click a part in the diagram to view its dimensions.':'請點選圖中一件部件查看尺寸。');
+    });
+  }
+  function normalizedCanvasPoint(canvas,event){
+    const rect=canvas.getBoundingClientRect();if(!(rect.width>0&&rect.height>0))return null;
+    const width=Math.max(1,canvas.clientWidth||canvas.width),height=Math.max(1,canvas.clientHeight||canvas.height);
+    let x,y;
+    const transform=window.getComputedStyle(canvas).transform;
+    if(transform&&transform!=='none'&&window.DOMMatrix&&window.DOMPoint){
+      try{
+        const inverse=new DOMMatrix(transform).inverse(),centerX=rect.left+rect.width/2,centerY=rect.top+rect.height/2;
+        const local=new DOMPoint(event.clientX-centerX,event.clientY-centerY).matrixTransform(inverse);
+        x=(local.x+width/2)/width;y=(local.y+height/2)/height;
+      }catch(_){x=NaN;y=NaN;}
+    }else{
+      const u=(event.clientX-rect.left)/rect.width,v=(event.clientY-rect.top)/rect.height,angle=((Number(canvas.dataset.rotation)||0)%360+360)%360;
+      if(angle===90){x=v;y=1-u;}else if(angle===180){x=1-u;y=1-v;}else if(angle===270){x=1-v;y=u;}else{x=u;y=v;}
+    }
+    return Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=1&&y>=0&&y<=1?{x,y}:null;
+  }
+  function handleDimensionCanvasClick(event,canvas,board,boardIndex){
+    if(!dimensionDisplay||dimensionDisplay.normalizeMode(partDimensionMode)!=='selected')return;
+    const point=normalizedCanvasPoint(canvas,event),projection=boardDisplayProjection(board);
+    const count=canvas.dataset.replayCount===''?null:Number(canvas.dataset.replayCount);
+    const visible=boardDisplayParts(board,projection,count);
+    const hit=point?dimensionDisplay.hitTest(visible,point.x*projection.width,point.y*projection.height):null;
+    const previous=selectedDimensionPart;
+    selectedDimensionPart=hit&&hit.id!=null?{boardIndex:Number(boardIndex),partId:String(hit.id)}:null;
+    const affected=new Set([previous&&previous.boardIndex,selectedDimensionPart&&selectedDimensionPart.boardIndex].filter(value=>value!=null));
+    affected.forEach(index=>redrawBoard(index));updateDimensionPanels();
+    if(window.calculator.portraitDisplayMode&&window.calculator.handlePortraitDisplayResize)window.calculator.handlePortraitDisplayResize();
   }
   function createBoardLegend(board,index){
     const legend=document.createElement('div');legend.className='board-size-legend';legend.dataset.boardIndex=index;legend.setAttribute('aria-label',`板 ${index+1} 顏色尺寸圖例`);
@@ -7978,12 +8093,13 @@ window.addEventListener('DOMContentLoaded', () => {
     return html;
   }
   function render(plan,selectedLabel){
+    selectedDimensionPart=null;
     window.calculator._trialCandidateLabel=selectedLabel||'';
     const root=$('trialResults'),container=$('canvasContainer'),details=$('cutDetails');
     const verifiedCutPlan=cutOverlay.isVerifiedPlan(plan);activeVerifiedPlan=verifiedCutPlan?plan:null;
     root.innerHTML='';container.innerHTML='';$('colorLegend').style.display='none';$('cuttingLegend').style.display='none';$('schemeSelector').style.display='none';$('utilizationStats').textContent='';
     details.open=false;details.style.display='block';$('cutDetailsContent').innerHTML=detailHtml(plan,selectedLabel);
-    plan.boards.forEach((b,i)=>{let at=b.cuts.length;details.querySelectorAll(`[data-replay-index="${i}"]`).forEach(button=>{button.onclick=()=>{const action=button.dataset.replayAction;if(action==='prev')at=Math.max(0,at-1);else if(action==='next')at=Math.min(b.cuts.length,at+1);else at=b.cuts.length;const card=container.querySelector(`.canvas-container[data-board-index="${i}"]`);if(card)drawBoard(b,i,card,at);};});});
+    plan.boards.forEach((b,i)=>{let at=b.cuts.length;details.querySelectorAll(`[data-replay-index="${i}"]`).forEach(button=>{button.onclick=()=>{const action=button.dataset.replayAction;if(action==='prev')at=Math.max(0,at-1);else if(action==='next')at=Math.min(b.cuts.length,at+1);else at=b.cuts.length;if(selectedDimensionPart&&selectedDimensionPart.boardIndex===i)selectedDimensionPart=null;const card=container.querySelector(`.canvas-container[data-board-index="${i}"]`);if(card)drawBoard(b,i,card,at);updateDimensionPanels();};});});
     const isComplete=plan.validation.ok&&plan.status==='candidate';
     const summary=document.createElement('div');summary.className='simple-result '+(isComplete?'':'incomplete');
     const pool=window.calculator._trialCandidates||[],idx=Number(window.calculator._trialCandidateIndex||0);
@@ -8020,8 +8136,15 @@ window.addEventListener('DOMContentLoaded', () => {
         const group=document.createElement('div');group.className='board-display-group';group.dataset.boardGroupIndex=i;
         const card=document.createElement('div');card.className='canvas-container';card.dataset.boardIndex=i;
         const stage=document.createElement('div');stage.className='portrait-canvas-stage';
-        const canvas=document.createElement('canvas');canvas.className='canvas';canvas.dataset.boardIndex=i;stage.appendChild(canvas);card.appendChild(stage);
+        const canvas=document.createElement('canvas');canvas.className='canvas';canvas.dataset.boardIndex=i;
+        canvas.addEventListener('click',event=>handleDimensionCanvasClick(event,canvas,b,i));
+        const isolateDimensionClick=event=>{if(partDimensionMode==='selected')event.stopPropagation();};
+        canvas.addEventListener('mousedown',isolateDimensionClick,true);canvas.addEventListener('dblclick',isolateDimensionClick,true);
+        canvas.addEventListener('touchstart',isolateDimensionClick,{capture:true,passive:true});
+        stage.appendChild(canvas);card.appendChild(stage);
         const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${fmtDim(b.width)} × ${fmtDim(b.length)}\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
+        const selectedNote=document.createElement('div');selectedNote.className='part-dimension-selection';selectedNote.dataset.boardIndex=i;selectedNote.hidden=true;selectedNote.setAttribute('role','status');selectedNote.setAttribute('aria-live','polite');card.appendChild(selectedNote);
+        card.appendChild(createPartDimensionList(b,i));
         group.appendChild(card);
         // 必須先加入頁面，讓 clientWidth 有實際值；否則首次繪圖的字體及鋸線會縮到極細。
         container.appendChild(group);
@@ -8029,6 +8152,7 @@ window.addEventListener('DOMContentLoaded', () => {
         group.appendChild(createBoardLegend(b,i));
         if(window.calculator._createTrialRotationControls) group.appendChild(window.calculator._createTrialRotationControls(b,i));
       });
+      updateDimensionPanels();
       details.addEventListener('toggle',function onToggle(){if(!details.open)return;details.removeEventListener('toggle',onToggle);});
     }
     if(window.calculator.portraitDisplayMode) window.calculator.handlePortraitDisplayResize();
@@ -8149,21 +8273,34 @@ window.addEventListener('DOMContentLoaded', () => {
   $('cuttingStrategy').addEventListener('change',showModeDescription);
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
-  window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate};
+  window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate,dimensionLabelMode:partDimensionMode};
+  function rerenderCurrentTrial(){
+    const c=window.calculator,plan=c&&c.trialPlan;if(!plan||!window.PlywoodTrialUI||typeof window.PlywoodTrialUI.render!=='function')return;
+    const index=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[index];
+    const label=(candidate&&candidate.label)||c._trialCandidateLabel||`按已選工序「${c.trialMode||plan.mode}」${c._trialRotationLabel||''}`;
+    const replay=[];document.querySelectorAll('#canvasContainer canvas.canvas').forEach((canvas,i)=>replay[i]=canvas.dataset.replayCount===''?null:Number(canvas.dataset.replayCount));
+    const details=$('cutDetails'),wasOpen=!!(details&&details.open);
+    window.PlywoodTrialUI.render(plan,label);
+    replay.forEach((count,i)=>{if(count!==null&&window.PlywoodTrialUI.redrawBoard){const canvas=document.querySelector(`#canvasContainer canvas.canvas[data-board-index="${i}"]`);if(canvas){canvas.dataset.replayCount=String(count);window.PlywoodTrialUI.redrawBoard(i);}}});
+    updateDimensionPanels();if(details)details.open=wasOpen;if(c.translatePage)c.translatePage();if(window.PlywoodTrialUI.updateVariationControls)window.PlywoodTrialUI.updateVariationControls();
+    if(c.portraitDisplayMode&&c.handlePortraitDisplayResize)c.handlePortraitDisplayResize();
+  }
   const appearanceSelect=$('partAppearanceStyle');
   if(appearanceSelect){
     appearanceSelect.value=partAppearanceStyle;
     appearanceSelect.addEventListener('change',()=>{
       partAppearanceStyle=appearanceRenderer?appearanceRenderer.normalizeStyle(appearanceSelect.value):'flat';
       appearanceSelect.value=partAppearanceStyle;savePartAppearancePreference(partAppearanceStyle);
-      const c=window.calculator,plan=c&&c.trialPlan;if(!plan||!window.PlywoodTrialUI||typeof window.PlywoodTrialUI.render!=='function')return;
-      const index=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[index];
-      const label=(candidate&&candidate.label)||c._trialCandidateLabel||`按已選工序「${c.trialMode||plan.mode}」${c._trialRotationLabel||''}`;
-      const replay=[];document.querySelectorAll('#canvasContainer canvas.canvas').forEach((canvas,i)=>replay[i]=canvas.dataset.replayCount===''?null:Number(canvas.dataset.replayCount));
-      const details=$('cutDetails'),wasOpen=!!(details&&details.open);
-      window.PlywoodTrialUI.render(plan,label);
-      replay.forEach((count,i)=>{if(count!==null&&window.PlywoodTrialUI.redrawBoard){const canvas=document.querySelector(`#canvasContainer canvas.canvas[data-board-index="${i}"]`);if(canvas){canvas.dataset.replayCount=String(count);window.PlywoodTrialUI.redrawBoard(i);}}});
-      if(details)details.open=wasOpen;if(c.translatePage)c.translatePage();if(window.PlywoodTrialUI.updateVariationControls)window.PlywoodTrialUI.updateVariationControls();
+      rerenderCurrentTrial();
+    });
+  }
+  const dimensionModeSelect=$('partDimensionMode');
+  if(dimensionModeSelect){
+    dimensionModeSelect.value=partDimensionMode;
+    dimensionModeSelect.addEventListener('change',()=>{
+      partDimensionMode=dimensionDisplay?dimensionDisplay.normalizeMode(dimensionModeSelect.value):'auto';
+      dimensionModeSelect.value=partDimensionMode;window.PlywoodTrialUI.dimensionLabelMode=partDimensionMode;
+      savePartDimensionMode(partDimensionMode);selectedDimensionPart=null;rerenderCurrentTrial();
     });
   }
 })();
@@ -8999,6 +9136,13 @@ window.addEventListener('DOMContentLoaded', () => {
     ['今次採用工序：','Process used:'],
     ['查看逐刀刀序與餘料','Review cut order and offcuts'],
     ['部件顏色風格','Part color style'],
+    ['部件尺寸標示','Part dimension labels'],
+    ['自動（適合時顯示）','Automatic (show when it fits)'],
+    ['點選單件顯示尺寸','Click one part to show its dimensions'],
+    ['全部部件顯示尺寸','Show dimensions for all parts'],
+    ['點選模式可點圖中單件查看尺寸；全部模式會逐件標號，並列出尺寸清單。','In click mode, select a part in the diagram to view its dimensions. In all mode, every part is numbered and listed.'],
+    ['全部部件尺寸','All part dimensions'],
+    ['請點選圖中一件部件查看尺寸。','Click a part in the diagram to view its dimensions.'],
     ['立體漸層','3D gradient'],
     ['金屬光澤','Metallic sheen'],
     ['原色平面','Original flat colors'],

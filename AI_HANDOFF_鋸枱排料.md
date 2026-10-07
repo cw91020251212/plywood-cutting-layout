@@ -29,7 +29,7 @@
 
 ## 2. 現時程式有咩、用乜嘢技術
 
-專案係一個**靜態 GitHub Pages 前端應用**，冇建置 bundler／後端資料庫等先決條件。正式頁面本體以單一 `index.html` 為主，引擎係內嵌 JavaScript；另載入兩個輕量輔助 JS 資產。同一核心裁切引擎可由瀏覽器及 Node.js 回歸測試執行。
+專案係一個**靜態 GitHub Pages 前端應用**，冇建置 bundler／後端資料庫等先決條件。正式頁面本體以單一 `index.html` 為主，引擎係內嵌 JavaScript；另載入四個輕量輔助 JS 資產（切割排序、刀路、色彩外觀、部件尺寸互動）。同一核心裁切引擎可由瀏覽器及 Node.js 回歸測試執行。
 
 使用者現有功能包括：
 
@@ -39,7 +39,7 @@
 - 鋸縫（kerf）、原板四邊修邊及邊緣能否保留為成品邊。
 - 「先分條再截件」、按成品展開切割樹，以及自動比較工序；**預設先分條再截件**。
 - 「慳料優先」及「開料方便優先」兩種**候選排序方式**；排序唔代表全局最優或精確用時。
-- 候選排版、原板張數、成品利用率、餘料、逐刀回放、材料平衡、排版畫布、儲存／載入 JSON、列印、PWA 離線資產。
+- 候選排版、原板張數、成品利用率、餘料、逐刀回放、材料平衡、排版畫布、三種部件尺寸顯示（自動／點選單件／全部件號與清單）、儲存／載入 JSON、列印、PWA 離線資產。
 - 單件旋轉會重新排料並重驗證；**不能依賴跨板手動拖曳作試排**。
 
 使用者未輸入板價／不同板種價格，所以「慳料」係幾何代理排序，**唔等於成本計算或實際節省金額**。支撐寬度可以留空；留空只會產生候選草排，輸入數值亦只作幾何篩選，唔係機台安全認證。
@@ -55,15 +55,18 @@
 | `index.html` 約 75xx | 切樹／逐刀 replay、成品 ID 完整度、鋸縫及原板面積帳。改演算法必須通過現有 `verifyBoard()`，唔好繞過。 |
 | `index.html` 約 7596–7666 | `PlywoodTrialEngine.plan()`：庫存板次序、補板模板、候選計畫、方向核對、摘要。 |
 | `assets/table-saw-optimizer.js` | Node／瀏覽器共用嘅子集搜尋、刀位換算及候選排名輔助模組。唔取代主切樹及驗證器。 |
+| `assets/part-dimension-display.js` | 純函數尺寸模式、可見部件篩選、穩定件號及 Canvas 幾何命中測試；不涉及排料計算。 |
+| `assets/part-appearance.js` | 同色相圖面漸層／平面外觀；視覺限定。 |
 | `index.html` 約 7756 | `replayState()`：預覽逐刀後嘅材料葉；**免刀 terminal 成品亦要消耗**。 |
 | `assets/cut-path-overlay.js` | 顯示經驗證刀路與 `finalMaterialLeaves()` 最終未用材料。唔係獨立排料器。 |
 | `index.html` 約 7995–8071 | UI 的 `getParts()`／`getBoards()`、候選比較、有限 profiles、完整度／方向驗證及 `calculate()`。 |
 | `index.html` 約 8073 起 | JSON 匯入／匯出與舊 schema 相容處理；變更欄位之前須加匯入回歸測試。 |
-| `sw.js` | 離線靜態資產 cache version。新增 JS 須同步 core asset、HTML URL 版本及測試。 |
+| `sw.js` | 離線靜態資產 cache version；目前新增尺寸 UI 使用 `2026-10-07-part-dimensions-2`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
 | `.github/workflows/pages.yml` | `main` push 部署 Pages；Node.js 22 先跑 inline JS 語法與全部 tests。 |
-| `tests/cut-path-overlay.test.cjs` | 原有 10 個 UI／刀路／單位／餘料顯示測試。 |
-| `tests/table-saw-optimizer.test.cjs` | 新增 14 個演算法、切序、候選池、回退、安全邊界及 PWA 測試。 |
-| `scripts/check-inline-scripts.cjs` | Node `vm.Script` 語法檢查 `index.html` 內嵌 JavaScript 及 3 個正式資產。 |
+| `tests/cut-path-overlay.test.cjs` | UI／刀路／單位／餘料顯示測試。 |
+| `tests/part-dimension-display.test.cjs` | 顯示模式、點選命中、穩定件號、雙語、只重繪及回放位置回歸。 |
+| `tests/table-saw-optimizer.test.cjs` | 演算法、切序、候選池、回退、安全邊界及 PWA 測試。 |
+| `scripts/check-inline-scripts.cjs` | Node `vm.Script` 語法檢查 `index.html` 內嵌 JavaScript 及 4 個正式資產。 |
 | `README.md` | 快速功能清單、重要限制及測試指令。 |
 | `TABLE_SAW_RELEASE.md` | 本輪發版摘要、數值反例、限制及回歸結果。 |
 
@@ -302,3 +305,42 @@ v3 改由每件部件自己的 HSL / RGB / HEX 色碼算出 `hsl(hue saturation 
 
 
 v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 右上內側取樣並轉回 HSL：紅色 hue 0°，立體 L **42.4 → 63.9**、金屬 L **35.5 → 73.5**；藍色 hue 210°，立體 L **47.5 → 69.0**、金屬 L **40.4 → 78.4**；綠色 hue 120°，立體 L **50.4 → 72.0**、金屬 L **43.5 → 81.6**。三種平面色兩點相同。這證明同色系明度方向，不是材料色度測量；測試只用隔離 Canvas，沒有改網站輸入、localStorage 或排料方案。
+
+
+## 15. 2026-10-07 排版圖部件尺寸標示
+
+### 需求與使用方式
+
+使用者發現闊度／長度相近的部件在排版圖上難以分辨，要求能選單件看尺寸，亦要可選擇所有部件顯示尺寸。結果工具列提供三個模式：
+
+- `auto`（預設）：保持目前自動嘗試在矩形內顯示尺寸的方式。
+- `selected`：點選排版圖內目前可見的成品；該件會顯示 `#件號 · 名義尺寸`，並以白色外框及橙色內框加強標示。再次點背景或未切出的區域會清除選擇。
+- `all`：在可用空間容納時於每件部件中顯示件號和尺寸；細窄件改畫件號徽章，並在圖下列出本板完整的件號、尺寸及識別色，避免文字互相遮住。
+
+清單中的件號以原板 `board.results` 完整順序編定；逐刀回放只顯示已完成的部件，件號仍對應整板清單，不會因未完成的其他部件而重新編號。切到另一刀或重新計算會清除目前單件選取，避免畫面標示與當前可見材料不符。尺寸走原有 `nominalSizeText()`／目前單位 formatter；方向標記 `↻` 仍照原有旋轉資訊顯示。
+
+### 原理及重要不變條件
+
+`assets/part-dimension-display.js` 是無依賴 UMD 純函數模組（`window.PlywoodPartDimensionDisplay`），提供模式正規化、所顯示的部件篩選、同一塊板的穩定件號及矩形 hit-test。`index.html` 將瀏覽器點擊從 viewport 經 Canvas bounds、DOMMatrix 反算到局部畫布，再用本板目前投影／回放狀態做幾何命中測試；不能以肉眼抽樣或字標位置當作尺寸真值。
+
+顏色／尺寸模式都只重繪現成候選。切換尺寸模式 **不能呼叫 `calculate()`、重建候選池或更改方案資料**；目前方案物件、部件位置、方向、原板來源、刀樹、鋸縫及材料帳必須保持不變。切換時保存並恢復逐刀回放步數及詳情展開狀態；只把視覺狀態存在本機 `localStorage` key `plywood-layout-part-dimension-mode-v1`，不存入匯出 JSON，也不覆寫部件需求。
+
+旋轉顯示時要保留 hit-test 座標反算（`normalizedCanvasPoint()`），滿版直向畫布亦要把可見尺寸面板計入可用高度；若之後變更 rotation 或 projection，必須用瀏覽器重新驗證點選區。`all` 模式在印刷時保留尺寸清單；使用者切換顯示選項本身不應改成排料輸入，也不能擋住已存在的旋轉或回放控制。不得因為尺寸太細就縮改排料幾何或聲稱尺寸已符合現場量測。
+
+### 程式地圖與版本
+
+- `assets/part-dimension-display.js`：`MODES`、`normalizeMode()`、`visibleParts()`、`ordinal()`、`hitTest()`；幾何函式以 mm／板內座標工作，不依賴 DOM。
+- `index.html`：`PART_DIMENSION_MODE_STORAGE_KEY`、`drawPartLabels()`、`drawPartIndexBadge()`、`drawSelectedPartOutline()`、`boardDisplayParts()`、`normalizedCanvasPoint()`、`handleDimensionCanvasClick()`、`updateDimensionPanels()`、`rerenderCurrentTrial()` 及工具列事件。
+- `tests/part-dimension-display.test.cjs`：模式篩選、最上層命中、件號穩定、雙語/無障礙 markup，以及模式切換只重繪而不重算的回歸測試。
+- `scripts/check-inline-scripts.cjs`：12 個 inline scripts + 4 個正式 JavaScript assets。
+- `sw.js`：PWA app-shell cache version `2026-10-07-part-dimensions-2`；尺寸模組資產 URL `assets/part-dimension-display.js?v=1`。更新 HTML/UI 時提高 cache version，更新模組本身時再一併提升其 URL query 並更新 PWA／測試斷言。
+
+### 本輪驗證結果
+
+- `node scripts/check-inline-scripts.cjs` 通過；`node --test tests/*.test.cjs` **35/35 通過**（部署前仍須在最新工作樹重跑）。
+- 本機瀏覽器以 603 × 1000 mm 板、250 × 400 mm 與 252 × 400 mm 兩件近尺寸部件實際測試。`all` 模式顯示兩件各自編號和尺寸；切換 `selected` 並點第一件後，狀態提示顯示 `#1 · 250 mm × 400 mm ↻`、畫布 cursor 變為 crosshair。結果同時確認 `calculator.trialPlan` 物件仍為同一參照，所有 board cuts JSON 完全一致，證明只改顯示而沒有重新排料。
+- 瀏覽器測試只寫入本機臨時 `calculator.parts`／`calculator.boards`，完成後刪除模式偏好並重新載入空白頁；正式網站、專案 JSON 與使用者訂單資料沒有被修改。
+
+### 尚未承諾的能力
+
+本功能不是圖面尺寸線、標尺或工件打印標籤；它係將原有部件需求尺寸顯示在排版圖上。Canvas 空間不足時仍須靠件號清單查閱，不能保證每塊極細小或極密排的部件都能在矩形內顯示完整字串。件號只在本次顯示的原板方案中有效，不是刻入木件的實體標籤、庫存 ID 或跨方案永久 ID。若日後要輸出標籤／尺寸線圖，先確認是否需列印、匯出圖片、跨板唯一編號及回放中如何表示未完成部件，再分開規劃。

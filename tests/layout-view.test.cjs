@@ -84,21 +84,27 @@ test('a vertical dimension text box cannot spill past the physical edge',()=>{
   const context={};vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawEdgeMeasure`,context);
   assert.equal(context.draw({measureText:()=>({width:40})},'a long label',0,0,20,50,Math.PI/2,1),false);
 });
-test('diagram metadata is folded, the legend stays outside, and two fixed arrows only switch real layouts',()=>{
+test('diagram metadata is folded, the legend stays outside, and the right remote closes without adding a tools block',()=>{
   assert.match(js,/displaySettings.append\(d.querySelector\('\.part-appearance-toolbar'\)/);
   assert.match(js,/el!==card&&el!==legend&&el!==extras/);
-  assert.match(js,/planTools.append\(controls\)/,'advanced choice and search controls stay folded');
+  assert.match(js,/parking.append\(controls\)/,'hidden native controls survive result rerenders without creating another visible block');
   assert.match(js,/id="remotePreviousVariation"/);
   assert.match(js,/id="remoteNextVariation"/);
+  assert.match(js,/id="closeLayoutRemote"/);
   assert.match(js,/remotePrevious.addEventListener\('click',\(\)=>previous.click\(\)\)/);
   assert.match(js,/remoteNext.addEventListener\('click',\(\)=>next.click\(\)\)/);
+  assert.match(js,/const close=\(\)=>\{closed=true;sync\(\);\}/,'closing hides the remote without changing a candidate');
+  assert.match(js,/c\.calculateCutting=function\(\)\{closed=false;/,'a later calculation reopens the comparison remote');
   assert.match(js,/switchable=ready&&\(!previous.disabled\|\|!next.disabled\)/,'arrows disappear when there is nothing to compare');
   assert.match(js,/simple-result:not\(\.incomplete\)/,'incomplete errors must not be folded');
   assert.match(js,/error.setAttribute\('role','alert'\)/);
-  assert.doesNotMatch(js,/layoutRemoteLauncher|closeLayoutRemote|remoteBoard|setPointerCapture/,'the remote has no launcher, close panel, board selector or drag behaviour');
+  assert.doesNotMatch(js,/layoutRemoteLauncher|layoutPlanTools|remoteBoard|setPointerCapture/,'the remote has no launcher, added tools block, board selector or drag behaviour');
   assert.match(css,/\.layout-remote\{position:fixed;right:/);
+  assert.match(css,/--wood-layout-remote-opacity/,'the remote follows the existing adjustable opacity convention');
+  assert.match(html,/wood-opacity-target-layout/,'settings expose a dedicated remote opacity target');
+  assert.match(html,/wood-layout-remote-opacity/);
   assert.match(html,/const scope=card.closest\('\.board-display-group'\)\|\|card/);
   assert.doesNotMatch(js,/\.plan\(|\.calculateCutting\(/,'view organization must not invoke a new solver');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  for(const asset of ['layout-view.js?v=2','layout-view.css?v=2'])assert.ok(sw.includes(asset)&&html.includes(asset));
+  for(const asset of ['layout-view.js?v=4','layout-view.css?v=4'])assert.ok(sw.includes(asset)&&html.includes(asset));
 });

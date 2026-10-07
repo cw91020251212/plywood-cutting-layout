@@ -54,21 +54,26 @@
     const displaySettings=details('layoutDisplaySettings','圖面與尺寸設定',heading.parentNode);heading.after(displaySettings);
     displaySettings.append(d.querySelector('.part-appearance-toolbar'),d.querySelector('.search-help'));
     const unitSetting=d.querySelector('.display-unit-setting');if(unitSetting)displaySettings.append(unitSetting);
-    const planTools=details('layoutPlanTools','更多方案工具',heading.parentNode);heading.after(planTools);
-    const controls=$('variationControls');planTools.append(controls);
+    const controls=$('variationControls');
+    const parking=d.createElement('div');parking.id='layoutControlsParking';parking.hidden=true;d.body.appendChild(parking);parking.append(controls);
     const messages=details('layoutDiagnostics','診斷訊息',heading.parentNode);$('cutDetails').after(messages);
     ['suggestionMessage','progressMessage','status'].forEach(id=>messages.appendChild($(id)));
     const error=$('errorMessage');heading.before(error);error.setAttribute('role','alert');
     const remote=d.createElement('nav');remote.id='layoutRemote';remote.className='layout-remote no-print';remote.hidden=true;remote.setAttribute('aria-label','切換排版方案');
-    remote.innerHTML='<button type="button" id="remotePreviousVariation" aria-label="上一個排法" title="上一個排法">‹</button><button type="button" id="remoteNextVariation" aria-label="下一個排法" title="下一個排法">›</button>';
+    remote.innerHTML='<button type="button" id="closeLayoutRemote" class="layout-remote-close" aria-label="關閉方案遙控器" title="關閉">×</button><button type="button" id="remotePreviousVariation" aria-label="上一個排法" title="上一個排法">‹</button><button type="button" id="remoteNextVariation" aria-label="下一個排法" title="下一個排法">›</button>';
     d.body.appendChild(remote);
-    const previous=$('previousVariationButton'),next=$('nextVariationButton'),remotePrevious=$('remotePreviousVariation'),remoteNext=$('remoteNextVariation');
+    const previous=$('previousVariationButton'),next=$('nextVariationButton'),remotePrevious=$('remotePreviousVariation'),remoteNext=$('remoteNextVariation'),remoteClose=$('closeLayoutRemote');
+    let closed=false;
     const sync=()=>{
       const ready=!controls.hidden,switchable=ready&&(!previous.disabled||!next.disabled);
-      planTools.hidden=!ready;remote.hidden=!switchable;
+      remote.hidden=!switchable||closed;
       remotePrevious.disabled=!switchable||previous.disabled;remoteNext.disabled=!switchable||next.disabled;
     };
-    remotePrevious.addEventListener('click',()=>previous.click());remoteNext.addEventListener('click',()=>next.click());
+    const close=()=>{closed=true;sync();};
+    remotePrevious.addEventListener('click',()=>previous.click());remoteNext.addEventListener('click',()=>next.click());remoteClose.addEventListener('click',close);
+    remote.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close();}});
+    const calculate=c.calculateCutting;
+    if(typeof calculate==='function')c.calculateCutting=function(){closed=false;return calculate.apply(this,arguments);};
     function compact() {
       const root=$('trialResults');
       if(root.querySelector('.simple-result:not(.incomplete)')) {

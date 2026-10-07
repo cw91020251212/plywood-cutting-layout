@@ -8,16 +8,17 @@
 #canvasContainer .board-display-group>.compact-details .canvas-label{font-size:.85em;padding:6px;white-space:pre-line}
 #canvasContainer .board-display-group>.compact-details .part-dimension-selection{margin:5px 0}
 .output-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-#layoutPlanTools{margin-top:4px}
-.layout-remote{position:fixed;right:max(8px,env(safe-area-inset-right));top:50%;z-index:20020;display:flex;flex-direction:column;gap:6px;transform:translateY(-50%);padding:4px;background:rgba(251,253,251,.94);border:1px solid #658b76;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+#layoutControlsParking[hidden]{display:none!important}
+.layout-remote{position:fixed;right:max(8px,env(safe-area-inset-right));top:50%;z-index:20020;display:flex;flex-direction:column;gap:6px;transform:translateY(-50%);padding:4px;background:rgba(251,253,251,.94);border:1px solid #658b76;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.22);opacity:var(--wood-layout-remote-opacity,.56)}
 .layout-remote[hidden]{display:none!important}
 .layout-remote button{width:42px!important;height:42px!important;min-height:42px;margin:0!important;padding:0!important;background:#245a43!important;color:#fff!important;border-radius:5px;font-size:30px!important;font-weight:700!important;line-height:1}
+.layout-remote .layout-remote-close{position:absolute!important;top:-10px!important;right:-10px!important;width:22px!important;height:22px!important;min-height:22px!important;background:#b42318!important;border:2px solid #fff!important;border-radius:50%!important;font-size:21px!important;font-weight:400!important;line-height:16px!important;z-index:1}
 .layout-remote button:disabled{background:#89968e!important;color:#dce2dd!important;opacity:.7}
 body.wood-dark-mode .compact-details{background:#26332d;border-color:#637769}
 body.wood-dark-mode .compact-details>summary{color:#e6efe8}
 body.wood-dark-mode #trialResults .compact-safety{color:#dfc898}
 body.wood-dark-mode .layout-remote{background:rgba(36,48,42,.96);border-color:#91b09b}
-@media(max-width:600px){.compact-details{padding:6px 8px}.output-heading h2{font-size:1.15em}.layout-remote{right:5px;gap:4px;padding:3px}.layout-remote button{width:38px!important;height:38px!important;min-height:38px;font-size:27px!important}}
-@media print{.layout-remote,#layoutDisplaySettings,#layoutPlanTools,#layoutInputSettings,#layoutDiagnostics{display:none!important}.compact-details{border:0;box-shadow:none}.compact-details>summary{display:none}.compact-details::details-content{content-visibility:visible!important}}
+@media(max-width:600px){.compact-details{padding:6px 8px}.output-heading h2{font-size:1.15em}.layout-remote{right:5px;gap:4px;padding:3px}.layout-remote button{width:38px!important;height:38px!important;min-height:38px;font-size:27px!important}.layout-remote .layout-remote-close{width:21px!important;height:21px!important;min-height:21px!important;font-size:20px!important}}
+@media print{.layout-remote,#layoutDisplaySettings,#layoutInputSettings,#layoutDiagnostics{display:none!important}.compact-details{border:0;box-shadow:none}.compact-details>summary{display:none}.compact-details::details-content{content-visibility:visible!important}}
 
 .part-dimension-all-item[hidden]{display:none!important}

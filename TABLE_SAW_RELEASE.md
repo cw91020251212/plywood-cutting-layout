@@ -3,7 +3,7 @@
 日期：2026-10-08
 引擎：`plywood-trial-1.3.0`
 輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=1`
-目前候發 PWA 快取：`2026-10-08-compact-layout-2`
+目前 PWA 快取：`2026-10-08-compact-layout-2`
 
 ## 今次正式整合
 
@@ -146,10 +146,10 @@ node --test tests/*.test.cjs
 
 正式程式 commit：`14f65bc410279e13beec93b8c429c8a40e22381c`；GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) **success**。公開 HTML、兩個排料／刀路模組及 Service Worker 已逐檔核對與該版本一致。
 
-## 單位保留、簡潔板圖與浮動方案遙控器（2026-10-08；候發）
+## 單位保留、簡潔板圖與浮動方案遙控器（2026-10-08）
 
 - **尺寸：**排版圖、四邊、圖例、餘料及原板表會帶原始闊／長輸入的單位上下文。輸入寸維持寸；由尺輸入而得到的 8 尺（96 寸）內尺寸亦以寸顯示。計算產生而沒有原輸入可參考的尺寸，才按目前來源單位顯示。內部幾何、鋸縫與驗證仍一律以 mm 進行。
 - **旋轉映射：**四邊顯示先按實際投影判斷該物理邊屬原始長或闊，再取相應原輸入單位；這涵蓋已轉件、橫向觀看的原板，以及長闊剛好相同但輸入單位不同的部件／餘料。
 - **收納與穩定性：**非必要的設定、診斷、板材資料、回放及尺寸清單收進原生 `details`；排版圖和圖例保留在外面。餘料尺寸開關同時隱藏圖中 R／四邊文字、圖下餘料列及切割詳情的餘料清單。方案遙控器為 fixed 浮窗，不會擠壓或推低圖面，並可拖動、關閉、以 Escape 關閉及在縮放後夾回視窗內。
 - **方案操作：**遙控器重用既有上一個／下一個、直選、追加／停止搜尋的真控制；可選查看哪塊原板。遙控器開關、位置、收納狀態、餘料尺寸開關及顯示單位偏好均保留在本機瀏覽器；不會修改方案 JSON、排料幾何或切刀序。
-- **離線與檢查：**加入 `assets/layout-view.js?v=1`、`assets/layout-view.css?v=1` 與更新的 `assets/cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-2`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。候發版本仍需在 GitHub Pages 部署完成後核對 Actions、公開 HTML、兩項新資產與 Service Worker。
+- **離線與檢查：**加入 `assets/layout-view.js?v=1`、`assets/layout-view.css?v=1` 與更新的 `assets/cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-2`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。功能 commit [`9fb2a88`](https://github.com/cw91020251212/plywood-cutting-layout/commit/9fb2a880e2ade94bdc7aca86f977e254143598a6) 的 GitHub Actions [37680265005](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37680265005) **success**；公開 HTML、Service Worker、兩個 layout-view 資產及 `cut-path-overlay.js?v=5` 的 SHA-256 均與本機相同。

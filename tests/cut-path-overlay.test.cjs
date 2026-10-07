@@ -163,6 +163,8 @@ test('geometric fit honors input orientation; dimensions and area format through
   assert.deepEqual(metric, { length: '220 mm', width: '350 mm', area: '77000 mm²' });
   const imperial = overlay.formatRemnantMeasurements({ rect: { x: 0, y: 0, width: 350, length: 220 } }, value => `${(value / 25.4).toFixed(2)} in`, value => `${(value / 645.16).toFixed(2)} sq in`);
   assert.deepEqual(imperial, { length: '8.66 in', width: '13.78 in', area: '119.35 sq in' });
+  const preserved = overlay.formatRemnantMeasurements(remnant, value => `${value} fallback`, value => `${value} area`, value => `${value / 10} cm`, value => `${value / 25.4} in`);
+  assert.deepEqual(preserved, { length: '22 cm', width: '13.779527559055119 in', area: '77000 area' });
 });
 
 test('new user-facing copy exists in both languages and the phone toggle has compact responsive CSS', () => {
@@ -176,27 +178,29 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.equal(overlay.copy('remnantSize', 'en'), 'length × width');
   assert.match(overlay.copy('fitsCurrent', 'en'), /^Geometrically fits/);
   assert.match(overlay.copy('remnantCaveat', 'zh'), /不保證未來用途或安全認證/);
-  assert.match(html, /cutOverlay\.formatRemnantMeasurements\([^\n]*fmtDim[^\n]*fmtArea\)/);
+  assert.match(html, /cutOverlay\.formatRemnantMeasurements\(remnant,fmtDim,fmtArea,value=>fmtDim\(value,source,'length'\),value=>fmtDim\(value,source,'width'\)\)/);
   assert.match(html, /cutOverlay\.leftoverPieces\(board\)/);
   assert.match(html, /data-remnant-kind/);
   assert.match(html, /<\/strong>&nbsp;（\$\{esc\(cutCopy\('remnantSize'\)\)\}）/);
-  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=4"><\/script>/);
-  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=4'"));
+  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=5"><\/script>/);
+  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=5'"));
   assert.match(html, /cut-path-toggle-row/);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]{0,700}cut-path-toggle/);
 });
 
 
 function loadUnitFormatters(unitSystem) {
-  const dimension = html.match(/function formatDimension\(mm\) \{([\s\S]*?)\n  \}\n  function formatArea/);
+  const start=html.indexOf('  function formatDimension(mm,item,dimension)');
+  const end=html.indexOf('\n  function formatArea',start);
+  const dimension=start>=0&&end>start?html.slice(start,end):null;
   const area = html.match(/function formatArea\(mm2\) \{([\s\S]*?)\n  \}\n\n  function refreshPartTable/);
   assert.ok(dimension, 'extract the current repo display dimension formatter');
   assert.ok(area, 'extract the current repo display area formatter');
-  const context = {};
+  const context = {window:{},calculator:{autoDisplayUnits:false}};
   vm.runInNewContext(`
     const nfmt = n => Number(n).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
     const selectedUnit = () => ${JSON.stringify(unitSystem)};
-    function formatDimension(mm) {${dimension[1]}\n    }
+    ${dimension}
     function formatArea(mm2) {${area[1]}\n    }
     globalThis.formatters = { formatDimension, formatArea };
   `, context, { filename: `index.html#formatters-${unitSystem}` });
@@ -206,12 +210,12 @@ function loadUnitFormatters(unitSystem) {
 test('candidate board caption renders a 72×48 in sheet in the selected unit; metric output remains mm', () => {
   const captionLine = html.split('\n').find(line => line.includes('原板實際尺寸：'));
   assert.ok(captionLine, 'find the real candidate board caption in the current renderer');
-  assert.ok(captionLine.includes('${fmtDim(b.width)} × ${fmtDim(b.length)}'), 'caption must format actual width and length through fmtDim');
+  assert.ok(captionLine.includes("${fmtDim(b.width,boardInputFor(b),'width')} × ${fmtDim(b.length,boardInputFor(b),'length')}"), 'caption must format actual dimensions with their source input units');
   assert.doesNotMatch(captionLine, /toLocaleString|\}\s*mm/, 'caption must not append a hard-coded mm suffix');
 
   const widthMm = 72 * 25.4, lengthMm = 48 * 25.4;
   const imperial = loadUnitFormatters('imperial');
-  assert.equal(`${imperial.formatDimension(widthMm)} × ${imperial.formatDimension(lengthMm)}`, '6尺 × 4尺');
+  assert.equal(`${imperial.formatDimension(widthMm)} × ${imperial.formatDimension(lengthMm)}`, '72寸 × 48寸');
   assert.equal(imperial.formatArea(widthMm * lengthMm), '3,456 吋²');
 
   const metric = loadUnitFormatters('metric');
@@ -247,7 +251,8 @@ test('kerf, edge trim, cut rectangles and remnant dimensions all use current-uni
   assert.ok(html.includes('fmtDim(plan.kerf)'), 'kerf output is formatted through the selected-unit formatter');
   assert.ok(html.includes('fmtDim(trim.left)') && html.includes('fmtDim(trim.right)') && html.includes('fmtDim(trim.top)') && html.includes('fmtDim(trim.bottom)'), 'all four trim outputs share that formatter');
   assert.ok(html.includes('rectText(step.kerfBand)') && html.includes('rectText(step.sourceRect)') && html.includes('outputsText(step)'), 'cut details pass actual cut rectangles and outputs through rectText');
-  assert.ok(html.includes('cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea)'), 'remnant dimensions and area use the same active dimension/area formatters');
+  assert.match(html,/cutOverlay\.formatRemnantMeasurements\(remnant,fmtDim,fmtArea,value=>fmtDim\(value,source,'length'\),value=>fmtDim\(value,source,'width'\)\)/, 'remnant dimensions retain their source sheet length/width units');
+  assert.match(html,/data-remnant-details/,'the detailed remnant list participates in the remnant-dimension switch');
   assert.match(html, /const oldUpdateUnitSystem = calculator\.updateUnitSystem\.bind\(calculator\);[\s\S]*?if \(this\.trialPlan\)\s*\{[\s\S]*?PlywoodTrialUI\.render\(this\.trialPlan/, 'changing units rerenders the existing plan without recomputing cut data');
 });
 

@@ -472,3 +472,22 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 這仍是有限啟發式搜尋，**不是所有排列的枚舉**；沒有保證每單至少幾個方案。大量反覆追加時池與選單／排序成本會增長，沒有硬截斷候選數；如日後實測超時，才評估 worker、分頁或完整 beam/Pareto 搜尋，不能默默刪掉師傅想要的較低排名方案。本次沒有新增設定項，不改已有偏好的持久化方式，也不新增永久候選池或跨重載的方案選取復原。若將來增加同尺寸不同板種、木紋、封邊或用途，須將有實際意義的需求屬性加入 signature，避免錯誤合併。
 
 正式程式 commit：`14f65bc410279e13beec93b8c429c8a40e22381c`；GitHub Actions [37669086183](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37669086183) **success**。公開 HTML、兩個排料／刀路模組及 Service Worker 已逐檔核對與該版本一致。
+
+## 20. 原輸入單位、介面收納及浮動方案遙控器（2026-10-08；候發）
+
+### 20.1 顯示契約（不改 mm 幾何）
+
+`assets/layout-view.js` 的 `formatLength()` 是唯一的單位保留純函式；`index.html` 的 `formatDimension(mm,item,dimension)` 傳入部件／原板的 `originalWidthInputs` 或 `originalLengthInputs`。輸入寸不轉尺；從尺輸入而總長不超過 96 寸時，顯示為寸；沒有可比對的原輸入才用同系統的合理單位。格式化不可量化或改寫供引擎、鋸縫、切樹及驗證使用的 mm 真值。
+
+四邊文字只可經 `formatEdgeDimension()` 取單位：它先判斷目前繪製邊（含 `rotated` 與 `boardDisplayProjection()`）代表原長或原闊。餘料 `remnantPartForDisplay()` 帶入原板的兩組輸入單位；不要把同一個任意單位套到其四條邊。語言切換時 `localizeTables()` 也必須經 `c._formatTrialDimension(..., b, 'width'/'length')`，不可掉回 `displayDimension()`。
+
+### 20.2 收納、遙控器與持久化
+
+- `assets/layout-view.js` 的 `install()` 只重組既有 DOM 和既有方案控制，不可呼叫 `plan()`／`calculateCutting()` 或修改 candidate；`PlywoodCompactUI` 僅提供 `compact()`／`sync()`。
+- `layout-view.css` 的遙控器為 `position:fixed`，因此不可把它改回會推移排版圖的 inline 面板。錯誤訊息保持在外且有 `role=alert`；排版圖與圖例不可收進 `details`。餘料尺寸開關亦必須同步隱藏 Canvas、圖下清單和 `data-remnant-details` 的切割詳情清單。
+- key `plywood-layout-compact-view-v1` 只保存遙控器開關、位置和折疊狀態；餘料尺寸、部件尺寸模式、外觀及自動顯示單位各自沿用其既有 localStorage key。存取失敗或不合法 JSON 必須靜默回預設，不能令計算失效。
+- 進入直向滿版時，啟動按鈕移入頂部滿版控制列；遙控器仍可開關而不遮擋 Canvas。滿版縮放須以目前畫布旋轉後的 bounding dimensions 計算，避免 90°／270° 下裁切。
+
+### 20.3 發版資產與回歸
+
+新增 `assets/layout-view.js?v=1`、`assets/layout-view.css?v=1`，並把更改過的刀路模組提升至 `assets/cut-path-overlay.js?v=5`；`sw.js` 候發 cache 為 `2026-10-08-compact-layout-2`。`scripts/check-inline-scripts.cjs` 應檢查 12 個 inline scripts + 5 個正式 production assets。`tests/layout-view.test.cjs` 覆蓋 8 尺界線、原寸超長、複合單位、旋轉／四邊格式器、localStorage 壞資料、餘料開關、收納、固定浮窗與 cache 資產；完整測試目前 **64/64 通過**。推送後須更新本節的正式 commit、Actions run 與公開資產驗證紀錄。

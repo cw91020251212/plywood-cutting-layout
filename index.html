@@ -952,6 +952,7 @@ select {
 body.wood-dark-mode #canvasContainer .part-dimension-all-item{background:#293139;color:#e8eef2;border-color:#65737c}
 body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]{background:#36352f}
 </style>
+<link rel="stylesheet" href="assets/layout-view.css?v=1">
 </head>
 <body>
 <div class="container">
@@ -1280,6 +1281,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
       <option value="all">全部部件及餘料顯示尺寸</option>
     </select>
   </div>
+  <label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸</span><input id="showRemnantDimensions" type="checkbox" checked><span>顯示餘料四邊尺寸與 R 編號</span></label>
   <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
   <p class="part-appearance-hint" id="partDimensionHint">餘料（包括修邊料）亦會沿四邊標尺寸；圖中 R 編號對應下方清單，太細則看清單。</p>
 </div>
@@ -1402,7 +1404,7 @@ function saveUnitSystemPreference(value) {
     catch (_) { return false; }
 }
 function readAutoDisplayUnitsPreference() {
-    try { return window.localStorage.getItem(DISPLAY_UNIT_MODE_STORAGE_KEY) === 'true'; }
+    try { if(window.localStorage.getItem('plywood-layout-input-unit-policy-v2')!== 'applied'){window.localStorage.setItem(DISPLAY_UNIT_MODE_STORAGE_KEY,'false');window.localStorage.setItem('plywood-layout-input-unit-policy-v2','applied');} return window.localStorage.getItem(DISPLAY_UNIT_MODE_STORAGE_KEY) === 'true'; }
     catch (_) { return false; }
 }
 function saveAutoDisplayUnitsPreference(value) {
@@ -5833,16 +5835,16 @@ class WoodCuttingCalculator {
             const availableWidth = Math.max(40, card.clientWidth - px(cardStyle.paddingLeft) - px(cardStyle.paddingRight));
             const availableHeight = Math.max(80,
                 card.clientHeight - px(cardStyle.paddingTop) - px(cardStyle.paddingBottom) - labelHeight - controlsHeight - dimensionPanelHeight - Math.max(0, rowCount - 1) * px(cardStyle.rowGap));
-            const targetAngle = 0; // 畫布已直接繪製投影，不再以 CSS 旋轉。
-            const currentAngle = 0;
-            const stageAngle = 0;
+            const currentAngle = ((Number(canvas.dataset.rotation)||0)%360+360)%360;
+            const quarterTurn = currentAngle===90||currentAngle===270;
+            const stageAngle = 0; // Canvas view rotation is separate from the stage's fitted bounds.
             const usableWidth = Math.max(10, availableWidth - 6);
             const usableHeight = Math.max(10, availableHeight - 6);
-            const scale = Math.min(usableWidth / displayWidth, usableHeight / displayHeight);
+            const scale = Math.min(usableWidth / (quarterTurn?displayHeight:displayWidth), usableHeight / (quarterTurn?displayWidth:displayHeight));
             const canvasWidth = Math.max(1, displayWidth * scale);
             const canvasHeight = Math.max(1, displayHeight * scale);
-            const stageWidth = canvasWidth + 6;
-            const stageHeight = canvasHeight + 6;
+            const stageWidth = (quarterTurn?canvasHeight:canvasWidth) + 6;
+            const stageHeight = (quarterTurn?canvasWidth:canvasHeight) + 6;
             stage.style.setProperty('--portrait-stage-width', `${stageWidth}px`);
             stage.style.setProperty('--portrait-stage-height', `${stageHeight}px`);
             stage.style.setProperty('--portrait-stage-angle', `${stageAngle}deg`);
@@ -7759,9 +7761,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
-<script src="assets/cut-path-overlay.js?v=4"></script>
+<script src="assets/cut-path-overlay.js?v=5"></script>
 <script src="assets/part-appearance.js?v=3"></script>
 <script src="assets/part-dimension-display.js?v=2"></script>
+<script src="assets/layout-view.js?v=1"></script>
 
 <script>
 (function(){
@@ -7769,7 +7772,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nfmt=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:2});
-  const fmtDim=value=>window.calculator&&window.calculator._formatTrialDimension?window.calculator._formatTrialDimension(value):`${nfmt(value)} mm`;
+  const fmtDim=(value,item,dimension)=>window.calculator&&window.calculator._formatTrialDimension?window.calculator._formatTrialDimension(value,item,dimension):`${nfmt(value)} mm`;
   const fmtArea=value=>window.calculator&&window.calculator._formatTrialArea?window.calculator._formatTrialArea(value):`${nfmt(value)} mm²`;
   const area=r=>Number(r.width)*Number(r.length);
   // 輔助資產未載入時仍保留基本驗證及逐刀線，不能令主計算失敗。
@@ -7869,20 +7872,20 @@ window.addEventListener('DOMContentLoaded', () => {
   function savePartDimensionMode(value){try{window.localStorage.setItem(PART_DIMENSION_MODE_STORAGE_KEY,value);}catch(_){/* Local storage may be unavailable in private browsing. */}}
   let partAppearanceStyle=readPartAppearancePreference();
   let partDimensionMode=readPartDimensionMode();
+  const REMNANT_DIMENSION_KEY='plywood-layout-remnant-dimensions-v1';
+  function readRemnantDimensions(){try{return window.localStorage.getItem(REMNANT_DIMENSION_KEY)!=='false';}catch(_){return true;}}
+  let showRemnantDimensions=readRemnantDimensions();
   let selectedDimensionPart=null;
   function nominalDimensions(part){
     const width=Number(part.originalWidth??part.width),length=Number(part.originalLength??part.length??part.height);
     return {width:Number.isFinite(width)&&width>0?width:0,length:Number.isFinite(length)&&length>0?length:0};
   }
   function nominalSizeKey(part){const d=nominalDimensions(part);return `${d.width}|${d.length}`;}
-  function nominalSizeText(part){
-    const d=nominalDimensions(part);
-    if(!calculator.autoDisplayUnits&&typeof calculator.formatStoredDimensionInputs==='function'&&part.originalWidthInputs&&part.originalLengthInputs){
-      const system=part.displayUnitSystem||selectedUnit();
-      const width=calculator.formatStoredDimensionInputs(part.originalWidthInputs,system),length=calculator.formatStoredDimensionInputs(part.originalLengthInputs,system);
-      if(width&&length)return `${width} × ${length}`;
-    }
-    return `${fmtDim(d.width)} × ${fmtDim(d.length)}`;
+  function nominalSizeText(part){const d=nominalDimensions(part);return `${fmtDim(d.width,part,'width')} × ${fmtDim(d.length,part,'length')}`;}
+  function boardInputFor(board){
+    if(!board)return null;
+    const items=window.calculator.boards||[];
+    return board.stockIndex!=null?items[board.stockIndex]:(items.find(item=>!item.disabled&&Math.abs(Number(item.width)-board.width)<1e-7&&Math.abs(Number(item.length??item.height)-board.length)<1e-7)||null);
   }
   function setDisplayColors(plan){
     const keys=new Set();(plan.boards||[]).forEach(board=>(board.results||[]).forEach(part=>keys.add(nominalSizeKey(part))));
@@ -7916,20 +7919,19 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function drawSelectedPartOutline(ctx,part,X,Y,sx,sy,dpr){
     const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy;
-    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=6*dpr;ctx.strokeRect(x,y,width,height);
-    ctx.strokeStyle='#e66a00';ctx.lineWidth=3*dpr;ctx.strokeRect(x,y,width,height);ctx.restore();
+    ctx.save();ctx.globalAlpha=1;ctx.strokeStyle='#e66a00';ctx.lineWidth=2;ctx.strokeRect(x,y,width,height);ctx.restore();
   }
   function edgeDimensionName(edge,english){
     return edge.dimension==='length'?(english?'L':'長'):edge.dimension==='width'?(english?'W':'闊'):(english?'Edge':'邊');
   }
   function drawEdgeMeasure(ctx,text,centerX,centerY,edgeLength,thickness,angle,dpr){
-    const vertical=Math.abs(angle)>0.5,minFont=6*dpr,maxFont=Math.min(8*dpr,thickness*.58);
+    const minFont=6*dpr,maxFont=Math.min(8*dpr,thickness*.58);
     let layout=null;
     for(let fontSize=maxFont;fontSize>=minFont;fontSize-=.5*dpr){
       ctx.font=`700 ${fontSize}px Arial, sans-serif`;
       const metrics=ctx.measureText(text),padX=Math.max(.7*dpr,fontSize*.12),padY=Math.max(.5*dpr,fontSize*.1);
       const boxWidth=metrics.width+padX*2,boxHeight=fontSize*1.2+padY*2;
-      const along=vertical?boxHeight:boxWidth,across=vertical?boxWidth:boxHeight;
+      const along=boxWidth,across=boxHeight;
       if(along<=edgeLength-4*dpr&&across<=thickness-2*dpr){layout={metrics,fontSize,padX,padY,boxWidth,boxHeight};break;}
     }
     if(!layout)return false;
@@ -7940,6 +7942,10 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.strokeStyle='rgba(23,37,43,.82)';ctx.lineWidth=Math.max(.65*dpr,.7);ctx.strokeRect(left,top,layout.boxWidth,layout.boxHeight);
     ctx.fillStyle='#17252b';ctx.fillText(text,0,0);ctx.restore();return true;
   }
+  function formatEdgeDimension(part,edge){
+    const source=edge.dimension==='edge'?(((edge.side==='top'||edge.side==='bottom')!==!!part.rotated)?'width':'length'):edge.dimension;
+    return fmtDim(edge.mm,part,source);
+  }
   function drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr){
     if(!dimensionDisplay)return 0;
     const edges=dimensionDisplay.edgeDimensions(part),bySide=new Map(edges.map(edge=>[edge.side,edge]));
@@ -7949,7 +7955,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let drawn=0;
     const draw=(side,angle,edgeLength,thickness,cx,cy)=>{
       const edge=bySide.get(side);if(!edge)return;
-      const text=`${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`;
+      const text=`${edgeDimensionName(edge,english)} ${formatEdgeDimension(part,edge)}`;
       if(drawEdgeMeasure(ctx,text,cx,cy,edgeLength,thickness,angle,dpr))drawn++;
     };
     // Put a measurement on each physical edge; opposite edges intentionally repeat the same value.
@@ -8039,7 +8045,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function remnantPartForDisplay(remnant,projection){
     const rect=remnant.rect||remnant;
-    return projection.rect({...rect,originalWidth:Number(rect.width),originalLength:Number(rect.length)});
+    const board=window.calculator.trialPlan?.boards.find(b=>b.boardId===remnant.boardId),source=boardInputFor(board)||{};
+    return projection.rect({...rect,rotated:false,displayUnitSystem:source.displayUnitSystem,originalWidthInputs:source.originalWidthInputs,originalLengthInputs:source.originalLengthInputs,originalWidth:Number(rect.width),originalLength:Number(rect.length)});
   }
   function drawRemnantShapes(ctx,remnants,projection,X,Y,sx,sy){
     remnants.forEach(remnant=>{
@@ -8061,13 +8068,14 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.font=`700 ${fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#26342e';ctx.fillText(text,x,y);ctx.restore();
   }
   function drawRemnantLabels(ctx,canvas,remnants,projection,X,Y,sx,sy){
+    if(!showRemnantDimensions)return;
     const scaleX=canvas.width/Math.max(1,canvas.clientWidth||canvas.width),scaleY=canvas.height/Math.max(1,canvas.clientHeight||canvas.height),dpr=(scaleX+scaleY)/2;
     remnants.forEach((remnant,index)=>{const part=remnantPartForDisplay(remnant,projection);drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr);drawRemnantBadge(ctx,part,index+1,X,Y,sx,sy,dpr);});
   }
   function drawBoard(board,index,card,count,quiet){
     const canvas=card.querySelector('canvas');if(!canvas)return;
     const projection=boardDisplayProjection(board),W=1200,H=Math.max(260,Math.round(W*projection.height/projection.width));
-    canvas.dataset.displayProjection=projection.swap?'transpose':'native';canvas.dataset.rotation='0';canvas.style.removeProperty('transform');
+    canvas.dataset.displayProjection=projection.swap?'transpose':'native';canvas.dataset.rotation=canvas.dataset.rotation||'0';
     canvas.dataset.replayCount=count==null?'':String(count);
     canvas.width=W;canvas.height=H;canvas.style.width='100%';canvas.style.height='auto';
     const ctx=canvas.getContext('2d'),sx=W/projection.width,sy=H/projection.height,X=x=>x*sx,Y=y=>y*sy;
@@ -8108,14 +8116,14 @@ window.addEventListener('DOMContentLoaded', () => {
     const projected=boardDisplayProjection(board).rect(part);
     const edges=dimensionDisplay?dimensionDisplay.edgeDimensions(projected):[];
     const sideName={top:english?'Top':'上邊',right:english?'Right':'右邊',bottom:english?'Bottom':'下邊',left:english?'Left':'左邊'};
-    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`).join(' · ');
+    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${formatEdgeDimension(projected,edge)}`).join(' · ');
     return `#${number} · ${measurements||nominalSizeText(part)}${part.rotated?' ↻':''}`;
   }
   function remnantDimensionLabel(remnant,number,projection,english){
     const rect=remnant.rect||remnant,projected=remnantPartForDisplay(remnant,projection);
     const edges=dimensionDisplay?dimensionDisplay.edgeDimensions(projected):[];
     const sideName={top:english?'Top':'上邊',right:english?'Right':'右邊',bottom:english?'Bottom':'下邊',left:english?'Left':'左邊'};
-    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`).join(' · ');
+    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${formatEdgeDimension(projected,edge)}`).join(' · ');
     const kind=remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial';
     return `R${number} · ${measurements||`${fmtDim(rect.length)} × ${fmtDim(rect.width)}`} · ${cutCopy(kind)}`;
   }
@@ -8142,8 +8150,11 @@ window.addEventListener('DOMContentLoaded', () => {
     if(hint)hint.textContent=english?'Click mode shows one part’s four edge dimensions. All mode also labels unused sheet pieces and edge-trim offcuts; R numbers match the list. Use the list for small pieces.':'點選模式可查看單件四邊尺寸；全部模式亦標示剩餘板料及修邊料，圖中 R 編號對照清單；太細可看清單。';
     document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
       const index=Number(card.dataset.boardIndex),board=plan&&plan.boards[index],canvas=card.querySelector('canvas.canvas');
-      const list=card.querySelector('.part-dimension-all-list'),note=card.querySelector('.part-dimension-selection');
+      const scope=card.closest('.board-display-group')||card;
+      const list=scope.querySelector('.part-dimension-all-list'),note=scope.querySelector('.part-dimension-selection');
+      if(list)list.querySelectorAll('[data-remnant-kind]').forEach(item=>item.hidden=!showRemnantDimensions);
       if(list)list.hidden=mode!=='all';
+      document.querySelectorAll('[data-remnant-details]').forEach(detail=>detail.hidden=!showRemnantDimensions);
       if(list)list.setAttribute('aria-label',english?'All part and leftover edge dimensions':'全部部件及餘料四邊尺寸');
       if(canvas){canvas.style.cursor=mode==='selected'?'crosshair':'';canvas.setAttribute('aria-label',mode==='selected'?(english?'Layout diagram; click a part to see all four edge dimensions':'排版圖；點選部件查看四邊尺寸'):(english?'Layout diagram':'排版圖'));}
       if(!note)return;
@@ -8196,20 +8207,20 @@ window.addEventListener('DOMContentLoaded', () => {
     return legend;
   }
   function partSpecsForRemnants(){
-    return (window.calculator.parts||[]).filter(part=>!part.disabled&&Number(part.width)>0&&Number(part.length)>0&&Number(part.count)>0).map(part=>({width:Number(part.width),length:Number(part.length),orientationPreference:part.orientationPreference||'auto'}));
+    return (window.calculator.parts||[]).filter(part=>!part.disabled&&Number(part.width)>0&&Number(part.length)>0&&Number(part.count)>0).map(part=>({width:Number(part.width),length:Number(part.length),orientationPreference:part.orientationPreference||'auto',displayUnitSystem:part.displayUnitSystem||part.unitSystem,originalWidthInputs:part.originalWidthInputs,originalLengthInputs:part.originalLengthInputs}));
   }
   function remnantDetailsHtml(plan){
     if(!cutOverlay.isVerifiedPlan(plan))return '';
-    const specs=partSpecsForRemnants();let html=`<section class="cut-path-remnants"><h3>${esc(cutCopy('remnantHeading'))}</h3><p>${esc(cutCopy('remnantIntro'))}</p>`;
+    const specs=partSpecsForRemnants();let html=`<section class="cut-path-remnants" data-remnant-details${showRemnantDimensions?'':' hidden'}><h3>${esc(cutCopy('remnantHeading'))}</h3><p>${esc(cutCopy('remnantIntro'))}</p>`;
     plan.boards.forEach((board,index)=>{
       html+=`<h4>${esc(cutCopy('sourceBoard'))} #${index+1}｜${esc(board.boardId)}</h4>`;
       const remnants=cutOverlay.leftoverPieces(board);
       if(!remnants.length){html+=`<p>${esc(cutCopy('noRemnants'))}</p>`;return;}
       html+='<ul class="cut-path-remnant-list">';
       remnants.forEach((remnant,remnantIndex)=>{
-        const measurements=cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea);
+        const source=boardInputFor(board)||{},measurements=cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea,value=>fmtDim(value,source,'length'),value=>fmtDim(value,source,'width'));
         const fits=specs.filter(spec=>cutOverlay.fitsPartSpec(remnant,spec));
-        const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length)} × ${fmtDim(spec.width)}`))];
+        const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length,spec,'length')} × ${fmtDim(spec.width,spec,'width')}`))];
         const useText=!specs.length?cutCopy('noSpecs'):uniqueFitSizes.length?`${cutCopy('fitsCurrent')}：${uniqueFitSizes.map(esc).join('、')}`:cutCopy('noCurrentFit');
         const kindText=cutCopy(remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial');
         html+=`<li data-remnant-material="${esc(remnant.materialId)}" data-remnant-kind="${esc(remnant.kind)}"><strong>R${remnantIndex+1} · ${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(kindText)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
@@ -8265,7 +8276,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if(isComplete){
       const integrityLine=document.createElement('p');integrityLine.id='remnantIntegritySummary';integrityLine.className='input-hint strategy-hint';
       const r=plan.summary.largestRemnant;
-      integrityLine.innerHTML=r?`<strong>最大完整餘料：</strong><span>長度：</span><span>${esc(fmtDim(r.rect.length))}</span> × <span>闊度：</span><span>${esc(fmtDim(r.rect.width))}</span> <span>來源板：</span><span>${esc(r.boardId)}</span><br><span>獨立剩料：</span><span>${plan.summary.retainedRemnantCount}</span> <span>塊（不含修邊料；只屬幾何指標，不保證用途）。</span>`:'沒有完整剩餘板料（修邊料另列）。';
+      integrityLine.innerHTML=r?`<strong>最大完整餘料：</strong><span>長度：</span><span>${esc(fmtDim(r.rect.length,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'length'))}</span> × <span>闊度：</span><span>${esc(fmtDim(r.rect.width,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'width'))}</span> <span>來源板：</span><span>${esc(r.boardId)}</span><br><span>獨立剩料：</span><span>${plan.summary.retainedRemnantCount}</span> <span>塊（不含修邊料；只屬幾何指標，不保證用途）。</span>`:'沒有完整剩餘板料（修邊料另列）。';
       root.appendChild(integrityLine);
     }
     const processLine=document.createElement('p');processLine.className='input-hint strategy-hint result-process-line';
@@ -8303,7 +8314,7 @@ window.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('mousedown',isolateDimensionClick,true);canvas.addEventListener('dblclick',isolateDimensionClick,true);
         canvas.addEventListener('touchstart',isolateDimensionClick,{capture:true,passive:true});
         stage.appendChild(canvas);card.appendChild(stage);
-        const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${fmtDim(b.width)} × ${fmtDim(b.length)}\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
+        const label=document.createElement('div');label.className='canvas-label';label.textContent=`板 ${i+1}｜原板實際尺寸：${fmtDim(b.width,boardInputFor(b),'width')} × ${fmtDim(b.length,boardInputFor(b),'length')}\n圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。`;card.appendChild(label);
         const selectedNote=document.createElement('div');selectedNote.className='part-dimension-selection';selectedNote.dataset.boardIndex=i;selectedNote.hidden=true;selectedNote.setAttribute('role','status');selectedNote.setAttribute('aria-live','polite');card.appendChild(selectedNote);
         card.appendChild(createPartDimensionList(b,i));
         group.appendChild(card);
@@ -8372,7 +8383,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const chooser=$('candidateChooser'),more=$('moreLayoutsButton');
     if(chooser){
       const fragment=document.createDocumentFragment();
-      pool.forEach((item,index)=>{const option=document.createElement('option'),r=item.plan.summary.largestRemnant;option.value=String(item.key);option.textContent=`方案 ${index+1}｜板材 ${item.plan.summary.usedBoardCount} 塊｜切刀 ${totalCutCount(item.plan)} 刀｜最大完整餘料：${r?`${fmtDim(r.rect.length)} × ${fmtDim(r.rect.width)}`:'無'}`;fragment.appendChild(option);});
+      pool.forEach((item,index)=>{const option=document.createElement('option'),r=item.plan.summary.largestRemnant;option.value=String(item.key);option.textContent=`方案 ${index+1}｜板材 ${item.plan.summary.usedBoardCount} 塊｜切刀 ${totalCutCount(item.plan)} 刀｜最大完整餘料：${r?`${fmtDim(r.rect.length,boardInputFor(item.plan.boards.find(b=>b.boardId===r.boardId)),'length')} × ${fmtDim(r.rect.width,boardInputFor(item.plan.boards.find(b=>b.boardId===r.boardId)),'width')}`:'無'}`;fragment.appendChild(option);});
       chooser.replaceChildren(fragment);
       chooser.value=String(pool[i].key);
     }
@@ -8500,6 +8511,9 @@ window.addEventListener('DOMContentLoaded', () => {
       rerenderCurrentTrial();
     });
   }
+  const remnantSwitch=$('showRemnantDimensions');
+  remnantSwitch.checked=showRemnantDimensions;
+  remnantSwitch.addEventListener('change',()=>{showRemnantDimensions=remnantSwitch.checked;try{window.localStorage.setItem(REMNANT_DIMENSION_KEY,String(showRemnantDimensions));}catch(_){}refreshCutPathCanvases();updateDimensionPanels();});
   const dimensionModeSelect=$('partDimensionMode');
   if(dimensionModeSelect){
     dimensionModeSelect.value=partDimensionMode;
@@ -8522,31 +8536,16 @@ window.addEventListener('DOMContentLoaded', () => {
   const nfmt = n => Number(n).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
   const selectedUnit = () => $('unitSystem')?.value || calculator.unitSystem || 'metric';
 
-  function formatDimension(mm) {
-    const value = Number(mm);
-    if (!Number.isFinite(value)) return '—';
-    if (selectedUnit() === 'metric') return `${nfmt(value)} mm`;
-    const eighths = Math.round((value / 25.4) * 8);
-    const feet = Math.floor(eighths / 96);
-    const rest = eighths - feet * 96;
-    const inches = Math.floor(rest / 8);
-    const fen = rest % 8;
-    const tokens = [];
-    if (feet) tokens.push(`${feet}尺`);
-    if (inches || (feet === 0 && fen === 0)) tokens.push(`${inches}寸`);
-    if (fen) {
-      if (feet === 0 && inches === 0) tokens.push('0寸');
-      tokens.push(`${fen}分`);
-    }
-    return tokens.join(' ');
+  function formatDimension(mm,item,dimension) {
+    const value=Number(mm);if(!Number.isFinite(value))return '—';
+    const system=!calculator.autoDisplayUnits&&item?(item.displayUnitSystem||item.unitSystem||selectedUnit()):selectedUnit();
+    const inputs=typeof dimension==='string'?item?.[dimension==='width'?'originalWidthInputs':'originalLengthInputs']:dimension;
+    if(window.PlywoodLayoutView)return window.PlywoodLayoutView.formatLength(value,{system,inputs,preserve:!calculator.autoDisplayUnits,english:calculator.currentLanguage==='en'});
+    if(system==='metric')return `${nfmt(value)} mm`;
+    const inches=value/25.4;if(inches<=96)return `${nfmt(inches)}寸`;
+    const feet=Math.floor(inches/12);return `${feet}尺 ${nfmt(inches-feet*12)}寸`;
   }
-  function formatUserDimension(value, item, inputs) {
-    if (!calculator.autoDisplayUnits && inputs && typeof calculator.formatStoredDimensionInputs === 'function') {
-      const raw = calculator.formatStoredDimensionInputs(inputs, item && (item.displayUnitSystem || item.unitSystem) || selectedUnit());
-      if (raw) return raw;
-    }
-    return formatDimension(value);
-  }
+  function formatUserDimension(value,item,inputs){return formatDimension(value,item,inputs);}
   function formatArea(mm2) {
     const value = Number(mm2);
     if (!Number.isFinite(value)) return '—';
@@ -8661,7 +8660,7 @@ window.addEventListener('DOMContentLoaded', () => {
       row.className = 'single-rotation-row';
       const label = document.createElement('span');
       label.className = 'single-rotation-label';
-      label.textContent = `${part.id}｜${formatDimension(part.originalWidth ?? part.width)} × ${formatDimension(part.originalLength ?? part.length)}${part.rotated ? '｜已轉90°' : ''}`;
+      label.textContent = `${part.id}｜${formatDimension(part.originalWidth ?? part.width,part,'width')} × ${formatDimension(part.originalLength ?? part.length,part,'length')}${part.rotated ? '｜已轉90°' : ''}`;
       row.appendChild(label);
       const button = document.createElement('button');
       button.type = 'button';
@@ -9359,6 +9358,7 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(...[["最大完整餘料：", "Largest intact remnant:"], ["來源板：", "Source sheet:"], ["獨立剩料：", "Separate remnants:"], ["塊（不含修邊料；只屬幾何指標，不保證用途）。", "pieces (edge-trim offcuts excluded; geometry only, no reuse guarantee)."], ["沒有完整剩餘板料（修邊料另列）。", "No intact leftover sheet material (edge-trim offcuts listed separately)."]]);
   dict.push(...[["直接揀方案", "Choose a layout directly"], ["搜尋更多排法", "Search more layouts"], ["停止追加搜尋", "Stop additional search"], ["正在搜尋更多排法；目前 ", "Searching more layouts; currently "], ["目前保留 ", "Layouts retained: "], ["本次新增 ", "Added this round: "], [" 個不同方案。", " distinct layouts."], [" 個不同方案；可再搜尋，較低排名也保留。", " distinct layouts; search again if needed. Lower-ranked layouts are retained."], ["已停止追加搜尋；已找到的方案全部保留。", "Additional search stopped; all layouts already found are retained."], ["更多候選：", "Additional candidate:"], ["多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證", "Diverse candidates use fixed seeds for part and orientation ordering; actual cuts are still verified one by one."]]);
   dict.push(['可反覆搜尋；每輪追加 24 組嘗試，只保留不同且已驗證的排法，未必每次都有新方案。','Search repeatedly: each round explores 24 profiles and keeps only distinct verified layouts. A round may find no new layout.']);
+  dict.push(['餘料尺寸','Leftover dimensions'],['顯示餘料四邊尺寸與 R 編號','Show leftover edge dimensions and R labels'],['方案遙控器','Layout remote'],['關閉方案遙控器','Close layout remote'],['拖動標題可移位；只選方案，不改尺寸。','Drag the title to move; choose layouts without changing dimensions.'],['查看原板','View sheet'],['圖面轉90°','Rotate view 90°'],['排料設定（慳料／方便、工序）','Layout settings (material, workflow)'],['圖面與尺寸設定','Diagram and dimension settings'],['診斷訊息','Diagnostic messages'],['方案資訊與驗證','Layout information and validation'],['板材資料與工具','Sheet information and tools'],['候選排法；開料前請師傅核對。','Candidate layout; have a woodworker verify before cutting.']);
   const exactOnly=new Set(['可','米','厘米','毫米','尺','呎','寸','分']);
   const order=[...dict].filter(([zh])=>!exactOnly.has(zh)).sort((a,b)=>b[0].length-a[0].length);
   function translateText(value,lang){
@@ -9410,12 +9410,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const out=[];if(feet)out.push(`${feet} ft`);const divisor=(a,b)=>b?divisor(b,a%b):a;const fractionText=fraction?`${fraction/divisor(fraction,8)}/${8/divisor(fraction,8)}`:'';if(inches||fraction||!feet)out.push(`${inches}${fractionText?` ${fractionText}`:''} in`);return out.join(' ');
   }
   const rawDimensionFormatter=c._formatTrialDimension,rawAreaFormatter=c._formatTrialArea;
-  if(typeof rawDimensionFormatter==='function')c._formatTrialDimension=function(mm){return c.currentLanguage==='en'?displayDimension(mm,'en'):rawDimensionFormatter.call(this,mm);};
+  if(typeof rawDimensionFormatter==='function')c._formatTrialDimension=function(mm,item,dimension){return window.PlywoodLayoutView?rawDimensionFormatter.call(this,mm,item,dimension):(c.currentLanguage==='en'?displayDimension(mm,'en'):rawDimensionFormatter.call(this,mm,item,dimension));};
   if(typeof rawAreaFormatter==='function')c._formatTrialArea=function(mm2){const raw=rawAreaFormatter.call(this,mm2);return c.currentLanguage==='en'?raw.replace(/\s*吋²/g,' sq in'):raw;};
   function localizeTables(lang){
     if(typeof c.updatePartsTable==='function')c.updatePartsTable();if(typeof c.updateBoardsTable==='function')c.updateBoardsTable();
-    document.querySelectorAll('#partsTableBody tr').forEach((tr,i)=>{const p=c.parts[i];if(p&&tr.cells.length>=3){tr.cells[1].textContent=displayDimension(p.width,lang);tr.cells[2].textContent=displayDimension(p.length,lang);}});
-    document.querySelectorAll('#boardsTableBody tr').forEach((tr,i)=>{const b=c.boards[i];if(b&&tr.cells.length>=2){tr.cells[0].textContent=displayDimension(b.width,lang);tr.cells[1].textContent=displayDimension(b.length??b.height,lang);}});
+    document.querySelectorAll('#partsTableBody tr').forEach((tr,i)=>{const p=c.parts[i];if(p&&tr.cells.length>=3){tr.cells[1].textContent=c._formatTrialDimension(p.width,p,'width');tr.cells[2].textContent=c._formatTrialDimension(p.length,p,'length');}});
+    document.querySelectorAll('#boardsTableBody tr').forEach((tr,i)=>{const b=c.boards[i];if(b&&tr.cells.length>=2){tr.cells[0].textContent=c._formatTrialDimension(b.width,b,'width');tr.cells[1].textContent=c._formatTrialDimension(b.length??b.height,b,'length');}});
     translateTree(document.getElementById('partsTableBody'),lang);translateTree(document.getElementById('boardsTableBody'),lang);
   }
   function setLanguage(lang,redraw,persist=false){

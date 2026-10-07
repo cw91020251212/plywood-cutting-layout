@@ -210,9 +210,9 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-08-layout-diversity-1'));
+  assert.ok(sw.includes('2026-10-08-compact-layout-2'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
-  assert.ok(sw.includes('./assets/cut-path-overlay.js?v=4'));
+  assert.ok(sw.includes('./assets/cut-path-overlay.js?v=5'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));
   assert.ok(sw.includes('./assets/part-dimension-display.js?v=2'));
 });
@@ -353,7 +353,7 @@ test('intact-remnant guidance, displayed length/width and provenance are bilingu
   assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
   assert.ok(html.includes('L-shaped blanks are never merged'));
   assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));
-  assert.ok(html.includes('fmtDim(r.rect.length)')&&html.includes('fmtDim(r.rect.width)')&&html.includes('esc(r.boardId)'));
+  assert.ok(html.includes('fmtDim(r.rect.length,boardInputFor(')&&html.includes('fmtDim(r.rect.width,boardInputFor(')&&html.includes('esc(r.boardId)'));
   assert.ok(html.includes('Largest intact remnant:')&&html.includes('Separate remnants:'));
   assert.ok(html.includes('edge-trim offcuts excluded; geometry only, no reuse guarantee'));
 });

@@ -132,13 +132,14 @@
       (length <= rect.width + EPS && width <= rect.length + EPS);
   }
 
-  function formatRemnantMeasurements(remnant, formatDimension, formatArea) {
+  function formatRemnantMeasurements(remnant, formatDimension, formatArea, formatLength = formatDimension, formatWidth = formatDimension) {
     if (!remnant || !validRect(remnant.rect || remnant) ||
-        typeof formatDimension !== 'function' || typeof formatArea !== 'function') return null;
+        typeof formatDimension !== 'function' || typeof formatArea !== 'function' ||
+        typeof formatLength !== 'function' || typeof formatWidth !== 'function') return null;
     const rect = remnant.rect || remnant;
     return {
-      length: formatDimension(rect.length),
-      width: formatDimension(rect.width),
+      length: formatLength(rect.length),
+      width: formatWidth(rect.width),
       area: formatArea(rect.width * rect.length)
     };
   }

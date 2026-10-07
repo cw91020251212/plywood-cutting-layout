@@ -85,6 +85,8 @@ test('a vertical dimension text box cannot spill past the physical edge',()=>{
   assert.equal(context.draw({measureText:()=>({width:40})},'a long label',0,0,20,50,Math.PI/2,1),false);
 });
 test('diagram metadata is folded, the legend stays outside, and the right remote closes without adding a tools block',()=>{
+  assert.match(js,/const canvasContainer=\$\('canvasContainer'\);\s*const displaySettings=details\('layoutDisplaySettings','圖面與尺寸設定',canvasContainer\.parentNode\);canvasContainer\.before\(displaySettings\)/,'diagram controls stay immediately before the layout image');
+  assert.doesNotMatch(js,/heading\.after\(displaySettings\)/,'diagram controls must not remain at the top of the results section');
   assert.match(js,/displaySettings.append\(d.querySelector\('\.part-appearance-toolbar'\)/);
   assert.match(js,/el!==card&&el!==legend&&el!==extras/);
   assert.match(js,/parking.append\(controls\)/,'hidden native controls survive result rerenders without creating another visible block');
@@ -106,5 +108,5 @@ test('diagram metadata is folded, the legend stays outside, and the right remote
   assert.match(html,/const scope=card.closest\('\.board-display-group'\)\|\|card/);
   assert.doesNotMatch(js,/\.plan\(|\.calculateCutting\(/,'view organization must not invoke a new solver');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  for(const asset of ['layout-view.js?v=4','layout-view.css?v=4'])assert.ok(sw.includes(asset)&&html.includes(asset));
+  for(const asset of ['layout-view.js?v=5','layout-view.css?v=4'])assert.ok(sw.includes(asset)&&html.includes(asset));
 });

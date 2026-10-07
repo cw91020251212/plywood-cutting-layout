@@ -51,7 +51,8 @@
     const settings=$('optimizationObjectiveGroup'), settingsParent=settings.parentNode;
     const inputSettings=details('layoutInputSettings','排料設定（慳料／方便、工序）',settingsParent);settingsParent.insertBefore(inputSettings,settings);inputSettings.append(settings,$('moreCutSettings'));
     const heading=d.querySelector('.output-heading');
-    const displaySettings=details('layoutDisplaySettings','圖面與尺寸設定',heading.parentNode);heading.after(displaySettings);
+    const canvasContainer=$('canvasContainer');
+    const displaySettings=details('layoutDisplaySettings','圖面與尺寸設定',canvasContainer.parentNode);canvasContainer.before(displaySettings);
     displaySettings.append(d.querySelector('.part-appearance-toolbar'),d.querySelector('.search-help'));
     const unitSetting=d.querySelector('.display-unit-setting');if(unitSetting)displaySettings.append(unitSetting);
     const controls=$('variationControls');

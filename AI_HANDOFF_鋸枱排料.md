@@ -48,7 +48,7 @@
 
 | 檔案／程式區域 | 用途 |
 | --- | --- |
-| `index.html` 約 7128 行起 | 生效嘅 trial 引擎；`VERSION = 'plywood-trial-1.2.0'`、`PlywoodTrialEngine`、排料候選計算及切樹驗證。 |
+| `index.html` 約 7128 行起 | 生效嘅 trial 引擎；`VERSION = 'plywood-trial-1.3.0'`、`PlywoodTrialEngine`、排料候選計算及切樹驗證。 |
 | `index.html` 約 7132–7147 | 尺寸方向及旋轉偏好 `orientations()`。改固定橫直前先確認命名與 `rotated` 意義。 |
 | `index.html` 約 7149–7187 | 展開部件、設定正規化、原板物件及 `stockIndex`／板 ID。 |
 | `index.html` 約 7191 起 | 切刀記錄 `makeStep()`、直接成品終端 `emitPart()`、修邊。每刀記來源材料、座標、鋸縫矩形、輸出及刀序。 |
@@ -59,9 +59,9 @@
 | `assets/part-appearance.js` | 同色相圖面漸層／平面外觀；視覺限定。 |
 | `index.html` 約 7756 | `replayState()`：預覽逐刀後嘅材料葉；**免刀 terminal 成品亦要消耗**。 |
 | assets/cut-path-overlay.js | 顯示經驗證刀路；`finalMaterialLeaves()` 取最終未用材料，`leftoverPieces()` 將實際修邊 offcut 與最終未用材料合併，排除鋸縫／無效矩形並按 material ID 去重。唔係獨立排料器。 |
-| `index.html` 約 7995–8071 | UI 的 `getParts()`／`getBoards()`、候選比較、有限 profiles、完整度／方向驗證及 `calculate()`。 |
+| `index.html` 約 7995–8071 | UI 的 `getParts()`／`getBoards()`、`candidateSignature()`、`diversityProfiles()`、`buildCandidatePool()`、`searchMoreCandidates()`、完整度／方向驗證及 `calculate()`；行號隨更新移動，按函式名稱定位。 |
 | `index.html` 約 8073 起 | JSON 匯入／匯出與舊 schema 相容處理；變更欄位之前須加匯入回歸測試。 |
-| `sw.js` | 離線靜態資產 cache version；餘料尺寸版使用 `2026-10-07-leftover-dimensions-1`，`cut-path-overlay.js?v=4`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
+| `sw.js` | 離線靜態資產 cache version；現搜尋擴充版使用 `2026-10-08-layout-diversity-1`，`cut-path-overlay.js?v=4` 保持不變。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
 | `.github/workflows/pages.yml` | `main` push 部署 Pages；Node.js 22 先跑 inline JS 語法與全部 tests。 |
 | `tests/cut-path-overlay.test.cjs` | UI／刀路／單位／終局剩料與修邊料去重及幾何顯示測試。 |
 | `tests/part-dimension-display.test.cjs` | 顯示模式、點選命中、穩定件號、部件與剩料 R 編號、逐刀回放可見性、雙語、只重繪及回放位置回歸。 |
@@ -429,3 +429,44 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 這個例子刻意顯示取捨：同等原板用量下可以接受略多鋸縫以保留較大單塊料，並不聲稱所有指標同時改善。`tests/table-saw-optimizer.test.cjs` 新增真實改選、板數／面積優先、短邊平手、kerf 先於碎片、便利目標不變、終端／修邊／鋸縫排除、實體葉節點對照、helper 缺失回退和雙語資產回歸。全套 **46/46 通過**；隔離瀏覽器亦得到長 1000 mm、闊 744 mm、來源 `STOCK-01`、3 塊終局餘料的中英文摘要，測後還原暫存資料。
 
 此改動是**現有有限候選池的排名**，不是新增全局最佳求解器；未保證每張單只留一塊、每張單都有更大餘料或沒有細小尾料。未定義最小可回用闊／長、未來需求、板種厚度或價錢，故名稱只稱「完整餘料」，不能稱「一定可用／安全／省錢」。
+
+
+## 19. 更多不同排法，讓師傅自己揀（2026-10-08）
+
+### 19.1 使用者意圖與舊版根因
+
+使用者指出：即使用料／刀數等數字唔係最好，某個部件組合仍可能正正適合工人當日開料，所以**不要只給一兩種排法，也不要因排名較低就隱藏合法候選**。推薦排序仍保留「先少用板，同等用料下保留最大完整餘料」；今次改的是搜尋多樣性和選擇自由，不是取消該目標。
+
+舊版 17 個 profile 並非真的嘗試 17 種完全不同順序：分條及切割樹多數仍以部件面積最大優先，很多 profile 只影響同面積件的 tie-break，會回到同一結果。舊候選池本來已保留較低排名者，主要瓶頸是**搜尋路徑相似**，不是排序後只保留最佳解。
+
+### 19.2 現在如何增加選擇
+
+保留原 17 組 profile、無 profile 原解及貪婪基線，初次計算再加入 **seed 1–12** 的固定種子探索。`diversityRank()` 用種子、件號／幾何 key 產生可重現次序，seeded 候選不再強迫最大件先放；亦探索方向、可放的矩形及庫存次序。這只是決策順序變化，所有尺寸、鋸縫、修邊、固定方向和切刀建樹仍由原引擎控制。
+
+分條的新增 seeded 路徑採快速 greedy 挑件／截件排序，避免每個額外種子都重跑昂貴 DP；原 profile 的 subset/greedy 兩路及同闊 DP 都仍在，不丟失慳料基線。切割樹亦探索 seeded 件序／可放矩形。`plan.searchProfile` 與 `plan.stripSelection` 是新增的可追查 metadata；以 JSON 存入 `trialResult` 時可供後續重現，**匯入依然只讀需求／設定並重新驗證，不信任存檔的幾何**。
+
+「搜尋更多排法」每輪追加 **24 個種子 profile**，之後可再按；不把全部候選硬截成 top-N、不因用板較多或排名較低而刪除。每個新候選入池前仍經 `strictlyValidCandidate()`、完整部件 ID／件數、方向覆寫及每板 `verifyBoard()`。每組完成後讓出 event loop，搜尋中同一按鈕變成「停止追加搜尋」，已找到的方案保留。24 是探索組數，**不是承諾新增 24 個方案**；一輪也可能沒有新結果。
+
+### 19.3 去重、直選及取消契約
+
+`candidateSignature()` 現只描述實際原板來源、成品原尺寸／旋轉／位置，以及有順序的來源矩形、刀軸、鋸縫矩形及輸出矩形。任意 part/material ID、工序名稱、phase／成品和 terminal 分類不構成不同排法；例如兩種演算法實際切同一刀，只算一個。短 hash 僅供識別，**真正去重比較完整 signature 字串，不以 hash 相同就直接刪除**。
+
+方案項目 `key` 按入池次序建立，排序後不變；下拉選單的 value 是 key，而不是會移動的排名 index。選單列出方案排名、板數、刀數及最大完整餘料長闊，仍保留上一個／下一個控制。追加時把原 `trialPlan` 物件重新定位到新排序 index，**不自動改選最新最佳解，不重畫現有圖，也不重置逐刀回放**；使用者搜尋途中另選一件，後續新增亦繼續保留該選擇。
+
+`candidateSearchEpoch`／state 是取消權杖。清除／重算需求會使舊搜尋失效，不能回填舊池；單件旋轉只有在整個 replacement plan 驗證成功後才 clear/cancel，並保存該工序與方向 override 的 `trialConfig`。旋轉的 index 指向實際 render 的 candidate，不假設排序第一個就是正在顯示的一個。停止只能在 seed 間的讓出點生效，**同步規劃中的單一 seed 不能中途搶占**。
+
+### 19.4 證據、位置及限制
+
+| 檢查 | 結果 |
+| --- | --- |
+| 六件固定方向案例：603 × 1000 mm，300 × 440 兩件＋300 × 250 四件 | 原搜尋 2 種；新初次計算 10 種；追加一輪 13 種，包含 1 板與 2 板的已驗證方案 |
+| 實際瀏覽器選較低排名方案後追加 | 保留所選 2 板方案、同一 Canvas、逐刀回放位置；直選選單與 13 個候選對應 |
+| 停止／英語介面 | 可停止，已找到方案保留；按鈕、選項板數／刀數／餘料及狀態英譯正確 |
+| Node 40 件樣本（200 × 300 二十件＋300 × 450 二十件，1220 × 2440 原板） | 初池 13 個，全部驗證通過；本次 Sandbox 約 415 ms，非手機時延保證 |
+| 最終回歸 | 54/54，含 8 項新測試；12 段 inline JS 及 4 個 production JS 語法通過 |
+
+獨立唯讀審查對初輪 53 項測試的實作未確認功能性漏洞；隨後增加跨工序實體去重第 54 項，完整回歸再次通過。專項測試亦覆蓋種子確定性、較差用料保留、件號交換去重、停用庫存、修邊／支撐與方向覆寫、途中改選、停止／需求取消不回填、穩定 key、旋轉與雙語提示。
+
+引擎 `plywood-trial-1.3.0`；PWA `2026-10-08-layout-diversity-1`，四個 JS 資產 URL 版本不變。核心位置是 `index.html` 的 `diversityRank()`、`comparePriority()`、`packRipBoard()`／`packTreeBoard()`、`candidateSignature()`、`diversityProfiles()`、`buildCandidatePool()`、`updateVariationControls()`、`searchMoreCandidates()`、`clearCandidatePool()` 及 `rotateTrialPartAndReplan()`；正式測試在 `tests/table-saw-optimizer.test.cjs`。
+
+這仍是有限啟發式搜尋，**不是所有排列的枚舉**；沒有保證每單至少幾個方案。大量反覆追加時池與選單／排序成本會增長，沒有硬截斷候選數；如日後實測超時，才評估 worker、分頁或完整 beam/Pareto 搜尋，不能默默刪掉師傅想要的較低排名方案。本次沒有新增設定項，不改已有偏好的持久化方式，也不新增永久候選池或跨重載的方案選取復原。若將來增加同尺寸不同板種、木紋、封邊或用途，須將有實際意義的需求屬性加入 signature，避免錯誤合併。

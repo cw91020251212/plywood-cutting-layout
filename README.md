@@ -12,7 +12,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 - Kerf/blade thickness and four-side edge-trim settings
 - Fewer-sheets or easier-cutting objectives and multiple layout strategies; at equal sheet count/area, the saving objective retains the largest intact rectangular remnant (never a merged L-shaped blank). Reuse is not guaranteed.
 - Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
-- Candidate validation, layout variations, utilisation and sheet count
+- Candidate validation, layout variations, utilisation and sheet count; extra deterministic part/orientation orders, repeatable **Search more layouts** with a stop control, and a direct layout chooser. Lower-ranked verified layouts remain available; swapping identical part IDs is not counted as a new physical layout
 - Part diagram appearance selector: flat color, same-hue 3D gradient (e.g. dark red to light red, dark blue to light blue), or metallic sheen (visual only; no gray overlay)
 - Dimension labels: automatic fit, click one part or show all parts; every leftover sheet piece and edge-trim offcut is also marked along four edges, with an `R` number linking the diagram to its size/area list. Kerf bands are excluded; small pieces remain listed even when labels do not fit. Visual-only, not part of cutting optimization
 - One-part rotation followed by full replanning and validation (manual dragging is disabled)
@@ -21,6 +21,8 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 - Native share sheet on supported phones, with clipboard fallback
 - Installable PWA with an offline-ready service worker
 - Settings for language, dark mode, font size and five-level scroll-arrow opacity
+
+After calculating, use the layout chooser to compare sheet count, cuts and largest intact remnant. **Search more layouts** explores another 24 profiles per click (not a promise of 24 new layouts), preserves the selected diagram/replay, and can be repeated or stopped. All new layouts must pass the same geometry and cut-by-cut checks.
 
 ## Important limitation
 

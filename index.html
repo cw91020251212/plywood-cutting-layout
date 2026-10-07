@@ -684,6 +684,9 @@ body.portrait-display-layout-pending #canvasContainer .portrait-canvas-stage{vis
 #variationControls #previousVariationButton{background:linear-gradient(135deg,#4d7180,#3c5966)!important}
 #variationControls .scheme-button:disabled{background:#999!important;color:#eee!important}
 #variationControls .variation-counter{font-weight:bold;color:#263b40;white-space:nowrap}
+#variationControls .candidate-chooser-label{font-weight:bold;white-space:nowrap}
+#variationControls .candidate-chooser{min-width:0;flex:1 1 100%;width:100%;max-width:100%;padding:8px;font-size:.92em;background:#fff;color:#263b40;border:1px solid #93a8a0;border-radius:4px}
+body.wood-dark-mode #variationControls .candidate-chooser{background:#243140;color:#eef5fa;border-color:#66877e}
 #variationControls .variation-status{flex-basis:100%;text-align:center;color:#6b4b16;font-size:.86em;line-height:1.35}
 #trialResults .variation-seq{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:10px;background:#e8f0eb;color:#315746;font-size:.78em;font-weight:700;white-space:nowrap}
 @media(max-width:600px){#variationControls{gap:5px!important}#variationControls .scheme-button{min-width:0;flex:1 1 42%;font-size:.92em!important}#variationControls .variation-counter{flex:0 0 auto}}
@@ -1178,7 +1181,11 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
   <button id="previousVariationButton" type="button" class="scheme-button" disabled>上一個排法</button>
   <span id="variationCounter" class="variation-counter">方案 1/1</span>
   <button id="nextVariationButton" type="button" class="scheme-button" disabled>下一個排法</button>
+  <label for="candidateChooser" class="candidate-chooser-label">直接揀方案</label>
+  <select id="candidateChooser" class="candidate-chooser" aria-label="直接揀方案"></select>
+  <button id="moreLayoutsButton" type="button" class="scheme-button">搜尋更多排法</button>
   <span id="variationStatus" class="variation-status"></span>
+  <small class="variation-status">可反覆搜尋；每輪追加 24 組嘗試，只保留不同且已驗證的排法，未必每次都有新方案。</small>
 </div>
 <details class="advanced-actions"><summary>其他操作：載入／儲存方案、列印與排版微調</summary>
 <p class="input-hint">目前不開放跨板拖曳試位；圖下方的單件旋轉會重新排料並重做驗證。</p>
@@ -1255,7 +1262,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 </div>
 </div>
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
-<details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
+<details class="search-help"><summary>搜尋方法小提示</summary><p>系統會比較大件優先及不同部件次序的候選；這不代表第一刀一定切大件。每個可選排法都會逐刀回放驗證。</p></details>
 <div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel partDimensionLabel">
   <div class="part-appearance-control" role="group" aria-labelledby="partAppearanceLabel">
     <label id="partAppearanceLabel" for="partAppearanceStyle">部件顏色風格</label>
@@ -7187,7 +7194,7 @@ window.addEventListener('DOMContentLoaded', () => {
 (function (global) {
   'use strict';
   const EPS = 1e-7;
-  const VERSION = 'plywood-trial-1.2.0';
+  const VERSION = 'plywood-trial-1.3.0';
   const area = r => r.width * r.length;
   const rect = (x, y, width, length) => ({ x, y, width, length });
   const cloneRect = r => rect(r.x, r.y, r.width, r.length);
@@ -7311,7 +7318,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const dx = source.width - w, dy = source.length - h;
     return dx >= -EPS && dy >= -EPS && (dx <= EPS || dx + EPS >= k) && (dy <= EPS || dy + EPS >= k);
   }
+  // Stable seeds diversify placement decisions without touching geometry or cut validation.
+  function diversityRank(profile, key) {
+    let h = 2166136261 ^ (Number(profile.seed) >>> 0);
+    for (const ch of String(key)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+    h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
+    return (h >>> 0) / 4294967296;
+  }
   function comparePriority(a, b, profile) {
+    if (profile && profile.seed) return diversityRank(profile,a.id)-diversityRank(profile,b.id) || a.id.localeCompare(b.id);
     const mode = Number(profile && profile.priority || 0);
     const maxA = Math.max(a.width, a.length), maxB = Math.max(b.width, b.length);
     const minA = Math.min(a.width, a.length), minB = Math.min(b.width, b.length);
@@ -7319,8 +7334,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (mode === 2) return (b.width - a.width) || (b.length - a.length) || a.id.localeCompare(b.id);
     return a.id.localeCompare(b.id);
   }
-  function profileFitScore(dx, dy, waste, board, profile, rotated) {
+  function profileFitScore(dx, dy, waste, board, profile, rotated, source) {
     if (!profile) return waste + (rotated ? 1e-6 : 0);
+    if (profile.seed) return diversityRank(profile,`${source.x},${source.y},${dx},${dy},${waste},${rotated}`);
     const fit = Number(profile.fit || 0);
     if (fit === 0) return waste + (Number(profile.orientation) ? (rotated ? -1e-6 : 0) : (rotated ? 1e-6 : 0));
     const metric = fit === 1 ? Math.min(dx, dy) : fit === 2 ? Math.max(dx, dy) : fit === 3 ? dx : dy;
@@ -7345,10 +7361,13 @@ window.addEventListener('DOMContentLoaded', () => {
             if (s.minSupport && (dx > EPS || dy > EPS) && r.width + EPS < s.minSupport) continue;
             if (s.minSupport && dx > EPS && dy > EPS && o.width + EPS < s.minSupport) continue;
             const waste = area(r) - o.width * o.length;
-            const score = profileFitScore(dx, dy, waste, b, search, o.rotated);
+            const score = profileFitScore(dx, dy, waste, b, search, o.rotated, r);
             const candidateArea = token.width * token.length;
             let better = !best;
-            if (best && search) {
+            if (best && search && search.seed) {
+              const priority = comparePriority(token, best.token, search);
+              better = priority < 0 || (priority === 0 && score < best.score - EPS);
+            } else if (best && search) {
               const bestArea = best.token.width * best.token.length;
               if (candidateArea > bestArea + EPS) better = true;
               else if (candidateArea < bestArea - EPS) better = false;
@@ -7442,6 +7461,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
       cand.sort((a, b) => {
+        if (search && search.seed) return comparePriority(a.token,b.token,search) || diversityRank(search,`lane:${a.o.width}:${a.o.length}`)-diversityRank(search,`lane:${b.o.width}:${b.o.length}`);
         const byArea = b.area - a.area;
         if (Math.abs(byArea) > EPS) return byArea;
         if (search) {
@@ -7464,6 +7484,7 @@ window.addEventListener('DOMContentLoaded', () => {
         choices.push({ token, o: opts[0] });
       }
       choices.sort((a, b) => {
+        if (search && search.seed) return comparePriority(a.token,b.token,search);
         const byArea = b.token.width * b.token.length - a.token.width * a.token.length;
         if (Math.abs(byArea) > EPS) return byArea;
         if (search && Number(search.fit) % 2) return (a.o.length - b.o.length) || comparePriority(a.token, b.token, search);
@@ -7517,6 +7538,7 @@ window.addEventListener('DOMContentLoaded', () => {
     for (const strip of strips) {
       let material = { id: strip.id, rect: cloneRect(strip.rect) };
       const ordered = strip.parts.slice().sort((a, b) => {
+        if (search && search.seed) return comparePriority(a.token,b.token,search);
         const byArea = b.token.width * b.token.length - a.token.width * a.token.length;
         if (Math.abs(byArea) > EPS) return byArea;
         if (search && Number(search.fit) % 2) return (a.o.length - b.o.length) || comparePriority(a.token, b.token, search);
@@ -7674,6 +7696,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const direction = stockOrder === 'largestFirst' ? -1 : 1;
       order.sort((a,b)=>direction*(Number(a.source.width)*Number(a.source.length)-Number(b.source.width)*Number(b.source.length))||a.index-b.index);
     }
+    if (stockOrder === 'seeded') order.sort((a,b)=>diversityRank(s.searchProfile,`stock:${a.index}`)-diversityRank(s.searchProfile,`stock:${b.index}`));
     // Each candidate visits stock once, preserving original stock indices even when its search order differs.
     for(let i=0;i<order.length && waiting.length;i++) {
       const ref=order[i], b=makeBoard(ref.source,ref.index,false,s);
@@ -7728,7 +7751,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const stripSearch=plans.reduce((sum,b)=>{const stats=b.stripSearch||{};sum.combined+=stats.combined||0;sum.limited+=stats.limited||0;sum.unavailable+=stats.unavailable||0;return sum;},{combined:0,limited:0,unavailable:0});
     const summary={requestedParts:demand.length,placedParts:placedIds.length,unplacedParts:unplaced.length,usedBoardCount:plans.length,boardsAdded:addedCount,partsArea:partArea,kerfArea,wasteArea:plans.reduce((n,b)=>n+b.validation.offcutArea,0),boardArea,netYield:boardArea?partArea/boardArea*100:0,largestRemnant,largestRemnantArea:largestRemnant?largestRemnant.area:0,largestRemnantShortSide:largestRemnant?largestRemnant.shortSide:0,retainedRemnantCount:retainedRemnants.length};
-    return {version:VERSION,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
+    return {version:VERSION,searchProfile:s.searchProfile?{...s.searchProfile}:null,stripSelection:s.stripSelection,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:s.searchProfile&&s.searchProfile.seed?'多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證':'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
   }
 
   global.PlywoodTrialEngine={version:VERSION,plan,verifyBoard,orientations};
@@ -8307,8 +8330,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function candidateSignature(plan){
     const q=n=>Math.round(Number(n)*1e6)/1e6;
-    const data=(plan.boards||[]).map(b=>({boardId:b.boardId,results:(b.results||[]).map(p=>[p.id,q(p.x),q(p.y),q(p.width),q(p.length),!!p.rotated]).sort((a,b)=>a[0].localeCompare(b[0])),cuts:(b.cuts||[]).map(c=>[c.phase,c.axis,q(c.distanceFromDatum),c.sourceMaterialId,[c.sourceRect.x,c.sourceRect.y,c.sourceRect.width,c.sourceRect.length].map(q),c.outputs.map(o=>[o.kind,o.partId||'',o.materialId,[o.rect.x,o.rect.y,o.rect.width,o.rect.length].map(q)])])}));
-    const signature=JSON.stringify({mode:plan.mode,boards:data});let h=2166136261;for(let i=0;i<signature.length;i++){h^=signature.charCodeAt(i);h=Math.imul(h,16777619);}return {signature,hash:(h>>>0).toString(16).padStart(8,'0')};
+    const box=r=>[r.x,r.y,r.width,r.length].map(q);
+    const data=(plan.boards||[]).map(b=>({boardId:b.boardId,
+      results:(b.results||[]).map(p=>[q(p.originalWidth),q(p.originalLength),...box(p),!!p.rotated]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))),
+      cuts:(b.cuts||[]).map(c=>[c.axis,box(c.sourceRect),box(c.kerfBand),c.outputs.map(o=>box(o.rect)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))])}));
+    const signature=JSON.stringify({boards:data});let h=2166136261;for(let i=0;i<signature.length;i++){h^=signature.charCodeAt(i);h=Math.imul(h,16777619);}return {signature,hash:(h>>>0).toString(16).padStart(8,'0')};
   }
   function strictlyValidCandidate(plan, overrides){
     if(!safeForDisplay(plan)||plan.status!=='candidate'||!plan.validation.ok||plan.unplaced.length)return false;
@@ -8319,30 +8345,43 @@ window.addEventListener('DOMContentLoaded', () => {
     for(const p of actual){const pref=overrides&&overrides[p.id];if(!pref)continue;const w=Number(p.originalWidth),l=Number(p.originalLength);const wantRotated=pref==='fixed_horizontal'?(w<l):(w>=l);if(Boolean(p.rotated)!==wantRotated)return false;}
     return true;
   }
-  function searchProfiles(){const out=[];for(let fit=0;fit<5;fit++)for(let priority=0;priority<3;priority++)out.push({active:true,fit,priority,orientation:(fit+priority)%2});for(const stockOrder of ['largestFirst','smallestFirst'])out.push({active:true,fit:0,priority:0,orientation:0,stockOrder});return out;}
-  function buildCandidatePool(initialPlan,baseSettings,modes,labelForMode,objective=selectedObjective()){
-    const overrides={...(baseSettings.fixedOrientationOverrides||{})};const pool=[],seen=new Set();
-    const add=(plan,label)=>{if(!strictlyValidCandidate(plan,overrides))return false;const sig=candidateSignature(plan);if(seen.has(sig.signature))return false;seen.add(sig.signature);pool.push({plan,label,signature:sig.signature,hash:sig.hash});return true;};
-    const initialLabel=labelForMode(initialPlan.mode);add(initialPlan,initialLabel);
-    const profiles=searchProfiles();
+  let candidateSearchEpoch=0,candidateSearchState=null;
+  function diversityProfiles(start,count){
+    if(!Number.isSafeInteger(start)||start<1||!Number.isInteger(count)||count<0||count>24)throw new TypeError('多樣化搜尋範圍無效');
+    return Array.from({length:count},(_,i)=>({active:true,seed:start+i,fit:(start+i)%5,priority:0,orientation:(start+i)%2,stockOrder:['input','largestFirst','smallestFirst','seeded'][(start+i)%4]}));
+  }
+  function searchProfiles(){const out=[];for(let fit=0;fit<5;fit++)for(let priority=0;priority<3;priority++)out.push({active:true,fit,priority,orientation:(fit+priority)%2});for(const stockOrder of ['largestFirst','smallestFirst'])out.push({active:true,fit:0,priority:0,orientation:0,stockOrder});return out.concat(diversityProfiles(1,12));}
+  function buildCandidatePool(initialPlan,baseSettings,modes,labelForMode,objective=selectedObjective(),profiles=searchProfiles(),existing=[]){
+    const overrides={...(baseSettings.fixedOrientationOverrides||{})};const pool=existing.slice(),seen=new Set(pool.map(x=>x.signature));
+    const add=(plan,label)=>{if(!strictlyValidCandidate(plan,overrides))return false;const sig=candidateSignature(plan);if(seen.has(sig.signature))return false;seen.add(sig.signature);pool.push({plan,label,key:pool.length,signature:sig.signature,hash:sig.hash});return true;};
+    if(!existing.length)add(initialPlan,labelForMode(initialPlan.mode));
     for(const mode of modes){
       const selections=mode==='ripThenCrosscut'?['subset','greedy']:['subset'];
-      // 保留原始無 profile 的貪婪候選，避免局部組合搜尋較差時失去舊解。
-      if(mode==='ripThenCrosscut'){try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,stripSelection:'greedy',searchProfile:null}),labelForMode(mode));}catch(_){}}
-      for(const stripSelection of selections)for(const profile of profiles){try{const settings={...baseSettings,mode,stripSelection,fixedOrientationOverrides:overrides,searchProfile:profile};const plan=window.PlywoodTrialEngine.plan(getParts(),getBoards(),settings);add(plan,labelForMode(mode));}catch(_){/* 無效或不完整候選不進池 */}}
+      if(mode==='ripThenCrosscut'&&!existing.length){try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,stripSelection:'greedy',searchProfile:null}),labelForMode(mode));}catch(_){} }
+      // ponytail: diverse rip profiles use fast greedy selection; original DP profiles remain as packing baselines.
+      for(const stripSelection of selections)for(const profile of profiles){if(mode==='ripThenCrosscut'&&profile.seed&&stripSelection==='subset')continue;try{const settings={...baseSettings,mode,stripSelection,fixedOrientationOverrides:overrides,searchProfile:profile};const plan=window.PlywoodTrialEngine.plan(getParts(),getBoards(),settings);add(plan,labelForMode(mode));}catch(_){/* 無效或不完整候選不進池；較低排名的合法候選不刪除 */}}
     }
-    // Sort only after every selected process/profile has completed; rejected or incomplete plans never enter the pool.
     pool.sort((x,y)=>rankPlan(x.plan,y.plan,objective));
     return pool;
   }
   function updateVariationControls(){
     const controls=$('variationControls'),prev=$('previousVariationButton'),next=$('nextVariationButton'),counter=$('variationCounter'),status=$('variationStatus');
-    const pool=window.calculator._trialCandidates||[],i=Number(window.calculator._trialCandidateIndex||0),has=!!window.calculator.trialPlan&&strictlyValidCandidate(window.calculator.trialPlan,window.calculator._trialFixedOrientationOverrides||{});
+    const c=window.calculator,pool=c._trialCandidates||[],i=Number(c._trialCandidateIndex||0),has=!!c.trialPlan&&strictlyValidCandidate(c.trialPlan,c._trialFixedOrientationOverrides||{});
     if(!controls)return;controls.hidden=!has;if(!has)return;
     counter.textContent=`方案 ${Math.min(i+1,pool.length||1)}/${Math.max(1,pool.length)}`;prev.disabled=i<=0;next.disabled=i>=pool.length-1;
-    status.textContent=i>=pool.length-1?'已沒有更多符合驗證的不同排法（本次有限搜尋；不代表全局最優）':'';
+    const chooser=$('candidateChooser'),more=$('moreLayoutsButton');
+    if(chooser){
+      const fragment=document.createDocumentFragment();
+      pool.forEach((item,index)=>{const option=document.createElement('option'),r=item.plan.summary.largestRemnant;option.value=String(item.key);option.textContent=`方案 ${index+1}｜板材 ${item.plan.summary.usedBoardCount} 塊｜切刀 ${totalCutCount(item.plan)} 刀｜最大完整餘料：${r?`${fmtDim(r.rect.length)} × ${fmtDim(r.rect.width)}`:'無'}`;fragment.appendChild(option);});
+      chooser.replaceChildren(fragment);
+      chooser.value=String(pool[i].key);
+    }
+    if(more){more.textContent=candidateSearchState?'停止追加搜尋':'搜尋更多排法';more.disabled=false;}
+    controls.setAttribute('aria-busy',candidateSearchState?'true':'false');
+    status.textContent=candidateSearchState?`正在搜尋更多排法；目前 ${pool.length} 個不同方案。`:(c._trialSearchNotice||`目前保留 ${pool.length} 個不同方案；可再搜尋，較低排名也保留。`);
+    const headline=$('trialResults')&&$('trialResults').querySelector('.result-number');if(headline)headline.textContent=counter.textContent;
   }
-  function clearCandidatePool(){const c=window.calculator;c._trialCandidates=[];c._trialCandidateIndex=0;c._trialCandidateLabel='';if($('variationControls'))$('variationControls').hidden=true;}
+  function clearCandidatePool(){const c=window.calculator;candidateSearchEpoch++;candidateSearchState=null;c._trialCandidates=[];c._trialCandidateIndex=0;c._trialCandidateLabel='';c._trialNextSeed=13;c._trialSearchNotice='';if($('variationControls'))$('variationControls').hidden=true;}
   function commitCandidate(index){
     const c=window.calculator,pool=c._trialCandidates||[];if(index<0||index>=pool.length)return false;
     const item=pool[index];if(!strictlyValidCandidate(item.plan,c._trialFixedOrientationOverrides||{}))return false;
@@ -8350,6 +8389,32 @@ window.addEventListener('DOMContentLoaded', () => {
     const label=item.label+(c._trialRotationLabel||'');window.PlywoodTrialUI.render(item.plan,label);
     if($('suggestionMessage'))$('suggestionMessage').textContent='幾何與逐刀回放驗證通過；仍是候選草排。';
     updateVariationControls();return true;
+  }
+  async function searchMoreCandidates(){
+    const c=window.calculator;
+    if(candidateSearchState){candidateSearchEpoch++;candidateSearchState=null;c._trialSearchNotice='已停止追加搜尋；已找到的方案全部保留。';updateVariationControls();return {cancelled:true};}
+    if(!c.trialPlan||!(c._trialCandidates||[]).length)return {added:0};
+    const state={epoch:candidateSearchEpoch},initialCount=c._trialCandidates.length;
+    candidateSearchState=state;
+    const settings={...c.trialConfig,fixedOrientationOverrides:{...(c._trialFixedOrientationOverrides||{})}};
+    const modes=settings.mode==='auto'?['ripThenCrosscut','partFirstTree']:[settings.mode||c.trialMode];
+    const objective=c._trialObjective||selectedObjective();
+    const labelForMode=mode=>mode==='ripThenCrosscut'?'更多候選：先分條再截件':'更多候選：按成品安排';
+    updateVariationControls();
+    try{
+      for(let round=0;round<24;round++){
+        await new Promise(resolve=>setTimeout(resolve,0));
+        if(candidateSearchState!==state||candidateSearchEpoch!==state.epoch)return {cancelled:true};
+        const seed=Number(c._trialNextSeed||13),current=c.trialPlan;
+        const pool=buildCandidatePool(current,settings,modes,labelForMode,objective,diversityProfiles(seed,1),c._trialCandidates);
+        c._trialNextSeed=seed+1;c._trialCandidates=pool;
+        c._trialCandidateIndex=Math.max(0,pool.findIndex(item=>item.plan===current));
+        updateVariationControls();
+      }
+      const added=c._trialCandidates.length-initialCount;
+      c._trialSearchNotice=`本次新增 ${added} 個不同方案；可再搜尋，較低排名也保留。`;
+      return {added};
+    }finally{if(candidateSearchState===state){candidateSearchState=null;updateVariationControls();}}
   }
   function calculate(){
     clearMessages();$('boardAddedNotification').style.display='none';clearCandidatePool();
@@ -8408,11 +8473,13 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click',e=>{if(e.target.closest('#partsTableBody button,#boardsTableBody button')){window.calculator._trialFixedOrientationOverrides={};resetResults();}},true);
   document.addEventListener('change',e=>{if(e.target.closest('#partsTableBody,#boardsTableBody')){window.calculator._trialFixedOrientationOverrides={};resetResults();}},true);
   $('nextVariationButton').addEventListener('click',()=>window.calculator.nextVariation());$('previousVariationButton').addEventListener('click',()=>window.calculator.previousVariation());
+  $('candidateChooser').addEventListener('change',event=>commitCandidate((window.calculator._trialCandidates||[]).findIndex(item=>String(item.key)===event.target.value)));
+  $('moreLayoutsButton').addEventListener('click',()=>searchMoreCandidates().catch(error=>{$('errorMessage').textContent=error.message||String(error);}));
   ['cuttingStrategy','sawBladeThickness','trialTrimLeft','trialTrimRight','trialTrimTop','trialTrimBottom','trialEdgeLeft','trialEdgeRight','trialEdgeTop','trialEdgeBottom','trialMinSupport'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{showModeDescription();if(window.calculator.trialPlan)resetResults();});});
   $('cuttingStrategy').addEventListener('change',showModeDescription);
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
-  window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate,updateDimensionPanels,dimensionLabelMode:partDimensionMode};
+  window.PlywoodTrialUI={calculate,searchMoreCandidates,candidateSignature,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate,updateDimensionPanels,dimensionLabelMode:partDimensionMode};
   function rerenderCurrentTrial(){
     const c=window.calculator,plan=c&&c.trialPlan;if(!plan||!window.PlywoodTrialUI||typeof window.PlywoodTrialUI.render!=='function')return;
     const index=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[index];
@@ -8702,6 +8769,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Commit only after the entire replacement plan passes all checks.
+    window.PlywoodTrialUI.clearCandidatePool();
+    calculator.trialConfig={...settings,selectedMode:candidate.mode,objective:calculator._trialObjective||'saving'};
     calculator._trialFixedOrientationOverrides=nextOverrides;
     calculator.trialPlan = candidate;
     calculator.schemes = makeLegacyScheme(candidate);
@@ -8712,8 +8781,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const baseLabel=`按已選工序「${modeName}」｜單件旋轉後重排`;
     const modes=[candidate.mode];
     calculator._trialCandidates=window.PlywoodTrialUI.buildCandidatePool(candidate,{...settings,fixedOrientationOverrides:nextOverrides},modes,mode=>`按已選工序「${mode==='ripThenCrosscut'?'先分條再截件':'按成品安排'}」`);
-    if(!calculator._trialCandidates.length)calculator._trialCandidates=[{plan:candidate,label:`按已選工序「${modeName}」`,...(()=>{const sig=JSON.stringify(candidate.boards.map(b=>b.results.map(p=>[p.id,p.x,p.y,p.width,p.length,p.rotated])));return {signature:sig,hash:'manual'};})()}];
-    calculator._trialCandidateIndex=0;
+    if(!calculator._trialCandidates.length)calculator._trialCandidates=[{plan:candidate,key:0,label:`按已選工序「${modeName}」`,...window.PlywoodTrialUI.candidateSignature(candidate)}];
+    calculator._trialCandidateIndex=Math.max(0,calculator._trialCandidates.findIndex(item=>item.plan===candidate));
     window.PlywoodTrialUI.render(candidate, baseLabel);window.PlywoodTrialUI.updateVariationControls();
     if ($('errorMessage')) $('errorMessage').textContent = '';
     if ($('suggestionMessage')) $('suggestionMessage').textContent = '單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。';
@@ -9261,7 +9330,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ['部件數量','Parts'],['輸入要切出的部件尺寸和數量，按「新增」加入清單。','Enter each part’s length, width and quantity, then select Add.'],['長度:','Length:'],['長度：','Length:'],['闊度:','Width:'],['寬度:','Width:'],['數量:','Quantity:'],['米','m'],['厘米','cm'],['毫米','mm'],['尺','ft'],['呎','ft'],['寸','in'],['分','eighths'],['新增','Add'],['新增部件','Add part'],['新增板材','Add sheet'],['重置','Reset'],['顏色','Color'],['寬','Width'],['長','Length'],['數量','Qty'],['方向','Orientation'],['操作','Actions'],
     ['板材尺寸','Sheet sizes'],['輸入手上夾板原板的闊度、長度和數量。修邊／原板邊規則按下方設定套用於全部原板。','Enter the width, length and quantity of the plywood sheets you have. Trim and usable-edge settings below apply to every sheet.'],['更多板材設定（通常設定已足夠）','More sheet settings (defaults are usually fine)'],['原板邊／修邊（套用到每塊原板；尺寸 mm）','Sheet edges and trim (apply to every sheet; dimensions in mm)'],['左邊修邊','Trim left edge'],['右邊修邊','Trim right edge'],['上邊修邊','Trim top edge'],['下邊修邊','Trim bottom edge'],['可作成品邊的原板邊','Sheet edges that can be finished edges'],['左原板邊可作成品邊','Left sheet edge can be a finished edge'],['右原板邊可作成品邊','Right sheet edge can be a finished edge'],['上原板邊可作成品邊','Top sheet edge can be a finished edge'],['下原板邊可作成品邊','Bottom sheet edge can be a finished edge'],['接角容差不會當作修邊。若某邊不可用作成品邊，須提供至少一個鋸縫寬度的實際修邊量；各邊可設 0。','Corner tolerance is not trim. If an edge cannot be used as a finished edge, enter a real trim amount of at least one kerf width. Each edge may be set to 0.'],['最窄安全支撐寬度（mm；未知可留空）','Minimum safe support width (mm; leave blank if unknown)'],['未驗證／留空','Not checked / leave blank'],['目前安全支撐寬度未知，不作猜測。留空時只產生候選草排；輸入數值亦只作幾何篩選，不構成安全認證。','The safe support width is not known, so the app will not guess it. Leaving this blank gives layout candidates only. An entered value is only a geometry filter, not a safety approval.'],['原板邊可作成品邊；需要修邊的邊可分別設定，0 代表不修邊。若停用某原板邊，需輸入足夠修邊量。','Sheet edges may be used as finished edges. Set trim for each edge separately; 0 means no trim. If an edge is disabled, enter enough trim for a valid cut.'],
     ['切割結果','Cutting results'],['不確定如何設定時，保留預設選項即可開始計算。','If unsure, keep the defaults and calculate.'],['鋸路方向:','Cut direction:'],['自動判斷（建議）','Auto (recommended)'],['自動判斷','Auto'],['橫切','Crosscut'],['直切','Rip cut'],['方向不確定時選「自動判斷」。','Choose Auto if you are unsure about the cut direction.'],['排版目標','Layout goal'],['慳料優先','Use fewer sheets'],['先少用板，同等用料下保留最大完整長方形餘料，再比較鋸縫及刀數。','Use fewer sheets; at equal sheet area retain the largest intact rectangular remnant before comparing kerf and cuts.'],['開料方便優先','Fewer cuts'],['先按刀數，再按工序換向及刀路長度；只作操作成本代理。','Rank by cuts, then axis changes and cut length; these are only operation-cost proxies.'],['只比較通過完整度、幾何及逐刀回放的有限候選；不保證全局最優、餘料用途或機台安全。','Compares only complete, checked candidates from a limited search. No global optimum, remnant-use, or machine-safety guarantee.'],['有限候選先比較刀數、再比較工序換向及刀路長度；這些只是代理，不代表實際翻板次數、機台工時或安全。','Limited candidates are ranked by cuts, then axis changes and cut length. These are proxies, not actual rotations, machine time, or safety.'],['有限候選先比較用板數及原板總面積，同等用料優先保留最大完整長方形餘料（同面積比短邊），再比較鋸縫、餘料塊數及刀數；不合併 L 形空位，不保證用途或全局最優。','Limited candidates first minimize sheet count and total sheet area, then retain the largest intact rectangular remnant (shorter side breaks equal-area ties), followed by kerf, remnant count and cuts. L-shaped blanks are never merged; no reuse or global-optimum guarantee.'],['更多設定','More settings'],['切割流程','Cutting process'],['自動（比較兩種工序）','Help me choose (compare both processes)'],['先分條再截件','Rip into strips, then crosscut'],['按成品安排','Plan around each part'],['自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。','Auto compares both processes and shows only complete candidates that pass geometry and cut-by-cut checks.'],['我會比較兩種工序，只採用通過幾何與逐刀驗證的候選。','Compares both processes and keeps only candidates that pass geometry and cut-by-cut checks.'],['先集中同闊分條，再用長短組合逐條截件；每刀切穿當前工件。固定方向仍會遵守，木紋須另由師傅核對。','Group equal-width strips, then combine lengths for crosscuts. Each cut crosses the current workpiece. Fixed orientations are respected; check grain separately.'],['按成品逐刀安排，每刀只切當時可用的材料。','Plan each part in turn. Every cut is made in material that still exists at that step.'],
-    ['計算','Calculate'],['上一個排法','Previous layout'],['下一個排法','Next layout'],['其他操作：載入／儲存方案、列印與排版微調','More actions: load / save JSON, print, and layout controls'],['目前不開放跨板拖曳試位；圖下方的單件旋轉會重新排料並重做驗證。','Dragging parts between sheets is not available. Rotate one part below a board to re-plan and re-check the layout.'],['載入 JSON','Load JSON'],['儲存 JSON','Save JSON'],['列印','Print'],['清除結果','Clear results'],['移動部件:','Move part:'],['目標板材編號:','Target sheet number:'],['板材編號','Sheet number'],['輸入部件編號','Enter part number'],['旋轉:','Rotation:'],['自動','Auto'],['縱向','Vertical'],['橫向','Horizontal'],['確認移動','Confirm move'],['取消','Cancel'],['部件拖拉','Drag parts'],['部件重疊','Part overlap'],['關閉','Off'],['吸附閾值:','Snap threshold:'],['邊緣對齊','Align to edge'],['⬅ 左對齊','⬅ Align left'],['➡ 右對齊','➡ Align right'],['⬆ 上對齊','⬆ Align top'],['⬇ 下對齊','⬇ Align bottom'],['居中對齊','Center align'],['⬌ 水平居中','⬌ Center horizontally'],['⬍ 垂直居中','⬍ Center vertically'],['貼靠部件','Snap to part'],['⬅ 貼靠左邊','⬅ Snap to left'],['➡ 貼靠右邊','➡ Snap to right'],['⬆ 貼靠上方','⬆ Snap to top'],['⬇ 貼靠下方','⬇ Snap to bottom'],['貼靠鋸路線','Snap to cut line'],['⬅ 貼靠左邊鋸路線','⬅ Snap to left cut line'],['➡ 貼靠右邊鋸路線','➡ Snap to right cut line'],['⬆ 貼靠上方鋸路線','⬆ Snap to top cut line'],['⬇ 貼靠下方鋸路線','⬇ Snap to bottom cut line'],['排版結果','Layout'],['查看各塊板的排料圖。','View the layout for each sheet.'],['排版圖顯示模式','Layout display mode'],['直向滿版','Portrait full-screen view'],['圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版只調整顯示大小。','The drawing starts at the top left (X goes right, Y goes down). A wide sheet may be transposed for viewing only; its real length and width and the cut plan do not change. Full-screen view only changes display size.'],['圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版僅調整顯示大小；拖放、雙擊旋轉與移板已停用，按 Esc 或「還原視圖」退出。','The drawing starts at the top left (X goes right, Y goes down). A wide sheet may be transposed for viewing only; its real dimensions and cut plan do not change. Full-screen view changes display size only. Dragging, double-click rotation and moving parts are disabled. Press Esc or Restore view to exit.'],['搜尋方法小提示','Search note'],['系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。','Larger parts are considered first during search. That does not mean they are cut first. The actual cut order is listed separately and checked by replaying each cut.'],['Guillotine切割方案','Guillotine layout'],['加入部件和板材，再按「計算」。','Add parts and sheets, then select Calculate.'],['切割詳情（展開查看刀序與材料數值）','Cut details (open to see cut order and material figures)'],['計算後可查看逐刀位置、材料帳和修邊資料。','After calculating, view each cut position, the material balance and trim details.'],['第一階段切割 (Primary Cuts)','First-stage cuts (primary cuts)'],['(將大板切成長條)','(Rip the sheet into strips)'],['第二階段切割 (Secondary Cuts)','Second-stage cuts (secondary cuts)'],['(將長條切成最終部件)','(Crosscut strips into finished parts)'],['部件規格','Part size'],['板材','Sheet'],['位置','Position'],['旋轉','Rotated'],['接觸邊緣','Edges touched'],['打印選項','Print options'],['排版圖形','Layout diagrams'],['打印','Print'],['方案','Layout'],['方案 ','Layout '],['總板材','Sheets used'],['總部件','Parts total'],['利用率','Yield'],['餘料','Offcut'],['顏色','Color'],['刪除','Delete'],['啟用','Enable'],['暫停','Disable'],['重啟','Enable'],['方向 preference','orientation preference'],
+    ['計算','Calculate'],['上一個排法','Previous layout'],['下一個排法','Next layout'],['其他操作：載入／儲存方案、列印與排版微調','More actions: load / save JSON, print, and layout controls'],['目前不開放跨板拖曳試位；圖下方的單件旋轉會重新排料並重做驗證。','Dragging parts between sheets is not available. Rotate one part below a board to re-plan and re-check the layout.'],['載入 JSON','Load JSON'],['儲存 JSON','Save JSON'],['列印','Print'],['清除結果','Clear results'],['移動部件:','Move part:'],['目標板材編號:','Target sheet number:'],['板材編號','Sheet number'],['輸入部件編號','Enter part number'],['旋轉:','Rotation:'],['自動','Auto'],['縱向','Vertical'],['橫向','Horizontal'],['確認移動','Confirm move'],['取消','Cancel'],['部件拖拉','Drag parts'],['部件重疊','Part overlap'],['關閉','Off'],['吸附閾值:','Snap threshold:'],['邊緣對齊','Align to edge'],['⬅ 左對齊','⬅ Align left'],['➡ 右對齊','➡ Align right'],['⬆ 上對齊','⬆ Align top'],['⬇ 下對齊','⬇ Align bottom'],['居中對齊','Center align'],['⬌ 水平居中','⬌ Center horizontally'],['⬍ 垂直居中','⬍ Center vertically'],['貼靠部件','Snap to part'],['⬅ 貼靠左邊','⬅ Snap to left'],['➡ 貼靠右邊','➡ Snap to right'],['⬆ 貼靠上方','⬆ Snap to top'],['⬇ 貼靠下方','⬇ Snap to bottom'],['貼靠鋸路線','Snap to cut line'],['⬅ 貼靠左邊鋸路線','⬅ Snap to left cut line'],['➡ 貼靠右邊鋸路線','➡ Snap to right cut line'],['⬆ 貼靠上方鋸路線','⬆ Snap to top cut line'],['⬇ 貼靠下方鋸路線','⬇ Snap to bottom cut line'],['排版結果','Layout'],['查看各塊板的排料圖。','View the layout for each sheet.'],['排版圖顯示模式','Layout display mode'],['直向滿版','Portrait full-screen view'],['圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版只調整顯示大小。','The drawing starts at the top left (X goes right, Y goes down). A wide sheet may be transposed for viewing only; its real length and width and the cut plan do not change. Full-screen view only changes display size.'],['圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。滿版僅調整顯示大小；拖放、雙擊旋轉與移板已停用，按 Esc 或「還原視圖」退出。','The drawing starts at the top left (X goes right, Y goes down). A wide sheet may be transposed for viewing only; its real dimensions and cut plan do not change. Full-screen view changes display size only. Dragging, double-click rotation and moving parts are disabled. Press Esc or Restore view to exit.'],['搜尋方法小提示','Search note'],['系統會比較大件優先及不同部件次序的候選；這不代表第一刀一定切大件。每個可選排法都會逐刀回放驗證。','Search compares larger-part-first baselines with different part orders. This does not dictate the first cut. Every selectable layout is checked by replaying each cut.'],['Guillotine切割方案','Guillotine layout'],['加入部件和板材，再按「計算」。','Add parts and sheets, then select Calculate.'],['切割詳情（展開查看刀序與材料數值）','Cut details (open to see cut order and material figures)'],['計算後可查看逐刀位置、材料帳和修邊資料。','After calculating, view each cut position, the material balance and trim details.'],['第一階段切割 (Primary Cuts)','First-stage cuts (primary cuts)'],['(將大板切成長條)','(Rip the sheet into strips)'],['第二階段切割 (Secondary Cuts)','Second-stage cuts (secondary cuts)'],['(將長條切成最終部件)','(Crosscut strips into finished parts)'],['部件規格','Part size'],['板材','Sheet'],['位置','Position'],['旋轉','Rotated'],['接觸邊緣','Edges touched'],['打印選項','Print options'],['排版圖形','Layout diagrams'],['打印','Print'],['方案','Layout'],['方案 ','Layout '],['總板材','Sheets used'],['總部件','Parts total'],['利用率','Yield'],['餘料','Offcut'],['顏色','Color'],['刪除','Delete'],['啟用','Enable'],['暫停','Disable'],['重啟','Enable'],['方向 preference','orientation preference'],
     ['候選排法','Layout candidate'],['候選草排','Layout candidate draft'],['不完整候選','Incomplete candidate'],['完整','Complete'],['未通過完整驗證','Not fully checked'],['幾何／逐刀驗證未通過：','Geometry / cut replay check failed: '],['此候選不顯示為可切排法，請修正設定後重新計算。','This layout is not shown as ready to cut. Check your settings and calculate again.'],['幾何與逐刀回放已通過程式驗證；仍須師傅實際核對，不代表夾持或機台安全。','Geometry and cut-by-cut replay checks passed. An experienced woodworker must still check the layout. This is not a clamping or machine-safety approval.'],['尚有部件未排入，不能當作完整排法；已排部分亦只供參考。仍須師傅實際核對。','Some parts are not placed, so this is not a complete layout. The placed parts are for reference only. Have an experienced woodworker check it.'],['未排入部件和原因已列在「切割詳情」。','Unplaced parts and reasons are listed in Cut details.'],['沒有可顯示的已驗證排法。','No checked layout is available.'],['所有候選均未通過完整度與逐刀回放驗證。','No candidate passed the completeness and cut-by-cut replay checks.'],['兩種工序都沒有產生通過幾何與逐刀回放驗證的完整候選。','Neither process produced a complete candidate that passed geometry and cut-by-cut replay checks.'],['請核對部件、原板尺寸及進階設定；不完整部件不會當作完整排法。','Check the parts, sheet sizes and advanced settings. An incomplete layout is not treated as complete.'],['輸入錯誤／無效幾何：','Input error / invalid geometry: '],['尚有 ','There are '],[' 件未排入；不會算作完成。',' parts not placed; the layout is incomplete.'],['幾何與逐刀回放驗證通過；仍是候選草排。','Geometry and cut-by-cut replay checks passed. This is still only a layout candidate.'],['此結果不完整；未排部件已保留在詳情中。','This layout is incomplete. Unplaced parts are listed in the details.'],['已沒有更多符合驗證的不同排法（本次有限搜尋；不代表全局最優）','No more checked layouts were found in this limited search. This does not mean the result is globally optimal.'],['幫我揀：採用「','Auto chose: “'],['按已選工序「','Selected process: “'],['」','”'],['按已選工序','Selected process'],['先分條再截件','Rip, then crosscut'],['按成品安排','Plan around each part'],
     ['工序：','Process: '],['安全支撐寬度：','Safe support width: '],['未設定；目前寬度未知，只作候選草排。','Not set; the safe width is unknown. Layout candidate only.'],['（只作幾何篩選，不是安全認證）','(Geometry filter only; not a safety approval)'],['鋸縫：','Kerf: '],['材料帳（全方案）','Material balance (whole layout)'],['成品面積：','Finished-part area: '],['鋸縫：','Kerf: '],['幾何餘料（含修邊）：','Geometric offcuts (including trim): '],['板面積：','Sheet area: '],['搜尋不代表切序：先搜尋較大成品；實際工序見每板刀序。','Search order is not cut order: larger parts are considered first. See each sheet for the actual cut order.'],['四邊修邊（左／右／上／下）：','Trim (left / right / top / bottom): '],['原板邊可作成品邊（左／右／上／下）：','Usable sheet edges (left / right / top / bottom): '],['可','Yes'],['否','No'],['未排入部件與原因','Unplaced parts and reasons'],['需求列 ','Input row '],['第 ','Part '],[' 件；','; '],['板 ','Sheet '],['原板實際尺寸：','Real sheet size: '],['圖面左上為起點（X 右、Y 下）；橫板換軸僅為觀看，不改切割計算。','Drawing origin is top left (X right, Y down). Transposing a wide sheet is for viewing only; it does not change the real dimensions or cut plan.'],['回放 ','Replay '],[' 刀',' cuts'],['全序；共 ','Full order; '],[' 刀',' cuts'],['刀號','Cut #'],['來源材料','Source material'],['工序／用途','Process / purpose'],['方向','Direction'],['基準邊與距離','Datum edge and distance'],['鋸縫帶（x、y、闊×長）','Kerf band (x, y, width × length)'],['當前材料矩形','Current material rectangle'],['切後材料／成品','Material / part after cut'],['X（直向刀路）','X (vertical cut)'],['Y（橫向刀路）','Y (horizontal cut)'],['自','From '],['左邊','left edge'],['上邊','top edge'],['成品','Finished part'],['修邊／廢料','Trim / waste'],['待切材料','Material to cut'],['無','None'],['此板沒有鋸切；部件直接使用可用原板邊或整塊板材。','No cuts are needed on this sheet; parts use a usable sheet edge or the whole sheet.'],['驗證問題','Check issues'],['板材面積帳','Sheet area balance'],['當前材料尺寸與記錄不符','current material size does not match the record'],['軸向不明','unknown cut direction'],['輸出/鋸縫重疊','outputs / kerf overlap'],['當前材料面積帳不守恆','current material area does not balance'],['來源材料','source material'],['不存在或已被消耗','does not exist or was already used'],['尺寸不合','size does not fit'],['方向無效','invalid direction'],['幾何與切序均通過程式驗證的候選草排','Layout candidate passed geometry and cut-order checks'],['不完整／不可切候選（不得視為可執行）','Incomplete / invalid layout candidate (not ready to cut)'],['安全支撐寬度未驗證，僅候選草排','Safe support width not checked; layout candidate only'],['已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證','User-entered support-width filter applied; not a machine or clamping safety approval'],['幾何與切序均通過程式驗證的候選草排','Layout candidate passed geometry and cut-order checks'],
     ['上一刀','Previous cut'],['下一刀','Next cut'],['全序','Full order'],['單件手動旋轉（會重新排料及驗證）','Rotate one part (re-plan and check)'],['旋轉會重排全部部件並重做刀序驗證；若無完整合法方案，原方案會保留。','Rotating a part re-plans all parts and checks the cut order again. The current layout is kept if no complete valid layout is found.'],['已轉90°','rotated 90°'],['正方形，無須旋轉','Square; no rotation needed'],['轉回','Undo rotation'],['轉90°','Rotate 90°'],['是正方形，不需要旋轉',' is square and does not need rotation'],['旋轉90度並重新排料','Rotate 90° and re-plan'],['目前排法未完整通過驗證，不能執行單件旋轉。','The current layout has not passed all checks; one-part rotation is unavailable.'],['直向滿版顯示期間已停用部件旋轉；請先還原視圖。','Part rotation is disabled in full-screen view. Restore the view first.'],['直向滿版顯示期間已停用移板；請先還原視圖。','Moving parts is disabled in full-screen view. Restore the view first.'],['還原視圖','Restore view'],['直向滿版顯示期間已停用移板','Moving parts is disabled in full-screen view'],['不允許手動拖移或改序；修改需求後請重新計算。','Manual dragging and reordering are not available. Change the requirements and calculate again.'],['夾板候選草排不允許手動拖移或改序；修改需求後請重新計算。','Manual dragging and reordering are not available for plywood layout candidates. Change the requirements and calculate again.'],
@@ -9288,6 +9357,8 @@ window.addEventListener('DOMContentLoaded', () => {
     ['保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。','Keeps each size’s color identifier; changes diagram appearance only, not the cutting plan.']
   );
   dict.push(...[["最大完整餘料：", "Largest intact remnant:"], ["來源板：", "Source sheet:"], ["獨立剩料：", "Separate remnants:"], ["塊（不含修邊料；只屬幾何指標，不保證用途）。", "pieces (edge-trim offcuts excluded; geometry only, no reuse guarantee)."], ["沒有完整剩餘板料（修邊料另列）。", "No intact leftover sheet material (edge-trim offcuts listed separately)."]]);
+  dict.push(...[["直接揀方案", "Choose a layout directly"], ["搜尋更多排法", "Search more layouts"], ["停止追加搜尋", "Stop additional search"], ["正在搜尋更多排法；目前 ", "Searching more layouts; currently "], ["目前保留 ", "Layouts retained: "], ["本次新增 ", "Added this round: "], [" 個不同方案。", " distinct layouts."], [" 個不同方案；可再搜尋，較低排名也保留。", " distinct layouts; search again if needed. Lower-ranked layouts are retained."], ["已停止追加搜尋；已找到的方案全部保留。", "Additional search stopped; all layouts already found are retained."], ["更多候選：", "Additional candidate:"], ["多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證", "Diverse candidates use fixed seeds for part and orientation ordering; actual cuts are still verified one by one."]]);
+  dict.push(['可反覆搜尋；每輪追加 24 組嘗試，只保留不同且已驗證的排法，未必每次都有新方案。','Search repeatedly: each round explores 24 profiles and keeps only distinct verified layouts. A round may find no new layout.']);
   const exactOnly=new Set(['可','米','厘米','毫米','尺','呎','寸','分']);
   const order=[...dict].filter(([zh])=>!exactOnly.has(zh)).sort((a,b)=>b[0].length-a[0].length);
   function translateText(value,lang){

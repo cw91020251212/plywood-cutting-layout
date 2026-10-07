@@ -22,9 +22,14 @@ function loadEngine(helper = saw) {
 }
 function loadPool(demand, stock, helper = saw) {
   const {engine,context} = loadEngine(helper);
+  context.setTimeout=setTimeout;
   context.window.calculator = {parts:demand,boards:stock};
   const start = html.indexOf('  function totalCutCount(plan)');
   const end = html.indexOf('  function updateVariationControls()', start);
+  const moreStart=html.indexOf('  async function searchMoreCandidates()');
+  const moreEnd=html.indexOf('  function calculate(){',moreStart);
+  const clearStart=html.indexOf('  function clearCandidatePool()');
+  const clearEnd=html.indexOf('  function commitCandidate(index){',clearStart);
   assert.ok(start>=0&&end>start);
   vm.runInNewContext(`
     const selectedObjective=()=> 'saving';
@@ -32,9 +37,13 @@ function loadPool(demand, stock, helper = saw) {
     const getBoards=()=>window.calculator.boards.map(b=>({...b}));
     const safeForDisplay=p=>p.validation.boardIssues.length===0&&p.validation.countIssues.length===0&&p.boards.every(b=>b.validation.ok);
     ${html.slice(start,end)}
-    globalThis.poolApi={buildCandidatePool,rankPlan,searchProfiles,strictlyValidCandidate};
+    const $=()=>null;
+    function updateVariationControls(){if(window.onVariationUpdate)window.onVariationUpdate();}
+    ${html.slice(clearStart,clearEnd)}
+    ${html.slice(moreStart,moreEnd)}
+    globalThis.poolApi={buildCandidatePool,rankPlan,searchProfiles,diversityProfiles,candidateSignature,strictlyValidCandidate,searchMoreCandidates,clearCandidatePool};
   `,context);
-  return {engine,api:context.poolApi};
+  return {engine,api:context.poolApi,context};
 }
 function choice(length,id='a',width=300){return {token:{id},o:{width,length,rotated:false}};}
 
@@ -201,7 +210,7 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-08-remnant-integrity-1'));
+  assert.ok(sw.includes('2026-10-08-layout-diversity-1'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=4'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));
@@ -338,7 +347,7 @@ test('missing helper still computes physical remnant metrics and saving fallback
 
 test('intact-remnant guidance, displayed length/width and provenance are bilingual and versioned',()=>{
   assert.equal(saw.version,'table-saw-1.1.0');
-  assert.equal(loadEngine().engine.version,'plywood-trial-1.2.0');
+  assert.equal(loadEngine().engine.version,'plywood-trial-1.3.0');
   assert.ok(html.includes('同等用料優先保留最大完整長方形餘料'));
   assert.equal(html.split('先少用板，同等用料下保留最大完整長方形餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
   assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
@@ -347,4 +356,126 @@ test('intact-remnant guidance, displayed length/width and provenance are bilingu
   assert.ok(html.includes('fmtDim(r.rect.length)')&&html.includes('fmtDim(r.rect.width)')&&html.includes('esc(r.boardId)'));
   assert.ok(html.includes('Largest intact remnant:')&&html.includes('Separate remnants:'));
   assert.ok(html.includes('edge-trim offcuts excluded; geometry only, no reuse guarantee'));
+});
+
+
+function prepareMorePool(){
+  const loaded=loadPool(parts,boards),{engine,api,context}=loaded;
+  const pool=api.buildCandidatePool(engine.plan(parts,boards,settings),settings,['ripThenCrosscut'],x=>x,'saving');
+  const c=context.window.calculator;
+  Object.assign(c,{_trialCandidates:pool,trialPlan:pool[pool.length-1].plan,_trialCandidateIndex:pool.length-1,
+    trialConfig:{...settings},trialMode:'ripThenCrosscut',_trialObjective:'saving',_trialNextSeed:13,_trialFixedOrientationOverrides:{}});
+  return {...loaded,c};
+}
+
+test('diverse initial search increases the actual two-layout fixture and retains worse verified layouts',()=>{
+  const {engine,api}=loadPool(parts,boards),initial=engine.plan(parts,boards,settings);
+  const old=api.buildCandidatePool(initial,settings,['ripThenCrosscut'],x=>x,'saving',api.searchProfiles().filter(p=>!p.seed));
+  const pool=api.buildCandidatePool(initial,settings,['ripThenCrosscut'],x=>x,'saving');
+  assert.equal(old.length,2);
+  assert.ok(pool.length>old.length&&pool.length>=5);
+  assert.ok(old.every(item=>pool.some(x=>x.signature===item.signature)),'all old physical baselines remain');
+  assert.equal(pool[0].plan.summary.usedBoardCount,1);
+  assert.ok(pool.some(x=>x.plan.summary.usedBoardCount===2),'poorer material scores remain selectable');
+  assert.ok(pool.every(x=>api.strictlyValidCandidate(x.plan,{})));
+  assert.equal(new Set(pool.map(x=>x.signature)).size,pool.length);
+  assert.equal(new Set(pool.map(x=>x.key)).size,pool.length);
+});
+
+test('physical signatures ignore renamed part/material IDs but detect a geometry change',()=>{
+  const {engine,api}=loadPool(parts,boards),plan=engine.plan(parts,boards,settings);
+  const renamed=JSON.parse(JSON.stringify(plan));
+  for(const b of renamed.boards){
+    for(const p of b.results){p.id='renamed-'+p.id;p.sourceMaterialId='renamed-'+p.sourceMaterialId;}
+    for(const cut of b.cuts){cut.sourceMaterialId='renamed-'+cut.sourceMaterialId;cut.partId='renamed-'+cut.partId;
+      for(const o of cut.outputs){o.materialId='renamed-'+o.materialId;o.partId='renamed-'+o.partId;}}
+  }
+  assert.equal(api.candidateSignature(plan).signature,api.candidateSignature(renamed).signature);
+  renamed.boards[0].results[0].x+=3;
+  assert.notEqual(api.candidateSignature(plan).signature,api.candidateSignature(renamed).signature);
+});
+
+test('seeded decisions are deterministic, do not mutate input and respect bounds',()=>{
+  const {engine,api}=loadPool(parts,boards),profile=api.diversityProfiles(7,1)[0];
+  const snapshot=JSON.stringify({parts,boards,settings,profile});
+  const a=engine.plan(parts,boards,{...settings,searchProfile:profile,stripSelection:'greedy'});
+  const b=engine.plan(parts,boards,{...settings,searchProfile:profile,stripSelection:'greedy'});
+  assert.equal(JSON.stringify(a),JSON.stringify(b));
+  assert.equal(a.searchProfile.seed,7);
+  assert.equal(a.stripSelection,'greedy');
+  assert.equal(JSON.stringify({parts,boards,settings,profile}),snapshot);
+  assert.equal(api.searchProfiles().filter(p=>p.seed).length,12);
+  assert.equal(api.diversityProfiles(13,24).length,24);
+  assert.throws(()=>api.diversityProfiles(0,24),/範圍無效/);
+  assert.throws(()=>api.diversityProfiles(13,25),/範圍無效/);
+});
+
+test('diverse layouts still obey disabled inventory, trims, support setting and per-part direction override',()=>{
+  const stock=[{width:603,length:1000,disabled:true},{width:603,length:1000}];
+  const overrides={P001:'fixed_horizontal'},opts={...settings,minSupportWidth:100,trims:{left:3,right:3,top:3,bottom:3},fixedOrientationOverrides:overrides};
+  const {engine,api}=loadPool(parts,stock),initial=engine.plan(parts,stock,opts);
+  const pool=api.buildCandidatePool(initial,opts,['ripThenCrosscut','partFirstTree'],x=>x,'saving');
+  assert.ok(pool.length>1);
+  for(const {plan} of pool){
+    assert.ok(api.strictlyValidCandidate(plan,overrides));
+    assert.equal(plan.boards.flatMap(b=>b.results).find(p=>p.id==='P001').rotated,true);
+    for(const b of plan.boards){assert.ok(engine.verifyBoard(b,3).ok);if(!b.added)assert.equal(b.stockIndex,1);}
+  }
+});
+
+test('additional search yields, retains all prior layouts and preserves a user selection changed during search',async()=>{
+  const {api,c,context}=prepareMorePool(),old=c._trialCandidates.slice();
+  let updates=0,chosen=c.trialPlan;
+  context.window.onVariationUpdate=()=>{if(++updates===2){chosen=c._trialCandidates[1].plan;c.trialPlan=chosen;c._trialCandidateIndex=1;}};
+  const result=await api.searchMoreCandidates();
+  assert.ok(result.added>0);
+  assert.equal(c._trialNextSeed,37);
+  assert.ok(updates>=26,'one UI yield/update per seed and final cleanup');
+  assert.equal(c.trialPlan,chosen);
+  assert.equal(c._trialCandidates[c._trialCandidateIndex].plan,chosen);
+  assert.ok(old.every(item=>c._trialCandidates.some(x=>x.signature===item.signature)));
+  assert.ok(old.every(item=>c._trialCandidates.find(x=>x.signature===item.signature).key===item.key));
+  assert.equal(new Set(c._trialCandidates.map(x=>x.signature)).size,c._trialCandidates.length);
+  assert.ok(c._trialCandidates.every(x=>api.strictlyValidCandidate(x.plan,{})));
+});
+
+test('stopping or changing demand cancels pending search without discarding found layouts or restoring stale ones',async()=>{
+  const first=prepareMorePool(),before=first.c._trialCandidates;
+  const pending=first.api.searchMoreCandidates();
+  const stop=await first.api.searchMoreCandidates();
+  assert.equal(stop.cancelled,true);
+  assert.equal((await pending).cancelled,true);
+  assert.equal(first.c._trialCandidates,before);
+  assert.equal(first.c._trialNextSeed,13);
+  const second=prepareMorePool(),stale=second.api.searchMoreCandidates();
+  second.api.clearCandidatePool();second.c.parts=[];second.c.trialPlan=null;
+  assert.equal((await stale).cancelled,true);
+  assert.equal(second.c._trialCandidates.length,0);
+  assert.equal(second.c.parts.length,0);
+});
+
+test('direct chooser and incremental search expose scores, bilingual copy and rotation cancellation without rerendering selection',()=>{
+  assert.ok(html.includes('id="candidateChooser"')&&html.includes('id="moreLayoutsButton"'));
+  assert.ok(html.includes('Choose a layout directly')&&html.includes('Search more layouts')&&html.includes('Stop additional search'));
+  assert.ok(html.includes("controls.setAttribute('aria-busy'"));
+  assert.ok(html.includes('String(item.key)===event.target.value'));
+  assert.equal(html.split('系統會比較大件優先及不同部件次序的候選；這不代表第一刀一定切大件。每個可選排法都會逐刀回放驗證。').length-1,2);
+  assert.ok(html.includes('A round may find no new layout.'));
+  assert.ok(html.includes('window.PlywoodTrialUI.clearCandidatePool();'));
+  assert.ok(html.includes('calculator._trialCandidates.findIndex(item=>item.plan===candidate)'));
+  const start=html.indexOf('  async function searchMoreCandidates()'),end=html.indexOf('  function calculate(){',start),source=html.slice(start,end);
+  assert.ok(source.includes('setTimeout(resolve,0)')&&source.includes('candidateSearchEpoch!==state.epoch'));
+  assert.ok(source.includes('round<24')&&source.includes('pool.findIndex(item=>item.plan===current)'));
+  assert.ok(!source.includes('.render(')&&!source.includes('commitCandidate('),'new results must not reset the selected diagram/replay');
+});
+
+test('identical physical cuts across process labels and terminal/output classifications count only once',()=>{
+  const demand=[{width:100,length:600,count:1,orientationPreference:'fixed_vertical'}],stock=[{width:400,length:600}];
+  const {engine,api}=loadPool(demand,stock),rip=engine.plan(demand,stock,settings),tree=engine.plan(demand,stock,{...settings,mode:'partFirstTree'});
+  assert.notEqual(rip.mode,tree.mode);
+  assert.notEqual(rip.boards[0].cuts[0].outputs[0].kind,tree.boards[0].cuts[0].outputs[0].kind);
+  assert.equal(api.candidateSignature(rip).signature,api.candidateSignature(tree).signature);
+  const pool=api.buildCandidatePool(rip,settings,['ripThenCrosscut','partFirstTree'],x=>x,'saving');
+  assert.equal(pool.length,1,'same rectangles and cut sequence are not extra options');
+  assert.ok(api.strictlyValidCandidate(pool[0].plan,{}));
 });

@@ -267,34 +267,38 @@ node --test tests/*.test.cjs
 
 使用者希望排版圖上每個部件能用漸層增加立體感，並可切換不同質感。控制器放在「排版結果／搜尋方法小提示」附近，選項為：
 
-- **立體漸層**：預設，保留按尺寸分配的原色，以對角線由左下深色過渡到右上淺色。
-- **金屬光澤**：同一識別色上疊加多段明暗反射，漸層主方向亦由左下深色走向右上淺色，邊框改中性深色。
+- **立體漸層**：預設，依每件原本的 HSL 色相生成同色系深淺，沿對角線由左下深色過渡到右上淺色；例如深紅至淺紅、深藍至淺藍。
+- **金屬光澤**：仍保留各件原色相，只微調飽和度並提高明度；不是疊加黑、白或灰色，邊框另用中性深色。
 - **原色平面**：不加漸層，作為清晰、輕量的傳統視圖。
 
 控制只改排版圖和每板尺寸圖例的視覺外觀，不改部件位置、尺寸、方向、排料排名、用板數、鋸縫、切刀或逐刀切割樹。切換時用目前已排方案重新繪圖，**不重新執行排料搜尋**；盡可能保留當前逐刀回放步數及詳情展開狀態。外觀偏好存在本機 `localStorage`（`plywood-layout-part-appearance-v1`），預設 `glossy`，不寫入使用者的方案 JSON。
 
 ### 實作位置
 
-- `assets/part-appearance.js`：無第三方依賴的 UMD Canvas 色彩模組；輸出 `window.PlywoodPartAppearance`，同時可由 Node 測試載入。管理樣式正規化、部件底色／漸層繪製、圖例色塊與金屬邊框。
+- `assets/part-appearance.js`：無第三方依賴的 UMD Canvas 色彩模組；輸出 `window.PlywoodPartAppearance`，同時可由 Node 測試載入。由部件自己的 HSL／RGB／HEX 底色算出同色相色階；不支援的色名安全退回原色平塗，不疊中性灰。
 - `index.html`：以 `#partAppearanceStyle` 提供繁體中文／英文選單；`drawStyledPart()` 共用於完整方案和逐刀回放，`stylePartSwatch()` 同步圖例；外觀切換 listener 儲存偏好、呼叫現有 renderer 並還原回放步數。
-- `sw.js`：核心快取新增 `./assets/part-appearance.js?v=2`，版本改為 `2026-10-07-board-appearance-2`。改名或改 script URL 時必須同步更新 HTML、service worker 和資產測試。
-- `tests/part-appearance.test.cjs`：測預設、白名單模式、Canvas alpha 還原、尺寸幾何不變、每款不同層次、圖例漸層、語言對照及純渲染切換；`tests/cut-path-overlay.test.cjs` 對部件外框的 2 px 寬度斷言已調整為容許金屬模式改色。
+- `sw.js`：核心快取新增 `./assets/part-appearance.js?v=3`，版本改為 `2026-10-07-board-appearance-3`。改名或改 script URL 時必須同步更新 HTML、service worker 和資產測試。
+- `tests/part-appearance.test.cjs`：測每個 stop 保持原 hue、明度沿左下至右上單調增加、紅／藍 HSL/HEX/RGB 色碼均不灰化、Canvas alpha 還原及幾何不變；`tests/cut-path-overlay.test.cjs` 對部件外框的 2 px 寬度斷言已調整為容許金屬模式改色。
 
 顏色仍依原有 `nominalSizeKey` 分配：**同尺寸部件有相同識別色**以便按尺寸查圖例；每個部件矩形個別繪製漸層。不要為了外觀重複實作或改寫尺寸色盤／排料資料。
 
 ### 測試與瀏覽器煙霧測試
 
-- 發佈前：`node scripts/check-inline-scripts.cjs` 通過 **12 個 inline scripts + 3 個 production JavaScript assets**；`node --test tests/*.test.cjs` **29/29 pass**；`git diff --check` 通過。
+- 發佈前：`node scripts/check-inline-scripts.cjs` 通過 **12 個 inline scripts + 3 個 production JavaScript assets**；`node --test tests/*.test.cjs` **30/30 pass**；`git diff --check` 通過。
 - 本機預覽以 1800 × 2400 mm 原板、5 件三種尺寸部件試跑，得到 1 板、8 刀、完整度驗證成功；三種 Canvas 成圖互不相同，抽樣部件像素有變化，但 `JSON.stringify(trialPlan)` 完全一致，切刀數仍為 8。
 - 先逐刀回放至第 7 刀，再切換外觀，仍回到同一第 7 刀；圖例跟隨漸層。英文名稱／說明切換和深色面板／選單對比亦已實測。
 
-### 漸層方向補充（2026-10-07）
+### 色相保留與漸層方向修正（2026-10-07）
 
-用戶補充指定：**左下角最深，斜向漸變至右上角最淺**。Canvas 線性漸層向量必須使用 `(x, y + height)` 到 `(x + width, y)`；顏色 stops 由深至淺排列。圖例 CSS 使用同方向的 `45deg`，不可只改 Canvas 而忘記色塊。立體與金屬兩款都遵守端點方向；金屬款用較平滑的多段色階保持整體斜向，不以反覆深淺條紋掩蓋方向。程式 URL 更新為 `assets/part-appearance.js?v=2`，service worker 版本為 `2026-10-07-board-appearance-2`；方向回歸斷言檢查 Canvas 兩角座標和首尾顏色，避免下一次改動又退回直向或反向。
+先前 v2 雖然把畫布改成左下至右上的幾何方向，卻用半透明黑／白疊在原色上；使用者指出這會把紅、藍等識別色混成灰感，並不是深紅→淺紅、深藍→淺藍的漸層。此回饋正確，**不可把 v2 的灰階疊色當成合格方案**。
+
+v3 改由每件部件自己的 HSL / RGB / HEX 色碼算出 `hsl(hue saturation lightness)` 色階：整條漸層保持 hue 不變，只令 lightness 從左下向右上逐步增加；金屬模式僅小幅調整飽和度，仍保持鮮明同色相。Canvas 向量使用 `(x, y + height)` 到 `(x + width, y)`，圖例 CSS 用同方向 `45deg`。漸層區不得使用中性黑／白／灰 overlay；非可解析色碼就退回原色平塗。
+
+資產及 PWA 快取版本升為 `assets/part-appearance.js?v=3` / `2026-10-07-board-appearance-3`。回歸測試檢查 stops 的 hue 完全一致、明度單調增加和最低飽和度；加入紅、藍 HSL/HEX/RGB 輸入，禁止重新引入灰化疊色。金屬外框的中性描邊是輪廓色，不屬於部件色階。
 
 ### 限制與維護
 
-「金屬」是半透明漸層的視覺模擬，不是實際金屬材質；沒有木紋貼圖，也不代表板材表面／顏色或能據此判斷實際板料。暫不加隨機木紋：它會增加視覺干擾，令細件尺寸及色彩圖例較難看清。如要新增樣式，先在 `profiles` 新增一個明確固定的色階，再測低／高亮底色、短窄件、逐刀回放、列印及深色模式；確保底色仍可辨識，且方案／刀數 snapshot 不變。
+「金屬」只係同色相的明暗／飽和度視覺風格，不是真正金屬材質；沒有木紋貼圖，也不代表板材表面／顏色或能據此判斷實際板料。暫不加隨機木紋：它會增加視覺干擾，令細件尺寸及色彩圖例較難看清。如要新增樣式，先在 `profiles` 新增明確的 HSL 調整量，再測紅／藍／綠、低／高亮底色、短窄件、逐刀回放、列印及深色模式；確保 hue 不變、明度方向正確，且方案／刀數 snapshot 不變。
 
 
-方向修正後用 1200 × 2400 mm 原板、兩件部件在 Canvas 內實測；以第一件的左下內側（15% 寬／85% 長）和右上內側（85% 寬／15% 長）取樣，立體模式亮度分別為 181.3 → 210.5，金屬模式為 154.6 → 227.8；原色模式兩點同為 205.7（預期無漸層）。方案仍然係驗證通過的 1 板／4 刀，外觀切換前後方案 JSON 相同。此數值只係該瀏覽器該色塊的 sRGB 測試，不是材料測量值。
+v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 右上內側取樣並轉回 HSL：紅色 hue 0°，立體 L **42.4 → 63.9**、金屬 L **35.5 → 73.5**；藍色 hue 210°，立體 L **47.5 → 69.0**、金屬 L **40.4 → 78.4**；綠色 hue 120°，立體 L **50.4 → 72.0**、金屬 L **43.5 → 81.6**。三種平面色兩點相同。這證明同色系明度方向，不是材料色度測量；測試只用隔離 Canvas，沒有改網站輸入、localStorage 或排料方案。

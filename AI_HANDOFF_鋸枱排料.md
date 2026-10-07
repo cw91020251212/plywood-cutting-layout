@@ -10,8 +10,8 @@
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
 | 儲存庫 | <https://github.com/cw91020251212/plywood-cutting-layout> |
 | 預設分支 | `main`，GitHub Pages 由 GitHub Actions 部署。 |
-| 已發布程式基準 | `e861bce`，引擎 `plywood-trial-1.1.0`，鋸枱模組 `table-saw-1.0.0`，外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=4`；PWA 快取 `2026-10-08-calculate-button-sheen-1`。 |
-| 已驗證正式部署 | GitHub Actions [37657793599](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37657793599) 成功；公開 HTML、排料模組、刀路／餘料模組與 service worker 均符合 commit `e861bcef360e93fac3469e61e5bf3de334e36e92`。 |
+| 已發布程式基準 | `3c473db`，引擎 `plywood-trial-1.2.0`，鋸枱模組 `table-saw-1.1.0`（asset v2），外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=4`；PWA 快取 `2026-10-08-remnant-integrity-1`。 |
+| 已驗證正式部署 | GitHub Actions [37665383156](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37665383156) 成功；公開 HTML、排料模組、刀路／餘料模組與 service worker 均符合 commit `3c473db8983ee3d6af64f98d291a5100236546ec`。 |
 
 ---
 

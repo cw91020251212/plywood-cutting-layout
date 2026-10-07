@@ -123,3 +123,5 @@ node --test tests/*.test.cjs
 真實候選反例：1000 × 1000 mm 原板，300 × 150 mm 兩件、100 × 450 mm 一件，鋸縫 3 mm、可旋轉、不修邊。新排名保留 744 × 1000 mm 一整塊，而舊鋸縫優先候選保留 697 × 1000 mm；兩者均一板五刀，鋸縫面積分別 7200／7182 mm²。因此只承諾同等原板用量下偏好完整大料，不保證鋸縫亦同時下降。
 
 引擎 `plywood-trial-1.2.0`，排序模組 `table-saw-1.1.0`、資產 query `v=2`；PWA `2026-10-08-remnant-integrity-1`。全套 **46/46 測試通過**，JavaScript 語法檢查及隔離瀏覽器的中英摘要核對完成。仍是有限候選排序，並無最小可回用尺寸、機台安全或全局最佳保證。
+
+正式程式 commit：`3c473db8983ee3d6af64f98d291a5100236546ec`；GitHub Actions [37665383156](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37665383156) **success**。公開 HTML、v2 排名模組、刀路／餘料模組及 Service Worker 已核對一致，v2 排名模組 SHA-256 與本機相同。唯讀獨立審查未發現功能性回歸；文內繁體字亦已更正。

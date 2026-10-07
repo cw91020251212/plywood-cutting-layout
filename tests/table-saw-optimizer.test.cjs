@@ -197,12 +197,12 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.throws(()=>engine.plan([{width:10,length:10,count:Infinity}],boards,settings),/數量無效/);
   assert.match(html,/<option value="ripThenCrosscut" selected>/);
   assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=1"><\/script>/);
-  assert.match(html,/<script src="assets\/part-appearance\.js\?v=1"><\/script>/);
+  assert.match(html,/<script src="assets\/part-appearance\.js\?v=2"><\/script>/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-07-board-appearance-1'));
+  assert.ok(sw.includes('2026-10-07-board-appearance-2'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=1'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=3'));
-  assert.ok(sw.includes('./assets/part-appearance.js?v=1'));
+  assert.ok(sw.includes('./assets/part-appearance.js?v=2'));
 });
 
 test('disabled stock sheets never renumber the remaining inventory or enter the plan',()=>{

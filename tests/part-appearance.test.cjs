@@ -9,7 +9,7 @@ const appearance = require('../assets/part-appearance.js');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-test('flat, glossy and metallic styles retain each size color and only change painted appearance', () => {
+test('glossy and metallic styles shade from dark lower-left to light upper-right without changing geometry', () => {
   assert.equal(appearance.defaultStyle, 'glossy');
   assert.equal(appearance.normalizeStyle('metallic'), 'metallic');
   assert.equal(appearance.normalizeStyle('unknown'), 'glossy');
@@ -42,13 +42,19 @@ test('flat, glossy and metallic styles retain each size color and only change pa
   assert.equal(flat.gradients.length, 0);
   assert.equal(glossy.fills.length, 2);
   assert.equal(glossy.gradients[0].stops.length, 5);
+  assert.deepEqual(glossy.gradients[0].args, [10, 120, 70, 20], 'Canvas gradient runs from the lower-left corner to the upper-right corner');
+  assert.deepEqual(glossy.gradients[0].stops[0], [0, 'rgba(0,0,0,.25)'], 'the lower-left endpoint is shaded darker');
+  assert.deepEqual(glossy.gradients[0].stops.at(-1), [1, 'rgba(255,255,255,.58)'], 'the upper-right endpoint is highlighted');
   assert.equal(metal.fills.length, 2);
-  assert.equal(metal.gradients[0].stops.length, 8);
+  assert.equal(metal.gradients[0].stops.length, 10);
+  assert.deepEqual(metal.gradients[0].args, [10, 120, 70, 20]);
+  assert.deepEqual(metal.gradients[0].stops[0], [0, 'rgba(15,25,30,.40)']);
+  assert.deepEqual(metal.gradients[0].stops.at(-1), [1, 'rgba(255,255,255,.72)']);
   assert.notEqual(metal.outline, '#245c42', 'metallic parts use a neutral outline');
 });
 
 test('style selector is bilingual, defaults to 3D, and renders the current plan without recalculating it', () => {
-  assert.match(html, /<script src="assets\/part-appearance\.js\?v=1"><\/script>/);
+  assert.match(html, /<script src="assets\/part-appearance\.js\?v=2"><\/script>/);
   assert.match(html, /<select id="partAppearanceStyle"/);
   assert.match(html, /<option value="glossy" selected>立體漸層<\/option>/);
   assert.match(html, /<option value="metallic">金屬光澤<\/option>/);
@@ -69,8 +75,8 @@ test('size legend swatches receive the selected finish as well as the part canva
   styles.push({ ...swatch.style });
   appearance.applySwatch(swatch, 'hsl(80 65% 70%)', 'flat');
   styles.push({ ...swatch.style });
-  assert.ok(styles[0].backgroundImage.startsWith('linear-gradient(180deg,'));
-  assert.ok(styles[1].backgroundImage.includes('rgba(15,28,35,.34)'));
+  assert.ok(styles[0].backgroundImage.startsWith('linear-gradient(45deg,'), 'legend swatch follows the same lower-left to upper-right diagonal');
+  assert.ok(styles[1].backgroundImage.includes('rgba(15,25,30,.40)'));
   assert.equal(styles[2].backgroundImage, 'none');
   assert.equal(styles[2].borderColor, '', 'flat appearance restores the stylesheet border after metallic mode');
   assert.ok(styles.every(style => style.backgroundColor === 'hsl(80 65% 70%)'));

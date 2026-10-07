@@ -10,24 +10,26 @@
     flat: Object.freeze({ stops: Object.freeze([]), border: null }),
     glossy: Object.freeze({
       stops: Object.freeze([
-        Object.freeze([0, 'rgba(255,255,255,.58)']),
-        Object.freeze([0.10, 'rgba(255,255,255,.22)']),
-        Object.freeze([0.20, 'rgba(255,255,255,0)']),
-        Object.freeze([0.72, 'rgba(0,0,0,0)']),
-        Object.freeze([1, 'rgba(0,0,0,.25)'])
+        Object.freeze([0, 'rgba(0,0,0,.25)']),
+        Object.freeze([0.28, 'rgba(0,0,0,0)']),
+        Object.freeze([0.80, 'rgba(255,255,255,0)']),
+        Object.freeze([0.90, 'rgba(255,255,255,.22)']),
+        Object.freeze([1, 'rgba(255,255,255,.58)'])
       ]),
       border: null
     }),
     metallic: Object.freeze({
       stops: Object.freeze([
-        Object.freeze([0, 'rgba(255,255,255,.72)']),
-        Object.freeze([0.14, 'rgba(255,255,255,.30)']),
-        Object.freeze([0.28, 'rgba(15,28,35,.34)']),
-        Object.freeze([0.42, 'rgba(255,255,255,.34)']),
-        Object.freeze([0.56, 'rgba(255,255,255,.62)']),
-        Object.freeze([0.70, 'rgba(15,28,35,.16)']),
-        Object.freeze([0.84, 'rgba(255,255,255,.24)']),
-        Object.freeze([1, 'rgba(15,25,30,.38)'])
+        Object.freeze([0, 'rgba(15,25,30,.40)']),
+        Object.freeze([0.12, 'rgba(15,25,30,.30)']),
+        Object.freeze([0.24, 'rgba(15,25,30,.20)']),
+        Object.freeze([0.36, 'rgba(15,25,30,.10)']),
+        Object.freeze([0.46, 'rgba(255,255,255,.04)']),
+        Object.freeze([0.56, 'rgba(255,255,255,.14)']),
+        Object.freeze([0.66, 'rgba(255,255,255,.24)']),
+        Object.freeze([0.78, 'rgba(255,255,255,.36)']),
+        Object.freeze([0.90, 'rgba(255,255,255,.54)']),
+        Object.freeze([1, 'rgba(255,255,255,.72)'])
       ]),
       border: '#34434b'
     })
@@ -46,7 +48,7 @@
     ctx.fillRect(x, y, width, height);
     ctx.globalAlpha = 1;
     if (!profile.stops.length) return;
-    const gradient = ctx.createLinearGradient(x, y, x, y + height);
+    const gradient = ctx.createLinearGradient(x, y + height, x + width, y);
     profile.stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, width, height);
@@ -57,7 +59,7 @@
     const profile = profiles[normalized];
     element.style.backgroundColor = baseColor;
     element.style.backgroundImage = profile.stops.length
-      ? `linear-gradient(180deg, ${profile.stops.map(([offset, color]) => `${color} ${offset * 100}%`).join(', ')})`
+      ? `linear-gradient(45deg, ${profile.stops.map(([offset, color]) => `${color} ${offset * 100}%`).join(', ')})`
       : 'none';
     element.style.borderColor = profile.border || '';
   }

@@ -335,7 +335,7 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 ### 本輪驗證結果
 
-- `node scripts/check-inline-scripts.cjs` 通過；本次四邊修正的 `node --test tests/*.test.cjs` **37/37 通過**。初版部署 commit `9374b56`（35 項測試，Actions `37609241945`）只供版本歷史參照；本次修正部署 commit／Actions 需在發布完成後填入。
+- `node scripts/check-inline-scripts.cjs` 通過；本次四邊修正的 `node --test tests/*.test.cjs` **37/37 通過**。初版部署 commit `9374b56`（35 項測試，Actions `37609241945`）只供版本歷史參照。本次修正 commit [`3a1cbe7`](https://github.com/cw91020251212/plywood-cutting-layout/commit/3a1cbe728a3546e7e51b168cd8dc64869976378d)，GitHub Actions [37611827610](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37611827610) 成功；Pages 上的模組雜湊與本機相同，PWA 版本為 `2026-10-07-part-dimensions-3`。
 - 本機瀏覽器以 603 × 1000 mm 板、300 × 440 mm 與 300 × 250 mm 部件實測。全部模式捕捉到 **8 個邊標籤（每件 4 個）**；點選第一件後，上方逐側顯示 `#1 · 上邊: 闊 300 mm · 右邊: 長 440 mm · 下邊: 闊 300 mm · 左邊: 長 440 mm`。旋轉件亦按輸入長／闊欄位標記，非只比較數值大小。
 - 瀏覽器測試只在隔離本機預覽寫入暫時 `calculator.parts`／`calculator.boards`，並還原尺寸模式偏好；正式網站、專案 JSON 與使用者訂單資料沒有被修改。
 

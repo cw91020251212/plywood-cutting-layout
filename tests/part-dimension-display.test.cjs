@@ -58,20 +58,27 @@ test('edge dimensions label each of four sides and keep length/width identity af
   assert.deepEqual(display.edgeDimensions({ width: 0, length: 500 }), []);
 });
 
-test('dimension controls are bilingual, accessible, and connected to the canvas and all-part list', () => {
+test('dimension controls are bilingual, accessible, and connected to parts plus leftover lists', () => {
   assert.match(html, /<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
-  assert.match(html, /<label id="partDimensionLabel" for="partDimensionMode">部件尺寸標示<\/label>/);
+  assert.match(html, /<label id="partDimensionLabel" for="partDimensionMode">尺寸標示<\/label>/);
   assert.match(html, /<option value="auto" selected>自動（適合時顯示）<\/option>/);
   assert.match(html, /<option value="selected">點選單件顯示尺寸<\/option>/);
-  assert.match(html, /<option value="all">全部部件顯示尺寸<\/option>/);
-  assert.match(html, /\['部件尺寸標示','Part dimension labels'\]/);
+  assert.match(html, /<option value="all">全部部件及餘料顯示尺寸<\/option>/);
+  assert.match(html, /\['尺寸標示','Dimension labels'\]/);
   assert.match(html, /\['點選單件顯示尺寸','Click one part to show its dimensions'\]/);
-  assert.match(html, /\['全部部件顯示尺寸','Show dimensions for all parts'\]/);
+  assert.match(html, /\['全部部件及餘料顯示尺寸','Show dimensions for all parts and leftovers'\]/);
   assert.match(html, /handleDimensionCanvasClick/);
   assert.match(html, /part-dimension-all-list/);
+  assert.match(html, /cutOverlay\.leftoverPieces\(board\)/);
+  assert.match(html, /data-remnant-kind/);
+  assert.match(html, /R\$\{remnantIndex\+1\}/);
   assert.match(html, /dimensionDisplay\.visibleParts/);
   assert.match(html, /dimensionDisplay\.edgeDimensions\(part\)/);
-  assert.match(html, /Selected\/all modes label all four edges/);
+  assert.match(html, /All mode labels every part; leftover pieces/);
+  assert.match(html, /Click mode shows one part/);
+  assert.match(html, /All mode also labels unused sheet pieces and edge-trim offcuts/);
+  assert.match(html, /點選模式可查看單件四邊尺寸；全部模式亦標示剩餘板料及修邊料/);
+  assert.doesNotMatch(html, /Selected\/all modes label all four edges/);
   assert.match(html, /上邊|Top/);
 });
 
@@ -84,6 +91,25 @@ test('selected and all modes draw a measurement beside each of the four edges an
   assert.match(html, /sideName=\{top:english\?'Top':'上邊',right:english\?'Right':'右邊',bottom:english\?'Bottom':'下邊',left:english\?'Left':'左邊'\}/);
   assert.match(html, /partDimensionLabel\(board,selected,english\)/);
   assert.match(html, /partDimensionLabel\(board,part,english\)/);
+  assert.match(html, /function drawRemnantLabels/);
+  assert.match(html, /function drawRemnantShapes/);
+  assert.match(html, /drawRemnantLabels\(ctx,canvas,remnants,projection,X,Y,sx,sy\)/);
+  assert.match(html, /function remnantDimensionLabel/);
+  assert.match(html, /R\$\{number\}/);
+});
+
+test('final diagrams include all leftovers while replay only labels edge offcuts after their cut', () => {
+  const start = html.indexOf('function remnantsForDisplay');
+  const end = html.indexOf('\n  function remnantPartForDisplay', start);
+  const source = html.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'replay-aware leftover selector exists');
+  assert.match(source, /count==null\|\|count>=board\.cuts\.length\)return cutOverlay\.leftoverPieces\(board\)/);
+  assert.match(source, /board\.cuts\.slice\(0,completed\)/);
+  assert.match(source, /output\.kind==='offcut'/);
+  assert.match(html, /drawRemnantShapes\(ctx,remnants,projection,X,Y,sx,sy\)/);
+  assert.match(html, /drawRemnantLabels\(ctx,canvas,remnants,projection,X,Y,sx,sy\)/);
+  assert.match(html, /cutCopy\('remnantHeading'\)/);
+  assert.match(html, /cutCopy\('remnantIntro'\)/);
 });
 
 test('changing dimension mode is display-only and preserves the current replay position', () => {

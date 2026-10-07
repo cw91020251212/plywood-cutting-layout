@@ -39,7 +39,7 @@
 - 鋸縫（kerf）、原板四邊修邊及邊緣能否保留為成品邊。
 - 「先分條再截件」、按成品展開切割樹，以及自動比較工序；**預設先分條再截件**。
 - 「慳料優先」及「開料方便優先」兩種**候選排序方式**；排序唔代表全局最優或精確用時。
-- 候選排版、原板張數、成品利用率、餘料、逐刀回放、材料平衡、排版畫布、三種部件尺寸顯示（自動／點選單件／全部件號與清單）、儲存／載入 JSON、列印、PWA 離線資產。
+- 候選排版、原板張數、成品利用率、餘料、逐刀回放、材料平衡、排版畫布、三種尺寸模式（自動／點選部件／全部部件及剩餘板料與修邊料尺寸清單）、儲存／載入 JSON、列印、PWA 離線資產。
 - 單件旋轉會重新排料並重驗證；**不能依賴跨板手動拖曳作試排**。
 
 使用者未輸入板價／不同板種價格，所以「慳料」係幾何代理排序，**唔等於成本計算或實際節省金額**。支撐寬度可以留空；留空只會產生候選草排，輸入數值亦只作幾何篩選，唔係機台安全認證。
@@ -58,13 +58,13 @@
 | `assets/part-dimension-display.js` | 純函數尺寸模式、可見部件篩選、穩定件號及 Canvas 幾何命中測試；不涉及排料計算。 |
 | `assets/part-appearance.js` | 同色相圖面漸層／平面外觀；視覺限定。 |
 | `index.html` 約 7756 | `replayState()`：預覽逐刀後嘅材料葉；**免刀 terminal 成品亦要消耗**。 |
-| `assets/cut-path-overlay.js` | 顯示經驗證刀路與 `finalMaterialLeaves()` 最終未用材料。唔係獨立排料器。 |
+| assets/cut-path-overlay.js | 顯示經驗證刀路；`finalMaterialLeaves()` 取最終未用材料，`leftoverPieces()` 將實際修邊 offcut 與最終未用材料合併，排除鋸縫／無效矩形並按 material ID 去重。唔係獨立排料器。 |
 | `index.html` 約 7995–8071 | UI 的 `getParts()`／`getBoards()`、候選比較、有限 profiles、完整度／方向驗證及 `calculate()`。 |
 | `index.html` 約 8073 起 | JSON 匯入／匯出與舊 schema 相容處理；變更欄位之前須加匯入回歸測試。 |
-| `sw.js` | 離線靜態資產 cache version；目前新增尺寸 UI 使用 `2026-10-07-part-dimensions-2`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
+| `sw.js` | 離線靜態資產 cache version；餘料尺寸版使用 `2026-10-07-leftover-dimensions-1`，`cut-path-overlay.js?v=4`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
 | `.github/workflows/pages.yml` | `main` push 部署 Pages；Node.js 22 先跑 inline JS 語法與全部 tests。 |
-| `tests/cut-path-overlay.test.cjs` | UI／刀路／單位／餘料顯示測試。 |
-| `tests/part-dimension-display.test.cjs` | 顯示模式、點選命中、穩定件號、雙語、只重繪及回放位置回歸。 |
+| `tests/cut-path-overlay.test.cjs` | UI／刀路／單位／終局剩料與修邊料去重及幾何顯示測試。 |
+| `tests/part-dimension-display.test.cjs` | 顯示模式、點選命中、穩定件號、部件與剩料 R 編號、逐刀回放可見性、雙語、只重繪及回放位置回歸。 |
 | `tests/table-saw-optimizer.test.cjs` | 演算法、切序、候選池、回退、安全邊界及 PWA 測試。 |
 | `scripts/check-inline-scripts.cjs` | Node `vm.Script` 語法檢查 `index.html` 內嵌 JavaScript 及 4 個正式資產。 |
 | `README.md` | 快速功能清單、重要限制及測試指令。 |
@@ -313,7 +313,7 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 - `auto`（預設）：保持目前自動嘗試在矩形內顯示尺寸的方式。
 - `selected`：點選排版圖內目前可見的成品；該件沿上、右、下、左四邊各顯示一個尺寸，對應需求「長度」的相對兩邊標長、對應需求「闊度」的相對兩邊標闊；上方訊息也逐側列出值。該件另以白色外框及橙色內框加強標示。再次點背景或未切出的區域會清除選擇。
-- `all`：每件部件的四邊都嘗試標示各自邊長，中央以件號徽章對照；圖下清單逐件列出上／右／下／左四個值及顏色。字標太細放不下時，四側完整數值仍可由清單核對。
+- `all`：每件部件的四邊都嘗試標示各自邊長，中央以件號徽章對照；同時列出可用剩餘板料及修邊料，以 `R1`、`R2`…編號。圖下清單逐件列出部件四側值；每塊剩料列出長、闊、面積及類型。字標太細放不下時，尺寸仍可在清單核對。
 
 清單中的件號以原板 `board.results` 完整順序編定；逐刀回放只顯示已完成的部件，件號仍對應整板清單，不會因未完成的其他部件而重新編號。切到另一刀或重新計算會清除目前單件選取，避免畫面標示與當前可見材料不符。每條邊的數值以投影後 `part.width`／`part.length`（mm）為真值，透過 `originalWidth`／`originalLength` 判定該邊對應原始長度或闊度欄位，再用現有單位 formatter 顯示；因此旋轉或橫板視覺換軸時，標籤仍對應正確需求欄位。方向標記 `↻` 仍照原有旋轉資訊顯示。
 
@@ -342,3 +342,30 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 ### 尚未承諾的能力
 
 這是沿四邊放置量度文字的排版輔助，不是含延伸線／箭頭、按比例出圖的工程尺寸圖，也不是工件打印標籤。Canvas 空間不足時仍須靠逐邊清單查閱，不能保證每塊極細小或極密排的部件都能在矩形內顯示完整字串。件號只在本次顯示的原板方案中有效，不是刻入木件的實體標籤、庫存 ID 或跨方案永久 ID。若日後要輸出標籤／工程尺寸圖，先確認是否需列印、匯出圖片、跨板唯一編號及回放中如何表示未完成部件，再分開規劃。
+
+
+## 16. 排版圖餘料尺寸與逐刀顯示（2026-10-07）
+
+### 用戶要求與實際結果
+
+使用者確認，除成品外，切完剩下的碎料也是板材，需要知道長闊。現時在「尺寸標示 → 全部部件及餘料顯示尺寸」中，部件維持四邊標示；每塊原板產生的餘料另標 `R1`、`R2`…，圖下清單按 R 編號列每條邊的尺寸、面積和餘料類型。編號在**每塊原板內**由 1 起，不是庫存 ID。極細條仍會列在清單，即使畫布位置容不下可讀尺寸字樣。
+
+### 資料與逐刀回放原理
+
+- `assets/cut-path-overlay.js` 新增 `leftoverPieces(board)`。它只接受 `isVerifiedBoard(board)` 的板，先按 `cuts[]` 原序收集輸出中 `kind === 'offcut'` 的實際修邊餘料，再加上 `finalMaterialLeaves(board)` 的最終剩餘板料。
+- 去重以 `materialId` 為準；只接受正尺寸有效矩形；`kerfBand` 不列入（係鋸屑／損耗，並非可保存木板）；直接切成品 terminal 已由 `finalMaterialLeaves()` 消耗，不會誤列為餘料。
+- `index.html` 的 `remnantsForDisplay(board,count)` 在最終圖（`count == null` 或所有刀已完成）使用 `leftoverPieces()`；逐刀中途只讀取已完成 `cuts.slice(0, completed)` 所產生的 offcut，不會把尚未切出的尾料提前畫出。每板依該順序重新編 `R1` 起的編號。
+- `drawRemnantShapes()` 繪畫有效餘料矩形，`drawRemnantLabels()` 在空間許可時標四邊數值及 R 編號；`remnantDimensionLabel()` 與 `updateDimensionPanels()` 令圖下清單和輔助文字中英同步。單位格式沿用現有 dimension formatter。
+- 「餘料」只係幾何分類，不證明一定有將來用途、可安全搬運或可再用；禁止把碎料面積加回優化評分，或暗示省錢保證。鋸縫永遠排除。
+
+### 維護位置與回歸
+
+- `assets/cut-path-overlay.js`：`finalMaterialLeaves()` 與 `leftoverPieces()`；改輸出分類前需保留 terminal、kerf、無效矩形及重複 material ID 測試。
+- `index.html`：`remnantsForDisplay()`、`remnantPartForDisplay()`、`remnantDimensionLabel()`、`drawRemnantShapes()`、`drawRemnantLabels()` 及 `updateDimensionPanels()`；尺寸外觀模式只可重繪，不可呼叫排料計算。
+- `tests/cut-path-overlay.test.cjs`、`tests/part-dimension-display.test.cjs`：涵蓋修邊 offcut + 終局未用板料、排除鋸縫、R 編號、四邊文字、逐刀只顯示已切出材料、提示雙語與 PWA 資產。
+- `sw.js`：PWA cache 為 `2026-10-07-leftover-dimensions-1`；`index.html` 與 `sw.js` 的 `cut-path-overlay.js?v=4` 必須一致，相關測試鎖定兩者。
+
+### 本輪驗證紀錄
+
+- `git diff --check`、`node --check assets/cut-path-overlay.js`、`node scripts/check-inline-scripts.cjs` 通過；完整 `node --test tests/*.test.cjs` **39/39 通過**。
+- 隔離本機瀏覽器實測 603 × 1000 mm 原板、單件 300 × 440 mm、鋸縫 3 mm、四邊各修 10 mm：得到一塊通過驗證的板、6 刀；全部模式顯示 1 件成品與 6 件餘料（4 件 7 mm 寬修邊料、兩塊最終剩料 280 × 980 mm 及 300 × 537 mm），共 7 行；各列列出四邊尺寸與類型。測試後已還原本機預覽原有儲存資料及偏好。這只是覆蓋用例，唔代表所有板料都一定可再利用。

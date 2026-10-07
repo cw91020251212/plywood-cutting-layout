@@ -933,6 +933,15 @@ select {
   overflow-wrap: anywhere;
 }
 </style>
+<style id="leftover-dimension-list-style">
+#canvasContainer .part-dimension-all-list{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0}
+#canvasContainer .part-dimension-all-item{display:inline-flex;align-items:flex-start;gap:6px;max-width:100%;padding:5px 7px;border:1px solid #c7d4d5;border-radius:6px;background:#fff;line-height:1.35;white-space:normal}
+#canvasContainer .part-dimension-all-label{min-width:0;overflow-wrap:anywhere}
+#canvasContainer .part-dimension-all-swatch{flex:0 0 12px;width:12px;height:12px;margin-top:3px;border:1px solid rgba(0,0,0,.25);border-radius:3px}
+#canvasContainer .part-dimension-all-item[data-remnant-kind]{border-style:dashed;background:#f7f3ea}
+body.wood-dark-mode #canvasContainer .part-dimension-all-item{background:#293139;color:#e8eef2;border-color:#65737c}
+body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]{background:#36352f}
+</style>
 </head>
 <body>
 <div class="container">
@@ -1250,15 +1259,15 @@ select {
     </select>
   </div>
   <div class="part-appearance-control" role="group" aria-labelledby="partDimensionLabel">
-    <label id="partDimensionLabel" for="partDimensionMode">部件尺寸標示</label>
+    <label id="partDimensionLabel" for="partDimensionMode">尺寸標示</label>
     <select id="partDimensionMode" aria-describedby="partDimensionHint">
       <option value="auto" selected>自動（適合時顯示）</option>
       <option value="selected">點選單件顯示尺寸</option>
-      <option value="all">全部部件顯示尺寸</option>
+      <option value="all">全部部件及餘料顯示尺寸</option>
     </select>
   </div>
   <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
-  <p class="part-appearance-hint" id="partDimensionHint">點選／全部模式都會沿四條邊標尺寸；長邊兩側標「長」、闊邊兩側標「闊」，細件可查逐邊清單。</p>
+  <p class="part-appearance-hint" id="partDimensionHint">餘料（包括修邊料）亦會沿四邊標尺寸；圖中 R 編號對應下方清單，太細則看清單。</p>
 </div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
@@ -7714,7 +7723,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
-<script src="assets/cut-path-overlay.js?v=3"></script>
+<script src="assets/cut-path-overlay.js?v=4"></script>
 <script src="assets/part-appearance.js?v=3"></script>
 <script src="assets/part-dimension-display.js?v=2"></script>
 
@@ -7983,6 +7992,42 @@ window.addEventListener('DOMContentLoaded', () => {
     const state=replay||replayState(board,count);
     return state.parts.map(part=>{const source=board.results.find(item=>item.id===part.id);return projection.rect(source?{...source,...part}:part);});
   }
+  function remnantsForDisplay(board,count){
+    if(!cutOverlay||!cutOverlay.isVerifiedBoard(board))return [];
+    if(count==null||count>=board.cuts.length)return cutOverlay.leftoverPieces(board);
+    const completed=Math.max(0,Math.min(board.cuts.length,Math.floor(Number(count)||0))),pieces=[];
+    board.cuts.slice(0,completed).forEach(step=>step.outputs.forEach(output=>{
+      if(output.kind==='offcut')pieces.push({materialId:output.materialId,boardId:board.boardId,kind:'offcut',cutNumber:step.number,rect:{...output.rect},area:output.rect.width*output.rect.length});
+    }));
+    return pieces;
+  }
+  function remnantPartForDisplay(remnant,projection){
+    const rect=remnant.rect||remnant;
+    return projection.rect({...rect,originalWidth:Number(rect.width),originalLength:Number(rect.length)});
+  }
+  function drawRemnantShapes(ctx,remnants,projection,X,Y,sx,sy){
+    remnants.forEach(remnant=>{
+      const part=remnantPartForDisplay(remnant,projection),x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy;
+      ctx.save();ctx.globalAlpha=1;
+      ctx.fillStyle=remnant.kind==='offcut'?'rgba(151,133,98,.25)':'rgba(94,142,122,.16)';ctx.fillRect(x,y,width,height);
+      ctx.strokeStyle=remnant.kind==='offcut'?'#9a8151':'#56816f';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);ctx.strokeRect(x,y,width,height);ctx.setLineDash([]);ctx.restore();
+    });
+  }
+  function drawRemnantBadge(ctx,part,number,X,Y,sx,sy,dpr){
+    const width=part.width*sx,height=part.length*sy,text=`R${number}`;
+    if(width<28*dpr||height<18*dpr)return;
+    const fontSize=Math.min(10*dpr,Math.min(width,height)*.36);ctx.font=`700 ${fontSize}px Arial, sans-serif`;
+    const padX=3*dpr,padY=2*dpr,boxWidth=ctx.measureText(text).width+padX*2,boxHeight=fontSize*1.25+padY*2;
+    if(boxWidth>width-2*dpr||boxHeight>height-2*dpr)return;
+    const x=X(part.x+part.width/2),y=Y(part.y+part.length/2);
+    ctx.save();ctx.globalAlpha=1;ctx.fillStyle='rgba(255,255,255,.95)';ctx.strokeStyle='#59625d';ctx.lineWidth=Math.max(1,dpr);
+    ctx.fillRect(x-boxWidth/2,y-boxHeight/2,boxWidth,boxHeight);ctx.strokeRect(x-boxWidth/2,y-boxHeight/2,boxWidth,boxHeight);
+    ctx.font=`700 ${fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#26342e';ctx.fillText(text,x,y);ctx.restore();
+  }
+  function drawRemnantLabels(ctx,canvas,remnants,projection,X,Y,sx,sy){
+    const scaleX=canvas.width/Math.max(1,canvas.clientWidth||canvas.width),scaleY=canvas.height/Math.max(1,canvas.clientHeight||canvas.height),dpr=(scaleX+scaleY)/2;
+    remnants.forEach((remnant,index)=>{const part=remnantPartForDisplay(remnant,projection);drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr);drawRemnantBadge(ctx,part,index+1,X,Y,sx,sy,dpr);});
+  }
   function drawBoard(board,index,card,count,quiet){
     const canvas=card.querySelector('canvas');if(!canvas)return;
     const projection=boardDisplayProjection(board),W=1200,H=Math.max(260,Math.round(W*projection.height/projection.width));
@@ -7992,15 +8037,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctx=canvas.getContext('2d'),sx=W/projection.width,sy=H/projection.height,X=x=>x*sx,Y=y=>y*sy;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#303030';ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
     if(count==null){
+      const remnants=remnantsForDisplay(board,count);drawRemnantShapes(ctx,remnants,projection,X,Y,sx,sy);
       const parts=boardDisplayParts(board,projection,null);
       parts.forEach(p=>{drawStyledPart(ctx,p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#245c42');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
-      drawPartLabels(ctx,canvas,board,index,parts,X,Y,sx,sy);
       drawCutPathOverlay(ctx,canvas,board,index,board.cuts.length,projection,X,Y,W);
+      drawPartLabels(ctx,canvas,board,index,parts,X,Y,sx,sy);
+      drawRemnantLabels(ctx,canvas,remnants,projection,X,Y,sx,sy);
       return;
     }
     const st=replayState(board,count);
+    const remnants=remnantsForDisplay(board,count);
     st.offcuts.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(155,166,166,.28)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#9aa8a8';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
     st.leaves.forEach(r=>{const q=projection.rect(r);ctx.fillStyle='rgba(48,150,111,.05)';ctx.fillRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.strokeStyle='rgba(28,121,84,.4)';ctx.setLineDash([7,5]);ctx.strokeRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.setLineDash([]);});
+    drawRemnantShapes(ctx,remnants,projection,X,Y,sx,sy);
     const replayParts=boardDisplayParts(board,projection,count,st);
     replayParts.forEach(p=>{const src=board.results.find(x=>x.id===p.id);drawStyledPart(ctx,src?{...src,...p}:p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#235843');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
     st.bands.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(204,45,45,.48)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#a51e1e';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
@@ -8014,6 +8063,7 @@ window.addEventListener('DOMContentLoaded', () => {
       else ctx.fillText(String(step.number),Math.max(3*cssScale,X(step.distanceFromDatum)+4*cssScale),Math.max(cutLabelInset,Y(step.sourceRect.x)+cutLabelInset));
     });
     }
+    drawRemnantLabels(ctx,canvas,remnants,projection,X,Y,sx,sy);
     const label=$(`replay-step-${index}`);if(label)label.textContent=`回放 ${count} / ${board.cuts.length} 刀`;
     $('cutDetailsContent').querySelectorAll(`[data-cut-row-board="${index}"]`).forEach(row=>row.classList.toggle('is-current',Number(row.dataset.cutRow)===count&&count>0));
   }
@@ -8025,26 +8075,40 @@ window.addEventListener('DOMContentLoaded', () => {
     const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`).join(' · ');
     return `#${number} · ${measurements||nominalSizeText(part)}${part.rotated?' ↻':''}`;
   }
+  function remnantDimensionLabel(remnant,number,projection,english){
+    const rect=remnant.rect||remnant,projected=remnantPartForDisplay(remnant,projection);
+    const edges=dimensionDisplay?dimensionDisplay.edgeDimensions(projected):[];
+    const sideName={top:english?'Top':'上邊',right:english?'Right':'右邊',bottom:english?'Bottom':'下邊',left:english?'Left':'左邊'};
+    const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${fmtDim(edge.mm)}`).join(' · ');
+    const kind=remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial';
+    return `R${number} · ${measurements||`${fmtDim(rect.length)} × ${fmtDim(rect.width)}`} · ${cutCopy(kind)}`;
+  }
   function createPartDimensionList(board,index){
     const list=document.createElement('div');list.className='part-dimension-all-list';list.dataset.boardIndex=index;list.hidden=true;
     const english=window.calculator&&calculator.currentLanguage==='en';
-    list.setAttribute('aria-label',english?'All four edge dimensions':'全部部件四邊尺寸');
+    const projection=boardDisplayProjection(board);
+    list.setAttribute('aria-label',english?'All part and leftover edge dimensions':'全部部件及餘料四邊尺寸');
     (board.results||[]).forEach((part,partIndex)=>{
       const item=document.createElement('span');item.className='part-dimension-all-item';item.dataset.partId=part.id;item.dataset.partNumber=String(partIndex+1);
       const swatch=document.createElement('span');swatch.className='part-dimension-all-swatch';swatch.style.backgroundColor=displayColor(part);swatch.setAttribute('aria-hidden','true');
       const label=document.createElement('span');label.className='part-dimension-all-label';label.textContent=partDimensionLabel(board,part,english);item.append(swatch,label);list.appendChild(item);
+    });
+    (cutOverlay?cutOverlay.leftoverPieces(board):[]).forEach((remnant,remnantIndex)=>{
+      const item=document.createElement('span');item.className='part-dimension-all-item part-dimension-all-remnant';item.dataset.remnantKind=remnant.kind;item.dataset.materialId=remnant.materialId;
+      const swatch=document.createElement('span');swatch.className='part-dimension-all-swatch';swatch.style.backgroundColor=remnant.kind==='offcut'?'#b8a47c':'#9ab7a5';swatch.setAttribute('aria-hidden','true');
+      const label=document.createElement('span');label.className='part-dimension-all-label';label.textContent=remnantDimensionLabel(remnant,remnantIndex+1,projection,english);item.append(swatch,label);list.appendChild(item);
     });
     return list;
   }
   function updateDimensionPanels(){
     const plan=window.calculator&&window.calculator.trialPlan,mode=dimensionDisplay?dimensionDisplay.normalizeMode(partDimensionMode):'auto';
     const english=window.calculator&&calculator.currentLanguage==='en',hint=$('partDimensionHint');
-    if(hint)hint.textContent=english?'Selected/all modes label all four edges; opposite edges for length show L, and width show W. Use the per-edge list for small parts.':'點選／全部模式會在四條邊各標數值；代表長度的相對兩邊標「長」，代表闊度的相對兩邊標「闊」，細件查逐邊清單。';
+    if(hint)hint.textContent=english?'Click mode shows one part’s four edge dimensions. All mode also labels unused sheet pieces and edge-trim offcuts; R numbers match the list. Use the list for small pieces.':'點選模式可查看單件四邊尺寸；全部模式亦標示剩餘板料及修邊料，圖中 R 編號對照清單；太細可看清單。';
     document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
       const index=Number(card.dataset.boardIndex),board=plan&&plan.boards[index],canvas=card.querySelector('canvas.canvas');
       const list=card.querySelector('.part-dimension-all-list'),note=card.querySelector('.part-dimension-selection');
       if(list)list.hidden=mode!=='all';
-      if(list)list.setAttribute('aria-label',english?'All four edge dimensions':'全部部件四邊尺寸');
+      if(list)list.setAttribute('aria-label',english?'All part and leftover edge dimensions':'全部部件及餘料四邊尺寸');
       if(canvas){canvas.style.cursor=mode==='selected'?'crosshair':'';canvas.setAttribute('aria-label',mode==='selected'?(english?'Layout diagram; click a part to see all four edge dimensions':'排版圖；點選部件查看四邊尺寸'):(english?'Layout diagram':'排版圖'));}
       if(!note)return;
       note.hidden=mode!=='selected';
@@ -8103,15 +8167,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const specs=partSpecsForRemnants();let html=`<section class="cut-path-remnants"><h3>${esc(cutCopy('remnantHeading'))}</h3><p>${esc(cutCopy('remnantIntro'))}</p>`;
     plan.boards.forEach((board,index)=>{
       html+=`<h4>${esc(cutCopy('sourceBoard'))} #${index+1}｜${esc(board.boardId)}</h4>`;
-      const remnants=cutOverlay.finalMaterialLeaves(board);
+      const remnants=cutOverlay.leftoverPieces(board);
       if(!remnants.length){html+=`<p>${esc(cutCopy('noRemnants'))}</p>`;return;}
       html+='<ul class="cut-path-remnant-list">';
-      remnants.forEach(remnant=>{
+      remnants.forEach((remnant,remnantIndex)=>{
         const measurements=cutOverlay.formatRemnantMeasurements(remnant,fmtDim,fmtArea);
         const fits=specs.filter(spec=>cutOverlay.fitsPartSpec(remnant,spec));
         const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length)} × ${fmtDim(spec.width)}`))];
         const useText=!specs.length?cutCopy('noSpecs'):uniqueFitSizes.length?`${cutCopy('fitsCurrent')}：${uniqueFitSizes.map(esc).join('、')}`:cutCopy('noCurrentFit');
-        html+=`<li data-remnant-material="${esc(remnant.materialId)}"><strong>${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
+        const kindText=cutCopy(remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial');
+        html+=`<li data-remnant-material="${esc(remnant.materialId)}" data-remnant-kind="${esc(remnant.kind)}"><strong>R${remnantIndex+1} · ${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(kindText)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
       });
       html+='</ul>';
     });
@@ -9190,12 +9255,12 @@ window.addEventListener('DOMContentLoaded', () => {
     ['今次採用工序：','Process used:'],
     ['查看逐刀刀序與餘料','Review cut order and offcuts'],
     ['部件顏色風格','Part color style'],
-    ['部件尺寸標示','Part dimension labels'],
+    ['尺寸標示','Dimension labels'],
     ['自動（適合時顯示）','Automatic (show when it fits)'],
     ['點選單件顯示尺寸','Click one part to show its dimensions'],
-    ['全部部件顯示尺寸','Show dimensions for all parts'],
-    ['點選／全部模式會在四條邊各標數值；代表長度的相對兩邊標「長」，代表闊度的相對兩邊標「闊」，細件查逐邊清單。','Selected/all modes label all four edges; opposite edges for length show L, and width show W. Use the per-edge list for small parts.'],
-    ['全部部件四邊尺寸','All four edge dimensions'],
+    ['全部部件及餘料顯示尺寸','Show dimensions for all parts and leftovers'],
+    ['全部模式會標示所有部件；餘料（包括修邊料）亦逐邊標尺寸並以 R 編號連到清單。太細放不下時請看清單。','All mode labels every part; leftover pieces (including edge-trim offcuts) also show edge dimensions and R IDs linking to the list. Check the list if a piece is too small for labels.'],
+    ['全部部件及餘料四邊尺寸','All part and leftover edge dimensions'],
     ['請點選圖中一件部件查看四邊尺寸。','Click a part in the diagram to view all four edge dimensions.'],
     ['立體漸層','3D gradient'],
     ['金屬光澤','Metallic sheen'],

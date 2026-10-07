@@ -135,6 +135,26 @@ test('remnants are only the final unused material outputs, not kerf bands or tri
     band.x === item.rect.x && band.y === item.rect.y && band.width === item.rect.width && band.length === item.rect.length)));
 });
 
+test('diagram leftover pieces include both final sheet material and edge-trim offcuts, never kerf', () => {
+  const board = makePlan().boards[0];
+  const sheetLeaves = overlay.finalMaterialLeaves(board);
+  const trimOffcuts = board.cuts.flatMap(cut => cut.outputs
+    .filter(output => output.kind === 'offcut')
+    .map(output => ({ materialId: output.materialId, cutNumber: cut.number })));
+  const pieces = overlay.leftoverPieces(board);
+  assert.deepEqual(pieces.map(piece => piece.materialId), [
+    ...trimOffcuts.map(piece => piece.materialId),
+    ...sheetLeaves.map(piece => piece.materialId)
+  ]);
+  assert.equal(pieces.filter(piece => piece.kind === 'offcut').length, trimOffcuts.length);
+  assert.equal(pieces.filter(piece => piece.kind === 'material').length, sheetLeaves.length);
+  assert.deepEqual([...pieces.filter(piece => piece.kind === 'offcut').map(piece => piece.cutNumber)], [...trimOffcuts.map(piece => piece.cutNumber)]);
+  assert.ok(pieces.every(piece => piece.area === piece.rect.width * piece.rect.length && piece.area > 0));
+  assert.ok(pieces.every(piece => !board.kerfBands.some(band =>
+    band.x === piece.rect.x && band.y === piece.rect.y && band.width === piece.rect.width && band.length === piece.rect.length)));
+  assert.deepEqual(overlay.leftoverPieces({ ...board, validation: { ok: false } }), []);
+});
+
 test('geometric fit honors input orientation; dimensions and area format through the active unit formatter', () => {
   const remnant = { rect: { x: 0, y: 0, width: 350, length: 220 } };
   assert.equal(overlay.fitsPartSpec(remnant, { width: 300, length: 200, orientationPreference: 'auto' }), true);
@@ -149,14 +169,19 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.equal(overlay.copy('showPaths', 'zh'), '顯示逐刀切線');
   assert.equal(overlay.copy('showPaths', 'en'), 'Show cut-path overlay');
   assert.match(overlay.copy('pathHint', 'en'), /including edge-trim cuts/);
+  assert.equal(overlay.copy('remnantHeading', 'zh'), '剩料尺寸（含修邊料）');
+  assert.equal(overlay.copy('edgeTrimOffcut', 'en'), 'edge-trim offcut');
+  assert.match(overlay.copy('remnantIntro', 'en'), /kerf is not a sheet piece/);
   assert.equal(overlay.copy('remnantSize', 'zh'), '長 × 闊');
   assert.equal(overlay.copy('remnantSize', 'en'), 'length × width');
   assert.match(overlay.copy('fitsCurrent', 'en'), /^Geometrically fits/);
   assert.match(overlay.copy('remnantCaveat', 'zh'), /不保證未來用途或安全認證/);
   assert.match(html, /cutOverlay\.formatRemnantMeasurements\([^\n]*fmtDim[^\n]*fmtArea\)/);
+  assert.match(html, /cutOverlay\.leftoverPieces\(board\)/);
+  assert.match(html, /data-remnant-kind/);
   assert.match(html, /<\/strong>&nbsp;（\$\{esc\(cutCopy\('remnantSize'\)\)\}）/);
-  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=3"><\/script>/);
-  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=3'"));
+  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=4"><\/script>/);
+  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=4'"));
   assert.match(html, /cut-path-toggle-row/);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]{0,700}cut-path-toggle/);
 });

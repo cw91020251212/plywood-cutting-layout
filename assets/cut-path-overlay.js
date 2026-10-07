@@ -93,6 +93,27 @@
       .map(([materialId, rect]) => ({ materialId, boardId: board.boardId, rect: { ...rect }, area: rect.width * rect.length }));
   }
 
+  // Every physical offcut remains wood: list edge-trim outputs as well as final unused cut-tree material.
+  // Kerf bands are intentionally excluded because they are sawdust/loss, not reusable sheet rectangles.
+  function leftoverPieces(board) {
+    if (!isVerifiedBoard(board)) return [];
+    const pieces = [], seen = new Set();
+    const add = (materialId, kind, rect, cutNumber) => {
+      if (!materialId || seen.has(String(materialId)) || !validRect(rect)) return;
+      const normalized = { x: Number(rect.x), y: Number(rect.y), width: Number(rect.width), length: Number(rect.length) };
+      const item = { materialId: String(materialId), boardId: board.boardId, kind, rect: normalized, area: normalized.width * normalized.length };
+      if (cutNumber != null) item.cutNumber = cutNumber;
+      pieces.push(item); seen.add(String(materialId));
+    };
+    for (const step of board.cuts) {
+      for (const output of step.outputs) {
+        if (output.kind === 'offcut') add(output.materialId, 'offcut', output.rect, step.number);
+      }
+    }
+    for (const remnant of finalMaterialLeaves(board)) add(remnant.materialId, 'material', remnant.rect);
+    return pieces;
+  }
+
   function fitsPartSpec(remnant, spec) {
     if (!remnant || !validRect(remnant.rect || remnant) || !spec || spec.disabled === true) return false;
     const rect = remnant.rect || remnant;
@@ -128,21 +149,23 @@
       '藍色虛線與刀號依每板 cuts 順序；序號包含修邊刀。僅供參考，不是機械導引。',
       'Blue dashed lines and numbers follow each sheet’s cuts order, including edge-trim cuts. Reference only—not machine guidance.'
     ],
-    remnantHeading: ['可保存餘料（切割樹未用材料）', 'Saveable remnants (unused cut-tree material)'],
+    remnantHeading: ['剩料尺寸（含修邊料）', 'Leftover sizes (including edge-trim offcuts)'],
     remnantIntro: [
-      '只列切割樹最後仍未再切的 material 輸出；已排除鋸縫帶、修邊廢料與零尺寸。',
-      'Only final, uncut material outputs from the cut tree are listed; kerf bands, trim waste, and zero-size pieces are excluded.'
+      '列出切割後未再切用的板料及修邊料；鋸縫不算材料。圖中的 R 編號對應清單。',
+      'Lists final unused sheet material and edge-trim offcuts; kerf is not a sheet piece. R numbers in the diagram match this list.'
     ],
+    edgeTrimOffcut: ['修邊料', 'edge-trim offcut'],
+    unusedSheetMaterial: ['剩餘板料', 'unused sheet material'],
     sourceBoard: ['來源板', 'Source sheet'],
     remnantSize: ['長 × 闊', 'length × width'],
     fitsCurrent: ['可容納本次輸入規格', 'Geometrically fits a part specification entered this time'],
     noCurrentFit: ['未找到幾何上可容納本次輸入部件規格的尺寸。', 'No current input part specification fits geometrically.'],
     noSpecs: ['沒有可供比對的本次輸入部件規格；只列尺寸與面積，不判斷用途。', 'No current part specifications are available to compare; dimensions and area only, no use estimate.'],
     remnantCaveat: [
-      '比對只涵蓋本次輸入尺寸，不保證未來用途或安全認證；可能仍需再修邊。',
-      'This only compares dimensions entered this time; it is not a future-use guarantee or safety approval. Further trimming may still be needed.'
+      '用途比對只涵蓋本次輸入尺寸，不保證未來用途或安全認證；修邊料能否再用須由師傅核對。',
+      'Fit comparison only covers dimensions entered this time; it is not a future-use guarantee or safety approval. A woodworker must verify whether an offcut can be reused.'
     ],
-    noRemnants: ['沒有未被後續切割使用的非成品材料輸出。', 'No non-part material outputs remain unused by later cuts.']
+    noRemnants: ['沒有剩餘板料或修邊料。', 'No unused sheet material or edge-trim offcuts remain.']
   };
   function copy(key, language) {
     const pair = COPY[key];
@@ -150,6 +173,6 @@
     return pair[language === 'en' ? 1 : 0];
   }
 
-  return { isVerifiedBoard, isVerifiedPlan, cutSegments, finalMaterialLeaves,
+  return { isVerifiedBoard, isVerifiedPlan, cutSegments, finalMaterialLeaves, leftoverPieces,
     fitsPartSpec, formatRemnantMeasurements, copy };
 });

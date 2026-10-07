@@ -13,6 +13,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 - Fewer-sheets or easier-cutting objectives and multiple layout strategies
 - Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
 - Candidate validation, layout variations, utilisation and sheet count
+- Part diagram appearance selector: flat color, 3D gradient, or metallic sheen (visual only)
 - One-part rotation followed by full replanning and validation (manual dragging is disabled)
 - Cut-by-cut replay, cut tree and material-balance details
 - Save/load JSON, print reports and save layout images
@@ -23,6 +24,8 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 ## Important limitation
 
 The result is a computer-generated candidate layout, not a workshop-safety certification or a guarantee of globally optimal material use. An experienced woodworker must verify the actual sheet, kerf, supports, tools and machine safety before cutting.
+
+Diagram finishes are visual cues only; they do not represent actual wood grain, material, or cut feasibility.
 
 ## Table-saw update
 

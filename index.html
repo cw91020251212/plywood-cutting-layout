@@ -315,6 +315,11 @@ th{background:#C0C0C0;color:#2F2F2F}
 .legend-with-spec{display:flex;flex-direction:column;align-items:center;margin:5px}
 .legend-color-box{width:25px;height:25px;border:1px solid #000;margin-bottom:5px}
 .legend-spec{font-size:12px;text-align:center;max-width:100px}
+.part-appearance-toolbar{display:grid;grid-template-columns:minmax(8rem,auto) minmax(12rem,1fr);align-items:center;gap:7px 12px;margin:12px 0;padding:10px 12px;border:1px solid #c4ced2;border-left:4px solid #34758a;border-radius:8px;background:rgba(255,255,255,.82)}
+.part-appearance-toolbar>label{margin:0;font-weight:700}
+.part-appearance-toolbar select{width:100%;min-width:0;min-height:42px}
+.part-appearance-hint{grid-column:1/-1;margin:0;color:#52616a;font-size:.88em;line-height:1.4}
+ @media(max-width:600px){.part-appearance-toolbar{grid-template-columns:1fr;gap:5px}.part-appearance-hint{grid-column:1}}
 .printable-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin-top:15px;padding:10px;background:rgba(255,255,255,0.9);border-radius:8px;font-size:14px;border:1px solid #ccc}
 .tooltip{position:relative;display:inline-block;cursor:help}
 .tooltip .tooltiptext{visibility:hidden;width:200px;background:#555;color:#fff;text-align:center;border-radius:6px;padding:5px;position:absolute;z-index:1;bottom:125%;left:50%;margin-left:-100px;opacity:0;transition:opacity 0.3s}
@@ -632,6 +637,9 @@ th{background:#C0C0C0;color:#2F2F2F}
 #canvasContainer .board-size-legend-item{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;box-sizing:border-box;padding:3px 6px;border:1px solid #d4dadc;border-radius:4px;background:#fff}
 #canvasContainer .board-size-legend-swatch{width:16px;height:16px;flex:0 0 16px;border:1px solid rgba(20,35,35,.58);border-radius:3px;box-sizing:border-box}
 #canvasContainer .board-size-legend-label{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;font-size:.9em;line-height:1.3}
+body.wood-dark-mode .part-appearance-toolbar{background:#293139!important;border-color:#65737c!important;color:#e8eef2!important}
+body.wood-dark-mode .part-appearance-toolbar>label{color:#e8eef2!important}
+body.wood-dark-mode #partAppearanceStyle{background:#aeb7c0!important;color:#17212b!important;border-color:#74818b!important}
 body.portrait-display-active #canvasContainer .board-size-legend{flex:0 0 auto;justify-content:center;margin:0 0 4px;padding:4px 2px}
 body.portrait-display-layout-pending #canvasContainer .portrait-canvas-stage{visibility:hidden!important}
 
@@ -1222,6 +1230,15 @@ select {
 </div>
 <div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會先拿大件作搜尋順序；這不代表第一刀一定先切大件。實際刀序會另行列明，並逐刀回放核對。</p></details>
+<div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel">
+  <label id="partAppearanceLabel" for="partAppearanceStyle">部件顏色風格</label>
+  <select id="partAppearanceStyle" aria-describedby="partAppearanceHint">
+    <option value="glossy" selected>立體漸層</option>
+    <option value="metallic">金屬光澤</option>
+    <option value="flat">原色平面</option>
+  </select>
+  <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
+</div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
 </div>
@@ -7675,6 +7692,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="assets/cut-path-overlay.js?v=3"></script>
+<script src="assets/part-appearance.js?v=1"></script>
 
 <script>
 (function(){
@@ -7772,6 +7790,11 @@ window.addEventListener('DOMContentLoaded', () => {
     return {leaves,parts,bands,offcuts};
   }
   let displayColorsBySize=new Map();
+  const appearanceRenderer=window.PlywoodPartAppearance||null;
+  const PART_APPEARANCE_STORAGE_KEY='plywood-layout-part-appearance-v1';
+  function readPartAppearancePreference(){try{return appearanceRenderer?appearanceRenderer.normalizeStyle(window.localStorage.getItem(PART_APPEARANCE_STORAGE_KEY)):'flat';}catch(_){return appearanceRenderer?appearanceRenderer.defaultStyle:'flat';}}
+  function savePartAppearancePreference(value){try{window.localStorage.setItem(PART_APPEARANCE_STORAGE_KEY,value);}catch(_){/* Local storage may be unavailable in private browsing. */}}
+  let partAppearanceStyle=readPartAppearancePreference();
   function nominalDimensions(part){
     const width=Number(part.originalWidth??part.width),length=Number(part.originalLength??part.length??part.height);
     return {width:Number.isFinite(width)&&width>0?width:0,length:Number.isFinite(length)&&length>0?length:0};
@@ -7797,6 +7820,9 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
   function displayColor(part){return displayColorsBySize.get(nominalSizeKey(part))||part.color||'#83bd9f';}
+  function drawStyledPart(ctx,part,X,Y,sx,sy){const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy,color=displayColor(part);if(appearanceRenderer){appearanceRenderer.drawPart(ctx,x,y,width,height,color,partAppearanceStyle);return;}ctx.globalAlpha=.78;ctx.fillStyle=color;ctx.fillRect(x,y,width,height);ctx.globalAlpha=1;}
+  function partOutlineColor(fallback){return appearanceRenderer?appearanceRenderer.outlineColor(partAppearanceStyle,fallback):fallback;}
+  function stylePartSwatch(swatch,part){const color=displayColor(part);if(appearanceRenderer)appearanceRenderer.applySwatch(swatch,color,partAppearanceStyle);else swatch.style.backgroundColor=color;}
   // 視覺投影只作用於繪圖副本：橫向非正方形原板交換 x/y 與闊/長，原點固定左上；方案與切割資料不改。
   function boardDisplayProjection(board){
     const width=Number(board.width),height=Number(board.length??board.height);
@@ -7865,7 +7891,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#303030';ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
     if(count==null){
       const parts=board.results.map(projection.rect);
-      parts.forEach(p=>{ctx.fillStyle=displayColor(p);ctx.globalAlpha=.78;ctx.fillRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);ctx.globalAlpha=1;ctx.strokeStyle='#245c42';ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
+      parts.forEach(p=>{drawStyledPart(ctx,p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#245c42');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
       drawPartLabels(ctx,canvas,board,parts,X,Y,sx,sy);
       drawCutPathOverlay(ctx,canvas,board,index,board.cuts.length,projection,X,Y,W);
       return;
@@ -7874,7 +7900,7 @@ window.addEventListener('DOMContentLoaded', () => {
     st.offcuts.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(155,166,166,.28)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#9aa8a8';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
     st.leaves.forEach(r=>{const q=projection.rect(r);ctx.fillStyle='rgba(48,150,111,.05)';ctx.fillRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.strokeStyle='rgba(28,121,84,.4)';ctx.setLineDash([7,5]);ctx.strokeRect(X(q.x),Y(q.y),q.width*sx,q.length*sy);ctx.setLineDash([]);});
     const replayParts=st.parts.map(part=>{const source=board.results.find(item=>item.id===part.id);return projection.rect(source?{...source,...part}:part);});
-    replayParts.forEach(p=>{const src=board.results.find(x=>x.id===p.id);ctx.fillStyle=src?displayColor(src):'#83bd9f';ctx.globalAlpha=.78;ctx.fillRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);ctx.globalAlpha=1;ctx.strokeStyle='#235843';ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
+    replayParts.forEach(p=>{const src=board.results.find(x=>x.id===p.id);drawStyledPart(ctx,src?{...src,...p}:p,X,Y,sx,sy);ctx.globalAlpha=1;ctx.strokeStyle=partOutlineColor('#235843');ctx.lineWidth=2;ctx.strokeRect(X(p.x),Y(p.y),p.width*sx,p.length*sy);});
     st.bands.map(projection.rect).forEach(r=>{ctx.fillStyle='rgba(204,45,45,.48)';ctx.fillRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);ctx.strokeStyle='#a51e1e';ctx.lineWidth=1;ctx.strokeRect(X(r.x),Y(r.y),r.width*sx,r.length*sy);});
     drawPartLabels(ctx,canvas,board,replayParts,X,Y,sx,sy);
     if(canShowCutPaths(board,index))drawCutPathOverlay(ctx,canvas,board,index,count,projection,X,Y,W);
@@ -7894,7 +7920,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const sizes=new Map();(board.results||[]).forEach(part=>{const key=nominalSizeKey(part);if(!sizes.has(key))sizes.set(key,part);});
     [...sizes.entries()].sort((a,b)=>{const x=a[0].split('|').map(Number),y=b[0].split('|').map(Number);return x[0]-y[0]||x[1]-y[1];}).forEach(([,part])=>{
       const item=document.createElement('div');item.className='board-size-legend-item';
-      const swatch=document.createElement('span');swatch.className='board-size-legend-swatch';swatch.style.backgroundColor=displayColor(part);swatch.setAttribute('aria-hidden','true');
+      const swatch=document.createElement('span');swatch.className='board-size-legend-swatch';stylePartSwatch(swatch,part);swatch.setAttribute('aria-hidden','true');
       const label=document.createElement('span');label.className='board-size-legend-label';label.textContent=nominalSizeText(part);
       item.append(swatch,label);legend.appendChild(item);
     });
@@ -7952,6 +7978,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return html;
   }
   function render(plan,selectedLabel){
+    window.calculator._trialCandidateLabel=selectedLabel||'';
     const root=$('trialResults'),container=$('canvasContainer'),details=$('cutDetails');
     const verifiedCutPlan=cutOverlay.isVerifiedPlan(plan);activeVerifiedPlan=verifiedCutPlan?plan:null;
     root.innerHTML='';container.innerHTML='';$('colorLegend').style.display='none';$('cuttingLegend').style.display='none';$('schemeSelector').style.display='none';$('utilizationStats').textContent='';
@@ -8123,6 +8150,22 @@ window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
   window.PlywoodTrialUI={calculate,render,saveProject,loadProject,replayState,safeForDisplay,redrawBoard,buildCandidatePool,clearCandidatePool,updateVariationControls,commitCandidate};
+  const appearanceSelect=$('partAppearanceStyle');
+  if(appearanceSelect){
+    appearanceSelect.value=partAppearanceStyle;
+    appearanceSelect.addEventListener('change',()=>{
+      partAppearanceStyle=appearanceRenderer?appearanceRenderer.normalizeStyle(appearanceSelect.value):'flat';
+      appearanceSelect.value=partAppearanceStyle;savePartAppearancePreference(partAppearanceStyle);
+      const c=window.calculator,plan=c&&c.trialPlan;if(!plan||!window.PlywoodTrialUI||typeof window.PlywoodTrialUI.render!=='function')return;
+      const index=Number(c._trialCandidateIndex||0),candidate=(c._trialCandidates||[])[index];
+      const label=(candidate&&candidate.label)||c._trialCandidateLabel||`按已選工序「${c.trialMode||plan.mode}」${c._trialRotationLabel||''}`;
+      const replay=[];document.querySelectorAll('#canvasContainer canvas.canvas').forEach((canvas,i)=>replay[i]=canvas.dataset.replayCount===''?null:Number(canvas.dataset.replayCount));
+      const details=$('cutDetails'),wasOpen=!!(details&&details.open);
+      window.PlywoodTrialUI.render(plan,label);
+      replay.forEach((count,i)=>{if(count!==null&&window.PlywoodTrialUI.redrawBoard){const canvas=document.querySelector(`#canvasContainer canvas.canvas[data-board-index="${i}"]`);if(canvas){canvas.dataset.replayCount=String(count);window.PlywoodTrialUI.redrawBoard(i);}}});
+      if(details)details.open=wasOpen;if(c.translatePage)c.translatePage();if(window.PlywoodTrialUI.updateVariationControls)window.PlywoodTrialUI.updateVariationControls();
+    });
+  }
 })();
 </script>
 
@@ -8954,7 +8997,12 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(
     ['鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to rip, then crosscut; every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
     ['今次採用工序：','Process used:'],
-    ['查看逐刀刀序與餘料','Review cut order and offcuts']
+    ['查看逐刀刀序與餘料','Review cut order and offcuts'],
+    ['部件顏色風格','Part color style'],
+    ['立體漸層','3D gradient'],
+    ['金屬光澤','Metallic sheen'],
+    ['原色平面','Original flat colors'],
+    ['保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。','Keeps each size’s color identifier; changes diagram appearance only, not the cutting plan.']
   );
   const exactOnly=new Set(['可','米','厘米','毫米','尺','呎','寸','分']);
   const order=[...dict].filter(([zh])=>!exactOnly.has(zh)).sort((a,b)=>b[0].length-a[0].length);

@@ -10,7 +10,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 
 - Metric and imperial triple-unit input for parts and sheets
 - Kerf/blade thickness and four-side edge-trim settings
-- Fewer-sheets or easier-cutting objectives and multiple layout strategies
+- Fewer-sheets or easier-cutting objectives and multiple layout strategies; at equal sheet count/area, the saving objective retains the largest intact rectangular remnant (never a merged L-shaped blank). Reuse is not guaranteed.
 - Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
 - Candidate validation, layout variations, utilisation and sheet count
 - Part diagram appearance selector: flat color, same-hue 3D gradient (e.g. dark red to light red, dark blue to light blue), or metallic sheen (visual only; no gray overlay)
@@ -30,7 +30,7 @@ Diagram finishes preserve each part's color hue while changing shade; they are v
 
 ## Table-saw update
 
-See [the 2026-10-07 release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, ranking and remnant fixes, search limits, and remaining limitations.
+See [the table-saw release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, intact-remnant ranking and its trade-offs, search limits, and remaining limitations.
 
 ## AI handoff
 

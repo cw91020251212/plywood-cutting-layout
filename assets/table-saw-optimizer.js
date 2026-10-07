@@ -6,7 +6,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   const EPS = 1e-7;
-  const VERSION = 'table-saw-1.0.0';
+  const VERSION = 'table-saw-1.1.0';
   const metricsCache = new WeakMap();
 
   function searchLimit() {
@@ -110,7 +110,12 @@
           [a.summary.usedBoardCount, b.summary.usedBoardCount], [a.summary.boardArea, b.summary.boardArea],
           [a.summary.kerfArea, b.summary.kerfArea]]
       : [[a.summary.usedBoardCount, b.summary.usedBoardCount], [a.summary.boardArea, b.summary.boardArea],
-          [a.summary.kerfArea, b.summary.kerfArea], [ma.cuts, mb.cuts],
+          // These are actual final material leaves, never the union/bounding box of empty space.
+          [b.summary.largestRemnantArea ?? 0, a.summary.largestRemnantArea ?? 0],
+          [b.summary.largestRemnantShortSide ?? 0, a.summary.largestRemnantShortSide ?? 0],
+          [a.summary.kerfArea, b.summary.kerfArea],
+          [a.summary.retainedRemnantCount ?? 0, b.summary.retainedRemnantCount ?? 0],
+          [ma.cuts, mb.cuts],
           [ma.axisChanges, mb.axisChanges], [ma.cutLength, mb.cutLength]];
     for (const [left, right] of fields) {
       const delta = Number(left) - Number(right);

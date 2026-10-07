@@ -20,8 +20,8 @@ function loadEngine(helper = saw) {
   vm.runInNewContext(engineSource, context);
   return {engine:context.window.PlywoodTrialEngine, context};
 }
-function loadPool(demand, stock) {
-  const {engine,context} = loadEngine();
+function loadPool(demand, stock, helper = saw) {
+  const {engine,context} = loadEngine(helper);
   context.window.calculator = {parts:demand,boards:stock};
   const start = html.indexOf('  function totalCutCount(plan)');
   const end = html.indexOf('  function updateVariationControls()', start);
@@ -196,13 +196,13 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   const {engine}=loadEngine();
   assert.throws(()=>engine.plan([{width:10,length:10,count:Infinity}],boards,settings),/數量無效/);
   assert.match(html,/<option value="ripThenCrosscut" selected>/);
-  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=1"><\/script>/);
+  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=2"><\/script>/);
   assert.match(html,/<script src="assets\/part-appearance\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-08-calculate-button-sheen-1'));
-  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=1'));
+  assert.ok(sw.includes('2026-10-08-remnant-integrity-1'));
+  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=4'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));
   assert.ok(sw.includes('./assets/part-dimension-display.js?v=2'));
@@ -262,4 +262,89 @@ test('dark-mode imperial unit-label shadow is scoped away from metric and light-
   assert.match(html,/body\.wood-dark-mode \.unit-label\{color:#dbe5ec!important\}/);
   assert.doesNotMatch(html,/body\.wood-dark-mode \.unit-label\{[^}]*text-shadow:/);
   assert.doesNotMatch(html,/body\.wood-dark-mode \.dimension-unit-row\.metric \.unit-label\s*\{[^}]*text-shadow:/);
+});
+
+
+test('real saving pool retains a larger intact remnant before minimizing kerf at equal sheet use',()=>{
+  const demand=[{width:300,length:150,count:2,orientationPreference:'auto'},{width:100,length:450,count:1,orientationPreference:'auto'}];
+  const stock=[{width:1000,length:1000}];
+  const {engine,api}=loadPool(demand,stock);
+  const pool=api.buildCandidatePool(engine.plan(demand,stock,settings),settings,['ripThenCrosscut','partFirstTree'],x=>x,'saving');
+  const chosen=pool[0].plan;
+  assert.equal(chosen.summary.usedBoardCount,1);
+  assert.equal(chosen.summary.boardArea,1000000);
+  assert.equal(chosen.summary.largestRemnantArea,744000);
+  assert.equal(chosen.summary.largestRemnant.rect.width,744);
+  assert.equal(chosen.summary.largestRemnant.rect.length,1000);
+  assert.equal(chosen.summary.kerfArea,7200);
+  assert.equal(saw.planMetrics(chosen).cuts,5);
+  const oldBest=pool.find(x=>x.plan.summary.largestRemnantArea===697000&&x.plan.summary.kerfArea===7182);
+  assert.ok(oldBest,'previous lower-kerf candidate remains in the pool');
+  assert.ok(api.rankPlan(chosen,oldBest.plan,'saving')<0);
+  assert.ok(pool.every(x=>api.strictlyValidCandidate(x.plan,{})));
+  assert.ok(pool.every(x=>api.rankPlan(chosen,x.plan,'saving')<=0));
+});
+
+test('saving keeps sheet count/area first, then intact rectangle; kerf precedes fragmentation and convenience is unchanged',()=>{
+  const make=(overrides={},cuts=3)=>({summary:{usedBoardCount:1,boardArea:1000000,kerfArea:8000,largestRemnantArea:600000,largestRemnantShortSide:600,retainedRemnantCount:2,...overrides},boards:[{cuts:Array.from({length:cuts},()=>({axis:'x',phase:'rip',sourceRect:{width:1000,length:1000}}))}]});
+  const base=make(),snapshot=JSON.stringify(base);
+  assert.ok(saw.comparePlans(base,make({usedBoardCount:2,largestRemnantArea:900000}),'saving')<0);
+  assert.ok(saw.comparePlans(base,make({boardArea:2000000,largestRemnantArea:900000}),'saving')<0);
+  assert.ok(saw.comparePlans(base,make({largestRemnantArea:500000,kerfArea:7000}),'saving')<0);
+  assert.ok(saw.comparePlans(base,make({largestRemnantShortSide:100}),'saving')<0);
+  assert.ok(saw.comparePlans(base,make({kerfArea:9000,retainedRemnantCount:1}),'saving')<0,'do not saw away a tail merely to reduce count');
+  assert.ok(saw.comparePlans(make({retainedRemnantCount:1}),base,'saving')<0);
+  assert.ok(saw.comparePlans(make({largestRemnantArea:100000},2),base,'convenience')<0);
+  assert.equal(JSON.stringify(base),snapshot);
+});
+
+test('integrity summary uses individual final leaves, not L-shaped unions, trims, kerf or exact-fit parts',()=>{
+  const {engine}=loadEngine();
+  const fixtures=[
+    {p:[{width:300,length:440,count:1,orientationPreference:'fixed_vertical'}],b:boards,s:{...settings,trims:{left:10,right:10,top:10,bottom:10}}},
+    {p:parts,b:boards,s:settings},
+    {p:[{width:603,length:1000,count:1,orientationPreference:'fixed_vertical'}],b:boards,s:settings}
+  ];
+  for(const {p,b,s} of fixtures)for(const mode of ['ripThenCrosscut','partFirstTree']){
+    const plan=engine.plan(p,b,{...s,mode});
+    assert.ok(plan.validation.ok);
+    const real=plan.boards.flatMap(board=>overlay.finalMaterialLeaves(board));
+    assert.equal(plan.summary.retainedRemnantCount,real.length);
+    assert.equal(plan.summary.largestRemnantArea,Math.max(0,...real.map(r=>r.area)));
+    for(const board of plan.boards){
+      assert.deepEqual(JSON.parse(JSON.stringify(board.validation.finalRemnants)),overlay.finalMaterialLeaves(board).map(({materialId,rect,area})=>({materialId,rect,area})));
+    }
+    const largest=plan.summary.largestRemnant;
+    if(largest)assert.ok(real.some(r=>r.boardId===largest.boardId&&r.materialId===largest.materialId&&r.area===largest.area));
+    else assert.equal(real.length,0);
+  }
+  const trimmed=engine.plan(fixtures[0].p,boards,fixtures[0].s);
+  assert.equal(trimmed.summary.retainedRemnantCount,2);
+  const leaves=trimmed.boards[0].validation.finalRemnants;
+  assert.ok(trimmed.summary.largestRemnantArea<leaves.reduce((n,r)=>n+r.area,0),'adjacent remaining regions are not added into one piece');
+  assert.ok(overlay.leftoverPieces(trimmed.boards[0]).length>leaves.length,'trim offcuts remain displayed but are not integrity targets');
+});
+
+test('missing helper still computes physical remnant metrics and saving fallback ranks them first at equal sheet use',()=>{
+  const demand=[{width:300,length:150,count:2,orientationPreference:'auto'},{width:100,length:450,count:1,orientationPreference:'auto'}];
+  const stock=[{width:1000,length:1000}],{engine,api}=loadPool(demand,stock,null);
+  const plan=engine.plan(demand,stock,settings);
+  assert.ok(plan.stripSearch.unavailable>0);
+  const pool=api.buildCandidatePool(plan,settings,['ripThenCrosscut','partFirstTree'],x=>x,'saving');
+  assert.equal(pool[0].plan.summary.largestRemnantArea,744000);
+  assert.ok(pool.every(x=>api.rankPlan(pool[0].plan,x.plan,'saving')<=0));
+  assert.ok(pool.every(x=>x.plan.validation.ok));
+});
+
+test('intact-remnant guidance, displayed length/width and provenance are bilingual and versioned',()=>{
+  assert.equal(saw.version,'table-saw-1.1.0');
+  assert.equal(loadEngine().engine.version,'plywood-trial-1.2.0');
+  assert.ok(html.includes('同等用料優先保留最大完整長方形餘料'));
+  assert.equal(html.split('先少用板，同等用料下保留最大完整長方形餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
+  assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
+  assert.ok(html.includes('L-shaped blanks are never merged'));
+  assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));
+  assert.ok(html.includes('fmtDim(r.rect.length)')&&html.includes('fmtDim(r.rect.width)')&&html.includes('esc(r.boardId)'));
+  assert.ok(html.includes('Largest intact remnant:')&&html.includes('Separate remnants:'));
+  assert.ok(html.includes('edge-trim offcuts excluded; geometry only, no reuse guarantee'));
 });

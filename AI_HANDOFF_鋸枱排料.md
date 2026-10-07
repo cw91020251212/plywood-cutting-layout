@@ -10,8 +10,8 @@
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
 | 儲存庫 | <https://github.com/cw91020251212/plywood-cutting-layout> |
 | 預設分支 | `main`，GitHub Pages 由 GitHub Actions 部署。 |
-| 已發布程式基準 | `bd9daa6`，引擎 `plywood-trial-1.1.0`，鋸枱輔助模組 `table-saw-1.0.0`，PWA 快取 `2026-10-07-table-saw-1`。 |
-| 已驗證正式部署 | GitHub Actions [37588189150](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37588189150)；Pages 成功部署並核對公開 HTML、兩個前端 JS 模組、service worker 與已發布檔案相符。正式網站亦實際重跑一板七刀反例並通過切序驗證。 |
+| 已發布程式基準 | `9374b56`，引擎 `plywood-trial-1.1.0`，鋸枱模組 `table-saw-1.0.0`，外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=1`；PWA 快取 `2026-10-07-part-dimensions-2`。 |
+| 已驗證正式部署 | GitHub Actions [37609241945](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37609241945) 成功；公開 HTML、排料模組、刀路／餘料模組及 service worker 與指定 commit 相符；部件尺寸模組 SHA-256 亦與本機檔案一致。 |
 
 ---
 
@@ -162,7 +162,7 @@
 ## 7. PWA、Pages 與來源管理
 
 - `sw.js` `CORE_ASSETS` 要只包含存在檔案；每次加、移除、改名 asset 時同步清單及 regression assertion，避免 offline shell 指向 404。
-- script URL、overlay query version 同 `APP_VERSION` 必須同步更新；例如現有 `table-saw-optimizer.js?v=1`、`cut-path-overlay.js?v=3`、`2026-10-07-table-saw-1`。
+- script URL、overlay query version 同 `APP_VERSION` 必須同步更新；現有 `table-saw-optimizer.js?v=1`、`cut-path-overlay.js?v=3`、`part-appearance.js?v=3`、`part-dimension-display.js?v=1`，PWA app shell 為 `2026-10-07-part-dimensions-2`。
 - Pages actions 每次 `main` push 都會先跑：
 
   ```sh
@@ -171,20 +171,18 @@
   ```
 
   冇測試過唔好推；失敗應修正並重跑，唔好移除步驟逃過部署閘。
-- 基準版本 `bd9daa6` 已上線且 working tree 乾淨；往後以 Git diff、`gh run`／Actions、公開 HTML 及部署資產核對確實版本。
+- 本輪程式碼 release commit `9374b56` 已上線；Pages Actions `37609241945` 成功。往後以 Git diff、`gh run`／Actions、公開 HTML 及部署資產核對確實版本；文件後續更新可有獨立文件 commit。
 - 交接文件同 source 喺同一 repo `main`，令下一個 Agent 唔使靠本次對話歷史；更新報告基準版本時，同步記 commit hash、測試數、deployment run。
 
 ## 8. 當前自動及人工驗證
 
-截至已部署 `bd9daa6`：
+截至程式碼 release commit `9374b56`：
 
-- `node scripts/check-inline-scripts.cjs` 通過 **12 段 inline scripts + 3 個正式 JS 資產**語法檢查。
-- `node --test tests/*.test.cjs`：**24/24 pass，0 fail**。
-  - 舊刀路／UI／單位回歸 10 項。
-  - 本輪新組合搜尋及材料／回退測試 14 項，包括一板七刀主反例、比較排序、庫存次序、停用原板 index、免刀成品餘料、刀位換算、末刀／小數 kerf、搜尋超限回退、missing module fallback，以及 64 組固定種子幾何方向／修邊案例。
-- GitHub Pages 最新部署 Actions `37588189150` successful；公開資產 SHA-256 與該已推送 commit 內檔案一致。
-- 瀏覽器喺**正式網站**以固定方向反例重跑：`PlywoodTrialEngine.version = plywood-trial-1.1.0`、`PlywoodTableSaw.version = table-saw-1.0.0`、模式 `ripThenCrosscut`、1 板、7 刀、`validation.ok === true`。
-- 瀏覽器額外檢查中英提示及免刀 terminal 餘料；寫入假資料後還原瀏覽器 parts／boards 並重設結果；無保留假用戶訂單資料。
+- `node scripts/check-inline-scripts.cjs` 通過 **12 段 inline scripts + 4 個正式 JS 資產**語法檢查。
+- `node --test tests/*.test.cjs`：**35/35 pass，0 fail**：刀路／UI／單位 10 項、部件外觀 4 項、尺寸互動 5 項、排料／庫存／排序／PWA 16 項。
+- GitHub Pages Actions [37609241945](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37609241945) successful；公開尺寸模組 SHA-256 與本機一致，HTML 指向 `?v=1`，公開 service worker 使用 `2026-10-07-part-dimensions-2`。
+- 本機瀏覽器以兩件相近尺寸 `250 × 400 mm`、`252 × 400 mm` 實測全部尺寸清單及點選單件；點選第一件顯示 `#1 · 250 mm × 400 mm ↻`。切換前後 `calculator.trialPlan` 同一物件、每板 cuts JSON 相同，證明顯示切換無重算／改刀。
+- 瀏覽器互動測試只用臨時本機資料，完成後清除模式偏好並重載空白頁；正式站只讀確認選單，不寫入其使用者資料。
 - 相同反例舊候選 2 板／8 刀，新候選 1 板／7 刀，已另有 `TABLE_SAW_RELEASE.md` 數值紀錄。
 
 注意：測試係程式驗證，不代表真鋸測、木紋認證或正式 workshop health-and-safety sign-off。
@@ -337,7 +335,7 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 ### 本輪驗證結果
 
-- `node scripts/check-inline-scripts.cjs` 通過；`node --test tests/*.test.cjs` **35/35 通過**（部署前仍須在最新工作樹重跑）。
+- `node scripts/check-inline-scripts.cjs` 通過；`node --test tests/*.test.cjs` **35/35 通過**。程式碼已部署 commit `9374b56`，Actions `37609241945` 成功。
 - 本機瀏覽器以 603 × 1000 mm 板、250 × 400 mm 與 252 × 400 mm 兩件近尺寸部件實際測試。`all` 模式顯示兩件各自編號和尺寸；切換 `selected` 並點第一件後，狀態提示顯示 `#1 · 250 mm × 400 mm ↻`、畫布 cursor 變為 crosshair。結果同時確認 `calculator.trialPlan` 物件仍為同一參照，所有 board cuts JSON 完全一致，證明只改顯示而沒有重新排料。
 - 瀏覽器測試只寫入本機臨時 `calculator.parts`／`calculator.boards`，完成後刪除模式偏好並重新載入空白頁；正式網站、專案 JSON 與使用者訂單資料沒有被修改。
 

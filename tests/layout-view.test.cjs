@@ -105,7 +105,8 @@ test('narrow remnants may use 3 CSS-pixel labels while regular dimensions keep t
   const context={};vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawEdgeMeasure`,context);
   const ctx={font:'',measureText(text){return {width:[...text].length*Number((this.font.match(/(\d+(?:\.\d+)?)px/)||[0,0])[1])};},save(){},restore(){},translate(){},rotate(){},fillRect(){},strokeRect(){},fillText(){}};
   assert.equal(context.draw(ctx,'長 15.88寸',0,0,32,50,0,1),false);
-  assert.equal(context.draw(ctx,'長 15.88寸',0,0,32,50,0,1,3),true);
+  assert.equal(context.draw(ctx,'長 15.88寸',0,0,32,50,0,1,3,3),true);
+  assert.match(ctx.font,/3px/);
 });
 test('diagram metadata is folded, the legend stays outside, and the right remote closes without adding a tools block',()=>{
   assert.match(js,/const canvasContainer=\$\('canvasContainer'\);\s*const displaySettings=details\('layoutDisplaySettings','圖面與尺寸設定',canvasContainer\.parentNode\);canvasContainer\.before\(displaySettings\)/,'diagram controls stay immediately before the layout image');

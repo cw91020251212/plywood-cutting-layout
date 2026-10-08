@@ -3,7 +3,7 @@
 日期：2026-10-08
 引擎：`plywood-trial-1.3.0`
 輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=5`
-目前 PWA 快取：`2026-10-08-compact-layout-6`
+目前 PWA 快取：`2026-10-08-compact-layout-9`
 
 ## 今次正式整合
 
@@ -150,10 +150,17 @@ node --test tests/*.test.cjs
 
 - **尺寸：**排版圖、四邊、圖例、餘料及原板表會帶原始闊／長輸入的單位上下文。輸入寸維持寸；由尺輸入而得到的 8 尺（96 寸）內尺寸亦以寸顯示。計算產生而沒有原輸入可參考的尺寸，才按目前來源單位顯示。內部幾何、鋸縫與驗證仍一律以 mm 進行。
 - **旋轉映射：**四邊顯示先按實際投影判斷該物理邊屬原始長或闊，再取相應原輸入單位；這涵蓋已轉件、橫向觀看的原板，以及長闊剛好相同但輸入單位不同的部件／餘料。
-- **收納與穩定性：**非必要的設定、診斷、板材資料、回放及尺寸清單收進原生 `details`；排版圖和圖例保留在外面。餘料尺寸開關同時隱藏圖中 R／四邊文字、圖下餘料列及切割詳情的餘料清單。
+- **收納與穩定性：**非必要的設定、診斷、板材資料、回放及尺寸清單收進原生 `details`；排版圖和圖例保留在外面。餘料尺寸開關隱藏圖中長闊文字、圖下餘料列及切割詳情的餘料清單；R 編號另有獨立開關。
 - **方案操作：**右側 fixed 控制保留兩個 42 px 箭嘴：上一個／下一個方案，並加一個不佔主面積的紅色 `×` 關閉鈕。用途是工人望住排版圖前後比較；`×` 只收起遙控器，不改已揀候選。下一次按「計算」才會重新顯示。只有一個方案時整個遙控器隱藏。兩個箭嘴只觸發既有切換控制，不會重新排料、修改方案 JSON、幾何或切刀序。
 - **不再製造圖下區塊：**「更多方案工具」已移除，不會在排版圖／結果下面長出額外面板。原有直選／追加搜尋控制保留在不可見的穩定停車位，讓候選狀態和右側箭嘴在重新計算後正常工作；這輪不把它們重新顯示為另一塊介面。
 - **透明度：**右上角 `⚙ 設定` 的既有透明度選擇新增「方案遙控器」，可選 1–5 級並以本機 `wood-layout-remote-opacity` 記住；只改視覺透明度，不改方案或排料。
 - **圖面設定位置：**「圖面與尺寸設定」不再放在切割結果頂部；它現在是 `#canvasContainer` 的直接上一項，放在方案摘要之後、排版圖之前。外觀、四邊尺寸、餘料尺寸與切線開關一開便可立即看見同一張圖的效果。
 - **離線與檢查：**更新 `assets/layout-view.js?v=4`、`assets/layout-view.css?v=4` 與 `cut-path-overlay.js?v=5` 至 PWA cache，版本為 `2026-10-08-compact-layout-5`。`node scripts/check-inline-scripts.cjs` 檢查 12 段 inline script 與 5 個 production JS assets；完整 `node --test tests/*.test.cjs` 為 **64/64 通過**。功能 commit [`0245ff6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/0245ff6ddeb80ba7ba010d00f338621b74e65321) 的 GitHub Actions [37701274641](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37701274641) **success**；公開 HTML、Service Worker、兩個 layout-view v4 資產的 SHA-256 均與本機相同。正式站以 10 個候選實測：`×` 關閉後候選不變、下次計算重開；透明度第 4 級為 0.72；方案 1 轉 2 時排料引擎呼叫數為 0。
 - **離線與檢查（位置修正）：**`layout-view.js` 升至 `v=5`，PWA cache 為 `2026-10-08-compact-layout-6`；完整回歸仍為 **64/64 通過**。功能 commit [`7d56151`](https://github.com/cw91020251212/plywood-cutting-layout/commit/7d5615149e8d70c19e1072c05500e9fe72dba025) 的 GitHub Actions [37703072769](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37703072769) **success**；公開 HTML、Service Worker 及 layout-view v5 SHA-256 已核對。正式 10 候選案例確認設定是 `canvasContainer` 的直接上一個元素，設定底部 683 px、圖面容器頂部 691 px。
+
+## 餘料尺寸去重與獨立 R 編號（2026-10-08）
+
+- **畫布可讀性：**部件仍按要求保留四邊尺寸；餘料則不再把同一長、闊各畫兩次。每塊餘料在 Canvas 只畫一次上邊與一次右邊，即長、闊各一次，並固定用 **3 CSS px 超細字**，讓師傅放大畫面閱讀，避免相鄰窄料的白色尺寸框互相重疊。下方餘料清單及切割詳情仍保留完整上／右／下／左四邊資料，沒有降低可核對的尺寸資料。
+- **獨立編號：**「圖面與尺寸設定」內新增緊鄰「餘料尺寸」的「餘料編號」勾選。它會同時控制畫布、圖下清單和切割詳情的 `R1`、`R2`…；偏好只記在此瀏覽器 `plywood-layout-remnant-labels-v1`。開關不重排、不改切刀、餘料矩形、尺寸或材料帳。
+- **空間邊界：**若一個單邊連 3 CSS px 字串也放不下，Canvas 仍不強行畫到鄰塊；師傅可在完整四邊清單讀取。這是畫面去重，不是尺寸四捨五入或幾何變更。
+- **驗證及部署：**`node scripts/check-inline-scripts.cjs` 通過（12 段 inline、5 個正式 JS）；完整回歸 **66/66 通過**。功能 commit [`481e24b`](https://github.com/cw91020251212/plywood-cutting-layout/commit/481e24bd9c4264b2fcfdd516c733d094d9b78e50) 的 GitHub Actions [37708589361](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37708589361) **success**；公開 HTML 與 Service Worker SHA-256 均與本機一致。正式瀏覽器以 20 × 40 寸原板、4 × 24 寸固定方向部件四件測得 5 塊相鄰餘料；實際 1200／395 畫布比例量到餘料文字 **2.998 CSS px**，尺寸維持顯示時關閉 R，清單及詳情的 R 前綴消失並寫入偏好。

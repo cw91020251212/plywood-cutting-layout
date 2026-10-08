@@ -97,6 +97,7 @@ test('parts retain four-edge dimensions while remnants use one readable length a
   const remnantSource=html.slice(remnantStart,remnantEnd);
   assert.match(remnantSource,/draw\('top'/);
   assert.match(remnantSource,/draw\('right'/);
+  assert.match(remnantSource,/drawEdgeMeasure\([\s\S]*?,dpr,3\)/,'remnant labels may use 3 CSS-pixel text so narrow pieces remain zoom-readable');
   assert.doesNotMatch(remnantSource,/draw\('bottom'|draw\('left'/);
   assert.match(html, /function drawRemnantShapes/);
   assert.match(html, /drawRemnantLabels\(ctx,canvas,remnants,projection,X,Y,sx,sy\)/);

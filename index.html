@@ -7926,8 +7926,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function edgeDimensionName(edge,english){
     return edge.dimension==='length'?(english?'L':'長'):edge.dimension==='width'?(english?'W':'闊'):(english?'Edge':'邊');
   }
-  function drawEdgeMeasure(ctx,text,centerX,centerY,edgeLength,thickness,angle,dpr){
-    const minFont=6*dpr,maxFont=Math.min(8*dpr,thickness*.58);
+  function drawEdgeMeasure(ctx,text,centerX,centerY,edgeLength,thickness,angle,dpr,minFontCss=6){
+    const minFont=minFontCss*dpr,maxFont=Math.min(8*dpr,thickness*.58);
     let layout=null;
     for(let fontSize=maxFont;fontSize>=minFont;fontSize-=.5*dpr){
       ctx.font=`700 ${fontSize}px Arial, sans-serif`;
@@ -8073,7 +8073,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if(!dimensionDisplay)return 0;
     const edges=dimensionDisplay.edgeDimensions(part),bySide=new Map(edges.map(edge=>[edge.side,edge]));if(!edges.length)return 0;
     const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy,inset=2*dpr;
-    const draw=(side,angle,edgeLength,thickness,cx,cy)=>{const edge=bySide.get(side);return edge&&drawEdgeMeasure(ctx,`${edgeDimensionName(edge,window.calculator&&calculator.currentLanguage==='en')} ${formatEdgeDimension(part,edge)}`,cx,cy,edgeLength,thickness,angle,dpr);};
+    const draw=(side,angle,edgeLength,thickness,cx,cy)=>{const edge=bySide.get(side);return edge&&drawEdgeMeasure(ctx,`${edgeDimensionName(edge,window.calculator&&calculator.currentLanguage==='en')} ${formatEdgeDimension(part,edge)}`,cx,cy,edgeLength,thickness,angle,dpr,3);};
     // One long-side and one short-side label keep remnants readable; the list retains all four edges.
     const horizontalBoxHeight=Math.min(8*dpr,height*.58*1.2+2*dpr),verticalBoxHeight=Math.min(8*dpr,width*.58*1.2+2*dpr);
     return Number(draw('top',0,width,height,x+width/2,y+inset+horizontalBoxHeight/2))+Number(draw('right',Math.PI/2,height,width,x+width-inset-verticalBoxHeight/2,y+height/2));

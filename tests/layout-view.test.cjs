@@ -100,6 +100,13 @@ test('a vertical dimension text box cannot spill past the physical edge',()=>{
   const context={};vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawEdgeMeasure`,context);
   assert.equal(context.draw({measureText:()=>({width:40})},'a long label',0,0,20,50,Math.PI/2,1),false);
 });
+test('narrow remnants may use 3 CSS-pixel labels while regular dimensions keep their readable default',()=>{
+  const start=html.indexOf('  function drawEdgeMeasure'),end=html.indexOf('\n  function drawPartEdgeDimensions',start);
+  const context={};vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawEdgeMeasure`,context);
+  const ctx={font:'',measureText(text){return {width:[...text].length*Number((this.font.match(/(\d+(?:\.\d+)?)px/)||[0,0])[1])};},save(){},restore(){},translate(){},rotate(){},fillRect(){},strokeRect(){},fillText(){}};
+  assert.equal(context.draw(ctx,'長 15.88寸',0,0,32,50,0,1),false);
+  assert.equal(context.draw(ctx,'長 15.88寸',0,0,32,50,0,1,3),true);
+});
 test('diagram metadata is folded, the legend stays outside, and the right remote closes without adding a tools block',()=>{
   assert.match(js,/const canvasContainer=\$\('canvasContainer'\);\s*const displaySettings=details\('layoutDisplaySettings','圖面與尺寸設定',canvasContainer\.parentNode\);canvasContainer\.before\(displaySettings\)/,'diagram controls stay immediately before the layout image');
   assert.doesNotMatch(js,/heading\.after\(displaySettings\)/,'diagram controls must not remain at the top of the results section');

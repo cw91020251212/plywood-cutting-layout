@@ -210,7 +210,7 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-08-compact-layout-7'));
+  assert.ok(sw.includes('2026-10-08-compact-layout-8'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=5'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));

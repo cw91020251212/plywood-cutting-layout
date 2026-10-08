@@ -74,15 +74,15 @@ test('dimension controls are bilingual, accessible, and connected to parts plus 
   assert.match(html, /R\$\{remnantIndex\+1\}/);
   assert.match(html, /dimensionDisplay\.visibleParts/);
   assert.match(html, /dimensionDisplay\.edgeDimensions\(part\)/);
-  assert.match(html, /All mode labels every part; leftover pieces/);
+  assert.match(html, /each leftover piece \(including edge-trim offcuts\) shows length and width once/);
   assert.match(html, /Click mode shows one part/);
-  assert.match(html, /All mode also labels unused sheet pieces and edge-trim offcuts/);
-  assert.match(html, /點選模式可查看單件四邊尺寸；全部模式亦標示剩餘板料及修邊料/);
+  assert.match(html, /Leftovers show length and width once in the diagram to avoid overlap/);
+  assert.match(html, /點選模式可查看單件四邊尺寸；餘料圖中只標一次長、一次闊以免重疊/);
   assert.doesNotMatch(html, /Selected\/all modes label all four edges/);
   assert.match(html, /上邊|Top/);
 });
 
-test('selected and all modes draw a measurement beside each of the four edges and list side names', () => {
+test('parts retain four-edge dimensions while remnants use one readable length and width pair', () => {
   const start = html.indexOf('function drawPartEdgeDimensions');
   const end = html.indexOf('\n  function drawPartLabels', start);
   const source = html.slice(start, end);
@@ -92,6 +92,12 @@ test('selected and all modes draw a measurement beside each of the four edges an
   assert.match(html, /partDimensionLabel\(board,selected,english\)/);
   assert.match(html, /partDimensionLabel\(board,part,english\)/);
   assert.match(html, /function drawRemnantLabels/);
+  const remnantStart=html.indexOf('function drawRemnantEdgeDimensions');
+  const remnantEnd=html.indexOf('\n  function drawRemnantLabels',remnantStart);
+  const remnantSource=html.slice(remnantStart,remnantEnd);
+  assert.match(remnantSource,/draw\('top'/);
+  assert.match(remnantSource,/draw\('right'/);
+  assert.doesNotMatch(remnantSource,/draw\('bottom'|draw\('left'/);
   assert.match(html, /function drawRemnantShapes/);
   assert.match(html, /drawRemnantLabels\(ctx,canvas,remnants,projection,X,Y,sx,sy\)/);
   assert.match(html, /function remnantDimensionLabel/);

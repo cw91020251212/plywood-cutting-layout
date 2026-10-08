@@ -66,18 +66,34 @@ test('input unit policy migrates auto conversion off once, then remembers explic
   context.save(true);assert.equal(context.read(),true);
   context.save(false);assert.equal(context.read(),false);
 });
-test('leftover dimension switch is persistent and hides labels, not geometric material shapes',()=>{
+test('leftover dimension and R-label switches are persistent and do not hide geometric material shapes',()=>{
   const start=html.indexOf('  function drawRemnantLabels'),end=html.indexOf('\n  function drawBoard',start);
   let edges=0,badges=0;
-  const context={showRemnantDimensions:false,remnantPartForDisplay:r=>r,drawPartEdgeDimensions:()=>edges++,drawRemnantBadge:()=>badges++};
+  const context={showRemnantDimensions:false,showRemnantLabels:false,remnantPartForDisplay:r=>r,drawRemnantEdgeDimensions:()=>edges++,drawRemnantBadge:()=>badges++};
   vm.runInNewContext(`${html.slice(start,end)};globalThis.draw=drawRemnantLabels`,context);
   const canvas={width:100,height:100,clientWidth:100,clientHeight:100};
   context.draw({},canvas,[{}],{},null,null,1,1);assert.equal(edges,0);
-  context.showRemnantDimensions=true;context.draw({},canvas,[{}],{},null,null,1,1);assert.equal(edges,1);assert.equal(badges,1);
+  context.showRemnantDimensions=true;context.showRemnantLabels=true;context.draw({},canvas,[{}],{},null,null,1,1);assert.equal(edges,1);assert.equal(badges,1);
   assert.match(html,/localStorage.setItem\(REMNANT_DIMENSION_KEY,String\(showRemnantDimensions\)\)/);
+  assert.match(html,/const REMNANT_DIMENSION_KEY='plywood-layout-remnant-dimensions-v1',REMNANT_LABEL_KEY='plywood-layout-remnant-labels-v1'/);
+  assert.match(html,/function readRemnantLabels\(\)/);
+  assert.match(html,/id="showRemnantLabels"/);
+  assert.match(html,/localStorage.setItem\(REMNANT_LABEL_KEY,String\(showRemnantLabels\)\)/);
+  assert.match(html,/if\(showRemnantDimensions\)drawRemnantEdgeDimensions[\s\S]*?if\(showRemnantLabels\)drawRemnantBadge/);
+  assert.match(html,/draw\('top',[\s\S]*?draw\('right'/,'each remnant gets one long-side and one short-side canvas label, not four repeats');
   assert.match(html,/drawRemnantShapes\(ctx,remnants,projection,X,Y,sx,sy\)/);
   assert.match(html,/\[data-remnant-details\].*detail\.hidden=!showRemnantDimensions/);
   assert.match(css,/part-dimension-all-item\[hidden\]\{display:none!important\}/);
+});
+test('remnant label preference is independent from remnant dimension preference',()=>{
+  const start=html.indexOf("const REMNANT_DIMENSION_KEY = 'plywood-layout-remnant-dimensions-v1'")>=0?html.indexOf("const REMNANT_DIMENSION_KEY = 'plywood-layout-remnant-dimensions-v1'"):html.indexOf("const REMNANT_DIMENSION_KEY='plywood-layout-remnant-dimensions-v1'");
+  const end=html.indexOf('\n  let selectedDimensionPart',start);
+  const store=new Map([['plywood-layout-remnant-dimensions-v1','false'],['plywood-layout-remnant-labels-v1','true']]);
+  const context={window:{localStorage:{getItem:key=>store.get(key)??null}}};
+  vm.runInNewContext(`${html.slice(start,end)};globalThis.read={dims:readRemnantDimensions,labels:readRemnantLabels};`,context);
+  assert.equal(context.read.dims(),false);
+  assert.equal(context.read.labels(),true);
+  store.set('plywood-layout-remnant-labels-v1','false');assert.equal(context.read.labels(),false);
 });
 test('a vertical dimension text box cannot spill past the physical edge',()=>{
   const start=html.indexOf('  function drawEdgeMeasure'),end=html.indexOf('\n  function drawPartEdgeDimensions',start);

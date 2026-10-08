@@ -1281,9 +1281,10 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
       <option value="all">全部部件及餘料顯示尺寸</option>
     </select>
   </div>
-  <label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸</span><input id="showRemnantDimensions" type="checkbox" checked><span>顯示餘料四邊尺寸與 R 編號</span></label>
+  <label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸</span><input id="showRemnantDimensions" type="checkbox" checked><span>顯示餘料長、闊各一次；完整四邊見清單</span></label>
+  <label class="part-appearance-control" for="showRemnantLabels"><span>餘料編號</span><input id="showRemnantLabels" type="checkbox" checked><span>顯示圖中及清單 R 編號</span></label>
   <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
-  <p class="part-appearance-hint" id="partDimensionHint">餘料（包括修邊料）亦會沿四邊標尺寸；圖中 R 編號對應下方清單，太細則看清單。</p>
+  <p class="part-appearance-hint" id="partDimensionHint">餘料（包括修邊料）圖中只標一次長、一次闊，避免重疊；完整四邊尺寸在下方清單，R 編號可獨立開關。</p>
 </div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
@@ -7872,9 +7873,10 @@ window.addEventListener('DOMContentLoaded', () => {
   function savePartDimensionMode(value){try{window.localStorage.setItem(PART_DIMENSION_MODE_STORAGE_KEY,value);}catch(_){/* Local storage may be unavailable in private browsing. */}}
   let partAppearanceStyle=readPartAppearancePreference();
   let partDimensionMode=readPartDimensionMode();
-  const REMNANT_DIMENSION_KEY='plywood-layout-remnant-dimensions-v1';
+  const REMNANT_DIMENSION_KEY='plywood-layout-remnant-dimensions-v1',REMNANT_LABEL_KEY='plywood-layout-remnant-labels-v1';
   function readRemnantDimensions(){try{return window.localStorage.getItem(REMNANT_DIMENSION_KEY)!=='false';}catch(_){return true;}}
-  let showRemnantDimensions=readRemnantDimensions();
+  function readRemnantLabels(){try{return window.localStorage.getItem(REMNANT_LABEL_KEY)!=='false';}catch(_){return true;}}
+  let showRemnantDimensions=readRemnantDimensions(),showRemnantLabels=readRemnantLabels();
   let selectedDimensionPart=null;
   function nominalDimensions(part){
     const width=Number(part.originalWidth??part.width),length=Number(part.originalLength??part.length??part.height);
@@ -8067,10 +8069,19 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.fillRect(x-boxWidth/2,y-boxHeight/2,boxWidth,boxHeight);ctx.strokeRect(x-boxWidth/2,y-boxHeight/2,boxWidth,boxHeight);
     ctx.font=`700 ${fontSize}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#26342e';ctx.fillText(text,x,y);ctx.restore();
   }
+  function drawRemnantEdgeDimensions(ctx,part,X,Y,sx,sy,dpr){
+    if(!dimensionDisplay)return 0;
+    const edges=dimensionDisplay.edgeDimensions(part),bySide=new Map(edges.map(edge=>[edge.side,edge]));if(!edges.length)return 0;
+    const x=X(part.x),y=Y(part.y),width=part.width*sx,height=part.length*sy,inset=2*dpr;
+    const draw=(side,angle,edgeLength,thickness,cx,cy)=>{const edge=bySide.get(side);return edge&&drawEdgeMeasure(ctx,`${edgeDimensionName(edge,window.calculator&&calculator.currentLanguage==='en')} ${formatEdgeDimension(part,edge)}`,cx,cy,edgeLength,thickness,angle,dpr);};
+    // One long-side and one short-side label keep remnants readable; the list retains all four edges.
+    const horizontalBoxHeight=Math.min(8*dpr,height*.58*1.2+2*dpr),verticalBoxHeight=Math.min(8*dpr,width*.58*1.2+2*dpr);
+    return Number(draw('top',0,width,height,x+width/2,y+inset+horizontalBoxHeight/2))+Number(draw('right',Math.PI/2,height,width,x+width-inset-verticalBoxHeight/2,y+height/2));
+  }
   function drawRemnantLabels(ctx,canvas,remnants,projection,X,Y,sx,sy){
-    if(!showRemnantDimensions)return;
+    if(!showRemnantDimensions&&!showRemnantLabels)return;
     const scaleX=canvas.width/Math.max(1,canvas.clientWidth||canvas.width),scaleY=canvas.height/Math.max(1,canvas.clientHeight||canvas.height),dpr=(scaleX+scaleY)/2;
-    remnants.forEach((remnant,index)=>{const part=remnantPartForDisplay(remnant,projection);drawPartEdgeDimensions(ctx,part,X,Y,sx,sy,dpr);drawRemnantBadge(ctx,part,index+1,X,Y,sx,sy,dpr);});
+    remnants.forEach((remnant,index)=>{const part=remnantPartForDisplay(remnant,projection);if(showRemnantDimensions)drawRemnantEdgeDimensions(ctx,part,X,Y,sx,sy,dpr);if(showRemnantLabels)drawRemnantBadge(ctx,part,index+1,X,Y,sx,sy,dpr);});
   }
   function drawBoard(board,index,card,count,quiet){
     const canvas=card.querySelector('canvas');if(!canvas)return;
@@ -8125,7 +8136,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const sideName={top:english?'Top':'上邊',right:english?'Right':'右邊',bottom:english?'Bottom':'下邊',left:english?'Left':'左邊'};
     const measurements=edges.map(edge=>`${sideName[edge.side]}: ${edgeDimensionName(edge,english)} ${formatEdgeDimension(projected,edge)}`).join(' · ');
     const kind=remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial';
-    return `R${number} · ${measurements||`${fmtDim(rect.length)} × ${fmtDim(rect.width)}`} · ${cutCopy(kind)}`;
+    return `${showRemnantLabels?`R${number} · `:''}${measurements||`${fmtDim(rect.length)} × ${fmtDim(rect.width)}`} · ${cutCopy(kind)}`;
   }
   function createPartDimensionList(board,index){
     const list=document.createElement('div');list.className='part-dimension-all-list';list.dataset.boardIndex=index;list.hidden=true;
@@ -8147,7 +8158,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function updateDimensionPanels(){
     const plan=window.calculator&&window.calculator.trialPlan,mode=dimensionDisplay?dimensionDisplay.normalizeMode(partDimensionMode):'auto';
     const english=window.calculator&&calculator.currentLanguage==='en',hint=$('partDimensionHint');
-    if(hint)hint.textContent=english?'Click mode shows one part’s four edge dimensions. All mode also labels unused sheet pieces and edge-trim offcuts; R numbers match the list. Use the list for small pieces.':'點選模式可查看單件四邊尺寸；全部模式亦標示剩餘板料及修邊料，圖中 R 編號對照清單；太細可看清單。';
+    if(hint)hint.textContent=english?'Click mode shows one part’s four edge dimensions. Leftovers show length and width once in the diagram to avoid overlap; use the list for all four edges. R labels are separate.':'點選模式可查看單件四邊尺寸；餘料圖中只標一次長、一次闊以免重疊；完整四邊看清單，R 編號可獨立開關。';
     document.querySelectorAll('#canvasContainer .canvas-container').forEach(card=>{
       const index=Number(card.dataset.boardIndex),board=plan&&plan.boards[index],canvas=card.querySelector('canvas.canvas');
       const scope=card.closest('.board-display-group')||card;
@@ -8223,7 +8234,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const uniqueFitSizes=[...new Set(fits.map(spec=>`${fmtDim(spec.length,spec,'length')} × ${fmtDim(spec.width,spec,'width')}`))];
         const useText=!specs.length?cutCopy('noSpecs'):uniqueFitSizes.length?`${cutCopy('fitsCurrent')}：${uniqueFitSizes.map(esc).join('、')}`:cutCopy('noCurrentFit');
         const kindText=cutCopy(remnant.kind==='offcut'?'edgeTrimOffcut':'unusedSheetMaterial');
-        html+=`<li data-remnant-material="${esc(remnant.materialId)}" data-remnant-kind="${esc(remnant.kind)}"><strong>R${remnantIndex+1} · ${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(kindText)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
+        const remnantId=showRemnantLabels?`R${remnantIndex+1} · `:'';
+        html+=`<li data-remnant-material="${esc(remnant.materialId)}" data-remnant-kind="${esc(remnant.kind)}"><strong>${remnantId}${esc(measurements.length)} × ${esc(measurements.width)}</strong>&nbsp;（${esc(cutCopy('remnantSize'))}）；${esc(cutCopy('area'))} ${esc(measurements.area)}；${esc(kindText)}；${esc(cutCopy('sourceBoard'))} #${index+1} ${esc(board.boardId)}。<br>${esc(useText)}</li>`;
       });
       html+='</ul>';
     });
@@ -8514,6 +8526,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const remnantSwitch=$('showRemnantDimensions');
   remnantSwitch.checked=showRemnantDimensions;
   remnantSwitch.addEventListener('change',()=>{showRemnantDimensions=remnantSwitch.checked;try{window.localStorage.setItem(REMNANT_DIMENSION_KEY,String(showRemnantDimensions));}catch(_){}refreshCutPathCanvases();updateDimensionPanels();});
+  const remnantLabelSwitch=$('showRemnantLabels');
+  remnantLabelSwitch.checked=showRemnantLabels;
+  remnantLabelSwitch.addEventListener('change',()=>{showRemnantLabels=remnantLabelSwitch.checked;try{window.localStorage.setItem(REMNANT_LABEL_KEY,String(showRemnantLabels));}catch(_){}rerenderCurrentTrial();});
   const dimensionModeSelect=$('partDimensionMode');
   if(dimensionModeSelect){
     dimensionModeSelect.value=partDimensionMode;
@@ -9347,7 +9362,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ['自動（適合時顯示）','Automatic (show when it fits)'],
     ['點選單件顯示尺寸','Click one part to show its dimensions'],
     ['全部部件及餘料顯示尺寸','Show dimensions for all parts and leftovers'],
-    ['全部模式會標示所有部件；餘料（包括修邊料）亦逐邊標尺寸並以 R 編號連到清單。太細放不下時請看清單。','All mode labels every part; leftover pieces (including edge-trim offcuts) also show edge dimensions and R IDs linking to the list. Check the list if a piece is too small for labels.'],
+    ['全部模式會標示所有部件；餘料（包括修邊料）圖中只標一次長、一次闊，完整四邊見清單；R 編號可獨立開關。','All mode labels every part; each leftover piece (including edge-trim offcuts) shows length and width once in the diagram, with all four edges in the list; R IDs are separate.'],
     ['全部部件及餘料四邊尺寸','All part and leftover edge dimensions'],
     ['請點選圖中一件部件查看四邊尺寸。','Click a part in the diagram to view all four edge dimensions.'],
     ['立體漸層','3D gradient'],
@@ -9358,7 +9373,7 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(...[["最大完整餘料：", "Largest intact remnant:"], ["來源板：", "Source sheet:"], ["獨立剩料：", "Separate remnants:"], ["塊（不含修邊料；只屬幾何指標，不保證用途）。", "pieces (edge-trim offcuts excluded; geometry only, no reuse guarantee)."], ["沒有完整剩餘板料（修邊料另列）。", "No intact leftover sheet material (edge-trim offcuts listed separately)."]]);
   dict.push(...[["直接揀方案", "Choose a layout directly"], ["搜尋更多排法", "Search more layouts"], ["停止追加搜尋", "Stop additional search"], ["正在搜尋更多排法；目前 ", "Searching more layouts; currently "], ["目前保留 ", "Layouts retained: "], ["本次新增 ", "Added this round: "], [" 個不同方案。", " distinct layouts."], [" 個不同方案；可再搜尋，較低排名也保留。", " distinct layouts; search again if needed. Lower-ranked layouts are retained."], ["已停止追加搜尋；已找到的方案全部保留。", "Additional search stopped; all layouts already found are retained."], ["更多候選：", "Additional candidate:"], ["多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證", "Diverse candidates use fixed seeds for part and orientation ordering; actual cuts are still verified one by one."]]);
   dict.push(['可反覆搜尋；每輪追加 24 組嘗試，只保留不同且已驗證的排法，未必每次都有新方案。','Search repeatedly: each round explores 24 profiles and keeps only distinct verified layouts. A round may find no new layout.']);
-  dict.push(['餘料尺寸','Leftover dimensions'],['顯示餘料四邊尺寸與 R 編號','Show leftover edge dimensions and R labels'],['方案遙控器','Layout remote'],['關閉方案遙控器','Close layout remote'],['拖動標題可移位；只選方案，不改尺寸。','Drag the title to move; choose layouts without changing dimensions.'],['查看原板','View sheet'],['圖面轉90°','Rotate view 90°'],['排料設定（慳料／方便、工序）','Layout settings (material, workflow)'],['圖面與尺寸設定','Diagram and dimension settings'],['診斷訊息','Diagnostic messages'],['方案資訊與驗證','Layout information and validation'],['板材資料與工具','Sheet information and tools'],['候選排法；開料前請師傅核對。','Candidate layout; have a woodworker verify before cutting.']);
+  dict.push(['餘料尺寸','Leftover dimensions'],['顯示餘料長、闊各一次；完整四邊見清單','Show each leftover length and width once; see the list for all four sides'],['餘料編號','Remnant IDs'],['顯示圖中及清單 R 編號','Show R labels in diagram and list'],['方案遙控器','Layout remote'],['關閉方案遙控器','Close layout remote'],['拖動標題可移位；只選方案，不改尺寸。','Drag the title to move; choose layouts without changing dimensions.'],['查看原板','View sheet'],['圖面轉90°','Rotate view 90°'],['排料設定（慳料／方便、工序）','Layout settings (material, workflow)'],['圖面與尺寸設定','Diagram and dimension settings'],['診斷訊息','Diagnostic messages'],['方案資訊與驗證','Layout information and validation'],['板材資料與工具','Sheet information and tools'],['候選排法；開料前請師傅核對。','Candidate layout; have a woodworker verify before cutting.']);
   const exactOnly=new Set(['可','米','厘米','毫米','尺','呎','寸','分']);
   const order=[...dict].filter(([zh])=>!exactOnly.has(zh)).sort((a,b)=>b[0].length-a[0].length);
   function translateText(value,lang){

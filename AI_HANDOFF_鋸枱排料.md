@@ -10,8 +10,8 @@
 | 正式網站 | <https://cw91020251212.github.io/plywood-cutting-layout/> |
 | 儲存庫 | <https://github.com/cw91020251212/plywood-cutting-layout> |
 | 預設分支 | `main`，GitHub Pages 由 GitHub Actions 部署。 |
-| 已發布程式基準 | `481e24b`，引擎 `plywood-trial-1.3.0`，鋸枱模組 `table-saw-1.1.0`（asset v2），外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=5`，介面 `layout-view.js?v=5`／`layout-view.css?v=4`；PWA 快取 `2026-10-08-compact-layout-9`。 |
-| 已驗證正式部署 | GitHub Actions [37708589361](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37708589361) 成功；公開 HTML、Service Worker SHA-256 均符合功能 commit `481e24bd9c4264b2fcfdd516c733d094d9b78e50`。 |
+| 已發布程式基準 | `85758a6`，引擎 `plywood-trial-1.3.0`，鋸枱模組 `table-saw-1.1.0`（asset v2），外觀 `part-appearance.js?v=3`，尺寸互動 `part-dimension-display.js?v=2`，刀路／餘料 `cut-path-overlay.js?v=5`，介面 `layout-view.js?v=5`／`layout-view.css?v=4`；PWA 快取 `2026-10-08-compact-layout-10`。 |
+| 已驗證正式部署 | GitHub Actions [37712615799](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37712615799) 成功；公開 HTML、Service Worker SHA-256 均符合功能 commit `85758a60af4720dd450e498fff5256595df7fb2b`。 |
 
 ---
 
@@ -61,7 +61,7 @@
 | assets/cut-path-overlay.js | 顯示經驗證刀路；`finalMaterialLeaves()` 取最終未用材料，`leftoverPieces()` 將實際修邊 offcut 與最終未用材料合併，排除鋸縫／無效矩形並按 material ID 去重。唔係獨立排料器。 |
 | `index.html` 約 7995–8071 | UI 的 `getParts()`／`getBoards()`、`candidateSignature()`、`diversityProfiles()`、`buildCandidatePool()`、`searchMoreCandidates()`、完整度／方向驗證及 `calculate()`；行號隨更新移動，按函式名稱定位。 |
 | `index.html` 約 8073 起 | JSON 匯入／匯出與舊 schema 相容處理；變更欄位之前須加匯入回歸測試。 |
-| `sw.js` | 離線靜態資產 cache version；現版使用 `2026-10-08-compact-layout-9`，包括 `cut-path-overlay.js?v=5`、`layout-view.js?v=5` 和 `layout-view.css?v=4`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
+| `sw.js` | 離線靜態資產 cache version；現版使用 `2026-10-08-compact-layout-10`，包括 `cut-path-overlay.js?v=5`、`layout-view.js?v=5` 和 `layout-view.css?v=4`。新增／改版 JS 或 HTML 必須同步核心資產、URL 版本及測試。 |
 | `.github/workflows/pages.yml` | `main` push 部署 Pages；Node.js 22 先跑 inline JS 語法與全部 tests。 |
 | `tests/cut-path-overlay.test.cjs` | UI／刀路／單位／終局剩料與修邊料去重及幾何顯示測試。 |
 | `tests/part-dimension-display.test.cjs` | 顯示模式、點選命中、穩定件號、部件與剩料 R 編號、逐刀回放可見性、雙語、只重繪及回放位置回歸。 |
@@ -492,4 +492,4 @@ v3 本機 Canvas 實測使用獨立畫布，於 (15,85) 左下內側及 (85,15) 
 
 ### 20.3 發版資產與回歸
 
-更新 `assets/layout-view.js?v=5`、`assets/layout-view.css?v=4`，刀路模組維持 `assets/cut-path-overlay.js?v=5`；`sw.js` cache 為 `2026-10-08-compact-layout-9`。`drawRemnantEdgeDimensions()` 固定傳入 `3,3`，令餘料的長闊各一次標示為 3 CSS px；`drawPartEdgeDimensions()` 仍使用原有 6–8 CSS px，不能把部件四邊字一併縮細。`tests/layout-view.test.cjs` 覆蓋 8 尺界線、原寸超長、複合單位、旋轉／四邊格式器、localStorage 壞資料、餘料尺寸與 R 編號獨立開關、固定 3 px 餘料字、收納、可關閉固定遙控器、透明度、圖面設定須緊貼 Canvas 及 cache 資產；完整測試 **66/66 通過**。功能 commit [`481e24b`](https://github.com/cw91020251212/plywood-cutting-layout/commit/481e24bd9c4264b2fcfdd516c733d094d9b78e50) 的 Actions [37708589361](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37708589361) 成功；公開 HTML、Service Worker SHA-256 已逐檔核對。正式隔離瀏覽器案例得到 1 個候選、5 塊相鄰餘料；關閉 R 後尺寸保持、清單及詳情不再有 R 前綴，1200／395 Canvas 比例換算餘料字為 2.998 CSS px。
+更新 `assets/layout-view.js?v=5`、`assets/layout-view.css?v=4`，刀路模組維持 `assets/cut-path-overlay.js?v=5`；`sw.js` cache 為 `2026-10-08-compact-layout-10`。`drawRemnantEdgeDimensions()` 固定傳入 `3,3`，令餘料的長闊各一次標示為 3 CSS px；`drawPartEdgeDimensions()` 仍使用原有 6–8 CSS px，不能把部件四邊字一併縮細。viewport 必須保持 `user-scalable=yes`，而且**不可**再加入 `maximum-scale`／`minimum-scale`，否則手機會再限制放大。`tests/layout-view.test.cjs` 覆蓋 8 尺界線、原寸超長、複合單位、旋轉／四邊格式器、localStorage 壞資料、餘料尺寸與 R 編號獨立開關、固定 3 px 餘料字、無上限手機雙指放大、收納、可關閉固定遙控器、透明度、圖面設定須緊貼 Canvas 及 cache 資產；完整測試 **67/67 通過**。功能 commit [`85758a6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/85758a60af4720dd450e498fff5256595df7fb2b) 的 Actions [37712615799](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37712615799) 成功；公開 HTML、Service Worker SHA-256 已逐檔核對。正式瀏覽器 viewport 為 `width=device-width, initial-scale=1.0, user-scalable=yes` 且無倍率上限；餘料案例仍得到 1 個候選、5 塊相鄰餘料，1200／395 Canvas 比例換算餘料字為 2.998 CSS px。

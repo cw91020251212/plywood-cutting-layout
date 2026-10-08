@@ -3,7 +3,7 @@
 日期：2026-10-08
 引擎：`plywood-trial-1.3.0`
 輔助模組：`table-saw-1.1.0`（asset v2）、`part-appearance.js?v=3`、`part-dimension-display.js?v=2`、`cut-path-overlay.js?v=5`、`layout-view.js?v=5`
-目前 PWA 快取：`2026-10-08-compact-layout-9`
+目前 PWA 快取：`2026-10-08-compact-layout-10`
 
 ## 今次正式整合
 
@@ -162,5 +162,6 @@ node --test tests/*.test.cjs
 
 - **畫布可讀性：**部件仍按要求保留四邊尺寸；餘料則不再把同一長、闊各畫兩次。每塊餘料在 Canvas 只畫一次上邊與一次右邊，即長、闊各一次，並固定用 **3 CSS px 超細字**，讓師傅放大畫面閱讀，避免相鄰窄料的白色尺寸框互相重疊。下方餘料清單及切割詳情仍保留完整上／右／下／左四邊資料，沒有降低可核對的尺寸資料。
 - **獨立編號：**「圖面與尺寸設定」內新增緊鄰「餘料尺寸」的「餘料編號」勾選。它會同時控制畫布、圖下清單和切割詳情的 `R1`、`R2`…；偏好只記在此瀏覽器 `plywood-layout-remnant-labels-v1`。開關不重排、不改切刀、餘料矩形、尺寸或材料帳。
+- **手機放大：**移除 viewport 的 `maximum-scale=3.0` 及 `minimum-scale=0.5` 上限，保留 `user-scalable=yes`。現在可用瀏覽器原生雙指放大排版圖，閱讀 3 CSS px 餘料字；不另加會遮圖的自訂縮放面板，也不改 Canvas 幾何。
 - **空間邊界：**若一個單邊連 3 CSS px 字串也放不下，Canvas 仍不強行畫到鄰塊；師傅可在完整四邊清單讀取。這是畫面去重，不是尺寸四捨五入或幾何變更。
-- **驗證及部署：**`node scripts/check-inline-scripts.cjs` 通過（12 段 inline、5 個正式 JS）；完整回歸 **66/66 通過**。功能 commit [`481e24b`](https://github.com/cw91020251212/plywood-cutting-layout/commit/481e24bd9c4264b2fcfdd516c733d094d9b78e50) 的 GitHub Actions [37708589361](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37708589361) **success**；公開 HTML 與 Service Worker SHA-256 均與本機一致。正式瀏覽器以 20 × 40 寸原板、4 × 24 寸固定方向部件四件測得 5 塊相鄰餘料；實際 1200／395 畫布比例量到餘料文字 **2.998 CSS px**，尺寸維持顯示時關閉 R，清單及詳情的 R 前綴消失並寫入偏好。
+- **驗證及部署：**`node scripts/check-inline-scripts.cjs` 通過（12 段 inline、5 個正式 JS）；完整回歸 **67/67 通過**。功能 commit [`85758a6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/85758a60af4720dd450e498fff5256595df7fb2b) 的 GitHub Actions [37712615799](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37712615799) **success**；公開 HTML 與 Service Worker SHA-256 均與本機一致。正式瀏覽器讀到 viewport 為 `width=device-width, initial-scale=1.0, user-scalable=yes`，沒有 `maximum-scale` 或 `minimum-scale`；可原生雙指放大。20 × 40 寸原板、4 × 24 寸固定方向部件四件測得 5 塊相鄰餘料；實際 1200／395 畫布比例量到餘料文字 **2.998 CSS px**，尺寸維持顯示時關閉 R，清單及詳情的 R 前綴消失並寫入偏好。

@@ -47,3 +47,7 @@
 - [x] 餘料畫布文字固定為 3 CSS px 超細字，容許放大觀看；部件四邊字維持原來可讀字級。PWA 快取升至 `2026-10-08-compact-layout-9`，更新雙語提示與回歸；部署後核對公開資產及正式多條餘料案例。
 
 驗證：`git diff --check`、12 段 inline／5 個正式 JS 語法檢查及 **66/66** 回歸通過。功能 commit `481e24b`，GitHub Actions `37708589361` success；公開 HTML 與 Service Worker SHA-256 和本機一致。正式英制案例（20 × 40 寸原板、4 × 24 寸四件）得到 5 塊相鄰餘料；R 開關關閉後，尺寸仍開啟、清單及詳情沒有 R 前綴，偏好值為 `false`；Canvas 1200／395 的實測比例換算餘料文字為 **2.998 CSS px**。
+
+- [x] 解除手機頁面原有的 `maximum-scale=3.0`／`minimum-scale=0.5` 限制，只保留 `user-scalable=yes`；使用者可用原生雙指放大來看 3 CSS px 餘料尺寸，不另加遮住圖面的自訂放大工具。
+
+驗證：完整 **67/67** 回歸通過。功能 commit `85758a6`，GitHub Actions `37712615799` success；公開 HTML 與 Service Worker SHA-256 和本機一致。正式瀏覽器讀到 `width=device-width, initial-scale=1.0, user-scalable=yes`，沒有 `maximum-scale`／`minimum-scale`，確認可自由雙指放大。

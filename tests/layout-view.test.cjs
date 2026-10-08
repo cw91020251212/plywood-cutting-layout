@@ -11,6 +11,11 @@ const js=fs.readFileSync(path.join(root,'assets/layout-view.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'assets/layout-view.css'),'utf8');
 const inch=(n,inputs)=>view.formatLength(n*25.4,{system:'imperial',inputs});
 
+test('mobile pinch zoom remains unrestricted for ultrasmall remnant labels',()=>{
+  const viewport=html.match(/<meta name="viewport" content="([^"]+)">/)[1];
+  assert.match(viewport,/user-scalable=yes/);
+  assert.doesNotMatch(viewport,/maximum-scale|minimum-scale/);
+});
 test('entered inches stay inches, including values greater than 8 feet',()=>{
   for(const n of [1,11,24,36.5,48,72,96,105,108])assert.equal(inch(n,{inch:String(n)}),`${n}寸`);
   assert.equal(inch(11.5,{inch:'11',fen:'4'}),'11寸 4分');

@@ -46,3 +46,12 @@ node --test tests/*.test.cjs
 ```
 
 GitHub Pages runs these checks before deployment.
+
+---
+
+<!-- project-status-and-license-notice -->
+## Project status and licensing
+
+This is a personally maintained project for experimentation, learning, and testing. A public demo or deployment does not imply production support or third-party endorsement; features, data, and deployment may be incomplete or change. Verify suitability before relying on it.
+
+The original project code is licensed under the Apache License, Version 2.0 terms in [`LICENSE`](LICENSE). The maintainer asks that an unchanged, complete copy not be publicly redistributed or mirrored, and that the project not be misrepresented as someone else's work. This is a request, not an additional restriction: the stated license governs copying, modification, and redistribution, and its required notices must be retained. Third-party code, data, images, marks, and source materials remain subject to their own licenses and terms.

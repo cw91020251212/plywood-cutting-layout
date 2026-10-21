@@ -9475,10 +9475,13 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <style id="simple-title-outline">
-/* 保留標題底色與黃色實線框，在外側加最細黑框；標題文字置於容器水平中央。 */
+/* 使用提供的木紋背景，保留標題文字、黃色實線框與外側細黑框。 */
 h1#mainTitle {
-  background: linear-gradient(135deg, #c19a6b, #8b4513) !important;
-  background-image: linear-gradient(135deg, #c19a6b, #8b4513) !important;
+  background-color: #8b4513 !important;
+  background-image: linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.18)), url('./assets/title-wood-grain.jpg') !important;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
   border: 3px solid #FFD700 !important;
   border-radius: 8px !important;
   box-shadow: none !important;
@@ -9506,8 +9509,7 @@ h1#mainTitle::before, h1#mainTitle::after {
 }
 @media (prefers-color-scheme: dark) {
   h1#mainTitle {
-    background: linear-gradient(135deg, #c19a6b, #8b4513) !important;
-    background-image: linear-gradient(135deg, #c19a6b, #8b4513) !important;
+    background-color: #8b4513 !important;
     border: 3px solid #FFD700 !important;
     color: #fff !important;
   }

@@ -3,14 +3,14 @@
  * The version is intentionally changed whenever the application bundle changes so
  * installed PWA clients do not keep an old index.html after a release.
  */
-const APP_VERSION = '2026-10-21-wood-grain-title-1-icon-redesign';
+const APP_VERSION = '2026-10-23-verified-remnant-stock-1';
 const CACHE_NAME = `cutting-optimizer-${APP_VERSION}`;
 const CORE_ASSETS = [
   './',
   './index.html',
   './assets/title-wood-grain.jpg',
-  './assets/cut-path-overlay.js?v=5',
-  './assets/table-saw-optimizer.js?v=2',
+  './assets/cut-path-overlay.js?v=6',
+  './assets/table-saw-optimizer.js?v=3',
   './assets/part-appearance.js?v=3',
   './assets/part-dimension-display.js?v=2',
   './assets/layout-view.js?v=5',

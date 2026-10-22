@@ -205,15 +205,15 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   const {engine}=loadEngine();
   assert.throws(()=>engine.plan([{width:10,length:10,count:Infinity}],boards,settings),/數量無效/);
   assert.match(html,/<option value="ripThenCrosscut" selected>/);
-  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=2"><\/script>/);
+  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-appearance\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-21-wood-grain-title-1'));
+  assert.ok(sw.includes('2026-10-23-verified-remnant-stock-1'));
   assert.ok(sw.includes('./assets/title-wood-grain.jpg'));
-  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
-  assert.ok(sw.includes('./assets/cut-path-overlay.js?v=5'));
+  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=3'));
+  assert.ok(sw.includes('./assets/cut-path-overlay.js?v=6'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));
   assert.ok(sw.includes('./assets/part-dimension-display.js?v=2'));
 });
@@ -335,6 +335,39 @@ test('integrity summary uses individual final leaves, not L-shaped unions, trims
   assert.ok(overlay.leftoverPieces(trimmed.boards[0]).length>leaves.length,'trim offcuts remain displayed but are not integrity targets');
 });
 
+test('registered offcut sheets are tried before fresh stock and only reused sheets are counted',()=>{
+  const {engine}=loadEngine();
+  const demand=[{width:300,length:200,count:1,orientationPreference:'auto'}];
+  const stock=[{width:1000,length:1000},{width:1000,length:1000,isRemnant:true}];
+  const plan=engine.plan(demand,stock,{...settings,mode:'partFirstTree'});
+  assert.equal(plan.status,'candidate');
+  assert.equal(plan.boards.length,1);
+  assert.equal(plan.boards[0].stockIndex,1);
+  assert.equal(plan.boards[0].isRemnant,true);
+  assert.equal(plan.summary.usedRemnantBoardCount,1);
+  const offcutOnly=engine.plan([{width:500,length:500,count:1,orientationPreference:'auto'}],[{width:300,length:300,isRemnant:true}],{...settings,mode:'partFirstTree'});
+  assert.equal(offcutOnly.summary.boardsAdded,0,'a remnant must never be cloned as a new full-size sheet template');
+});
+
+test('saving objective prioritizes reuse and size-qualified intact-remnant area at equal sheet count',()=>{
+  const plan=(count,usableArea)=>({summary:{usedBoardCount:1,usedRemnantBoardCount:count,boardArea:1000000,kerfArea:0,remnantThresholdActive:true,reusableRemnantArea:usableArea},boards:[]});
+  assert.ok(saw.comparePlans(plan(1,100000),plan(0,500000),'saving')<0,'reuse existing stock before choosing a fresh sheet at equal count');
+  assert.ok(saw.comparePlans(plan(1,200000),plan(1,100000),'saving')<0,'then preserve greater qualifying remnant area');
+});
+
+test('minimum remnant dimensions count only whole final material rectangles and validate the limits',()=>{
+  const {engine}=loadEngine();
+  const demand=[{width:300,length:600,count:1,orientationPreference:'auto'}],stock=[{width:1000,length:1000}];
+  const plan=engine.plan(demand,stock,{...settings,mode:'partFirstTree',minRemnantShortSide:200,minRemnantLongSide:600});
+  const leaves=plan.boards.flatMap(board=>board.validation.finalRemnants);
+  const expected=leaves.filter(r=>Math.min(r.rect.width,r.rect.length)+1e-7>=200&&Math.max(r.rect.width,r.rect.length)+1e-7>=600);
+  assert.equal(plan.summary.remnantThresholdActive,true);
+  assert.equal(plan.summary.reusableRemnantCount,expected.length);
+  assert.equal(plan.summary.reusableRemnantArea,expected.reduce((sum,r)=>sum+r.area,0));
+  assert.throws(()=>engine.plan(demand,stock,{...settings,minRemnantShortSide:200}),/同時輸入/);
+  assert.throws(()=>engine.plan(demand,stock,{...settings,minRemnantShortSide:700,minRemnantLongSide:600}),/短邊門檻不可大於長邊/);
+});
+
 test('missing helper still computes physical remnant metrics and saving fallback ranks them first at equal sheet use',()=>{
   const demand=[{width:300,length:150,count:2,orientationPreference:'auto'},{width:100,length:450,count:1,orientationPreference:'auto'}];
   const stock=[{width:1000,length:1000}],{engine,api}=loadPool(demand,stock,null);
@@ -347,10 +380,13 @@ test('missing helper still computes physical remnant metrics and saving fallback
 });
 
 test('intact-remnant guidance, displayed length/width and provenance are bilingual and versioned',()=>{
-  assert.equal(saw.version,'table-saw-1.1.0');
-  assert.equal(loadEngine().engine.version,'plywood-trial-1.3.0');
-  assert.ok(html.includes('同等用料優先保留最大完整長方形餘料'));
-  assert.equal(html.split('先少用板，同等用料下保留最大完整長方形餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
+  assert.equal(saw.version,'table-saw-1.2.0');
+  assert.equal(loadEngine().engine.version,'plywood-trial-1.5.0');
+  assert.ok(html.includes('用板數相同時，先優先使用已登記餘料'));
+  assert.ok(html.includes('At equal sheet count, saved remnant sheets are preferred first'));
+  assert.ok(html.includes('addCurrentRemnantsToStock')&&html.includes('reusableRemnants(plan,minShort,minLong)'));
+  assert.ok(html.includes('Minimum reusable remnant size (mm)'));
+  assert.ok(html.includes('use first next time'));
   assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
   assert.ok(html.includes('L-shaped blanks are never merged'));
   assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));

@@ -165,3 +165,11 @@ node --test tests/*.test.cjs
 - **手機放大：**移除 viewport 的 `maximum-scale=3.0` 及 `minimum-scale=0.5` 上限，保留 `user-scalable=yes`。現在可用瀏覽器原生雙指放大排版圖，閱讀 3 CSS px 餘料字；不另加會遮圖的自訂縮放面板，也不改 Canvas 幾何。
 - **空間邊界：**若一個單邊連 3 CSS px 字串也放不下，Canvas 仍不強行畫到鄰塊；師傅可在完整四邊清單讀取。這是畫面去重，不是尺寸四捨五入或幾何變更。
 - **驗證及部署：**`node scripts/check-inline-scripts.cjs` 通過（12 段 inline、5 個正式 JS）；完整回歸 **67/67 通過**。功能 commit [`85758a6`](https://github.com/cw91020251212/plywood-cutting-layout/commit/85758a60af4720dd450e498fff5256595df7fb2b) 的 GitHub Actions [37712615799](https://github.com/cw91020251212/plywood-cutting-layout/actions/runs/37712615799) **success**；公開 HTML 與 Service Worker SHA-256 均與本機一致。正式瀏覽器讀到 viewport 為 `width=device-width, initial-scale=1.0, user-scalable=yes`，沒有 `maximum-scale` 或 `minimum-scale`；可原生雙指放大。20 × 40 寸原板、4 × 24 寸固定方向部件四件測得 5 塊相鄰餘料；實際 1200／395 畫布比例量到餘料文字 **2.998 CSS px**，尺寸維持顯示時關閉 R，清單及詳情的 R 前綴消失並寫入偏好。
+
+
+## Verified reusable remnant stock (2026-10-23)
+
+- Benchmarked against [RajwanYair/WoodworkingShop](https://github.com/RajwanYair/WoodworkingShop): its optimizer filters saved offcuts by material and tries those sheets before full-size stock.
+- This app defaults to a 100 × 100 mm reusable-size threshold (editable short and long sides). Only exact final material leaves from a complete cut-by-cut verified plan qualify; kerf, edge-trim waste and joined empty gaps are excluded.
+- A verified plan can add qualifying leaves to the current project board list. They are marked R, tried before fresh sheets, and preserved by project JSON. The app has one material class today; only add remnants after the physical cut is made.
+- Saving ranking preserves sheet-count priority, then prefers consuming saved remnant boards; the existing sheet-area comparison follows, with larger qualifying intact-remnant area as the next tie-breaker when the threshold is active. Existing saved projects without remnant fields continue to work.

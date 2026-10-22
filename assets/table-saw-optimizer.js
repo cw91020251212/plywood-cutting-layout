@@ -6,7 +6,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   const EPS = 1e-7;
-  const VERSION = 'table-saw-1.1.0';
+  const VERSION = 'table-saw-1.2.0';
   const metricsCache = new WeakMap();
 
   function searchLimit() {
@@ -107,9 +107,12 @@
     const ma = planMetrics(a), mb = planMetrics(b);
     const fields = objective === 'convenience'
       ? [[ma.cuts, mb.cuts], [ma.axisChanges, mb.axisChanges], [ma.cutLength, mb.cutLength],
+          [b.summary.usedRemnantBoardCount ?? 0, a.summary.usedRemnantBoardCount ?? 0],
           [a.summary.usedBoardCount, b.summary.usedBoardCount], [a.summary.boardArea, b.summary.boardArea],
           [a.summary.kerfArea, b.summary.kerfArea]]
-      : [[a.summary.usedBoardCount, b.summary.usedBoardCount], [a.summary.boardArea, b.summary.boardArea],
+      : [[a.summary.usedBoardCount, b.summary.usedBoardCount],
+          [b.summary.usedRemnantBoardCount ?? 0, a.summary.usedRemnantBoardCount ?? 0], [a.summary.boardArea, b.summary.boardArea],
+          ...(a.summary.remnantThresholdActive || b.summary.remnantThresholdActive ? [[b.summary.reusableRemnantArea ?? 0, a.summary.reusableRemnantArea ?? 0]] : []),
           // These are actual final material leaves, never the union/bounding box of empty space.
           [b.summary.largestRemnantArea ?? 0, a.summary.largestRemnantArea ?? 0],
           [b.summary.largestRemnantShortSide ?? 0, a.summary.largestRemnantShortSide ?? 0],

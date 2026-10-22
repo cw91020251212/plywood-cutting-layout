@@ -10,7 +10,7 @@ The software display name remains **木材切割排版｜夾板簡易排料**. *
 
 - Metric and imperial triple-unit input for parts and sheets
 - Kerf/blade thickness and four-side edge-trim settings
-- Fewer-sheets or easier-cutting objectives and multiple layout strategies; at equal sheet count/area, the saving objective retains the largest intact rectangular remnant (never a merged L-shaped blank). Reuse is not guaranteed.
+- Fewer-sheets or easier-cutting objectives and multiple layout strategies; at equal sheet count, the saving objective first favors use of saved remnant stock, then preserves the existing sheet-area comparison; when the size threshold is active, qualifying intact-remnant area is the next tie-breaker (default minimum 100 × 100 mm). L-shaped gaps are never merged. Verified remnants can be added to the project board inventory and are tried before fresh stock; save/load JSON carries the inventory. Reuse is not guaranteed.
 - Table-saw-first strip/crosscut workflow with bounded equal-width length-combination search
 - Candidate validation, layout variations, utilisation and sheet count; extra deterministic part/orientation orders, repeatable **Search more layouts** with a stop control, and a direct layout chooser. Lower-ranked verified layouts remain available; swapping identical part IDs is not counted as a new physical layout
 - Part diagram appearance selector: flat color, same-hue 3D gradient (e.g. dark red to light red, dark blue to light blue), or metallic sheen (visual only; no gray overlay)
@@ -32,7 +32,7 @@ Diagram finishes preserve each part's color hue while changing shade; they are v
 
 ## Table-saw update
 
-See [the table-saw release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, intact-remnant ranking and its trade-offs, search limits, and remaining limitations.
+See [the table-saw release notes](TABLE_SAW_RELEASE.md) for the one-sheet/seven-cut regression example, usable-remnant filtering and reuse, ranking trade-offs, search limits, and remaining limitations.
 
 ## AI handoff
 

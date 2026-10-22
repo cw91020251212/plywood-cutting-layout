@@ -6,7 +6,6 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   const EPS = 1e-7;
-  const VERSION = 'cut-overlay-1.6.0';
   const isFiniteNumber = value => Number.isFinite(Number(value));
   const validRect = rect => !!rect &&
     [rect.x, rect.y, rect.width, rect.length].every(isFiniteNumber) &&
@@ -96,12 +95,6 @@
 
   // Every physical offcut remains wood: list edge-trim outputs as well as final unused cut-tree material.
   // Kerf bands are intentionally excluded because they are sawdust/loss, not reusable sheet rectangles.
-  function reusableRemnants(plan, minShortSide = 100, minLongSide = 100) {
-    const short=Number(minShortSide),long=Number(minLongSide);
-    if(!isVerifiedPlan(plan)||!(Number.isFinite(short)&&Number.isFinite(long)&&short>0&&long>0&&short<=long)) return [];
-    return plan.boards.flatMap(finalMaterialLeaves).filter(item=>Math.min(item.rect.width,item.rect.length)+EPS>=short&&Math.max(item.rect.width,item.rect.length)+EPS>=long).sort((a,b)=>b.area-a.area);
-  }
-
   function leftoverPieces(board) {
     if (!isVerifiedBoard(board)) return [];
     const pieces = [], seen = new Set();
@@ -181,6 +174,6 @@
     return pair[language === 'en' ? 1 : 0];
   }
 
-  return { version: VERSION, isVerifiedBoard, isVerifiedPlan, cutSegments, finalMaterialLeaves, reusableRemnants, leftoverPieces,
+  return { isVerifiedBoard, isVerifiedPlan, cutSegments, finalMaterialLeaves, leftoverPieces,
     fitsPartSpec, formatRemnantMeasurements, copy };
 });

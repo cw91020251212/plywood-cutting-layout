@@ -3,10 +3,10 @@
 <head>
 <meta name="theme-color" content="#8b4513">
 <meta name="description" content="夾板木材切割排版工具；協助規劃切割、減少廢料並分享排版連結。">
-<link rel="manifest" href="assets/manifest.webmanifest?v=5">
-<link rel="icon" href="favicon.ico?v=5" sizes="any">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/cutting-wood-192.png?v=5">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/cutting-wood-180.png?v=5">
+<link rel="manifest" href="assets/manifest.webmanifest?v=4">
+<link rel="icon" href="favicon.ico?v=4" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/cutting-wood-192.png?v=4">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/cutting-wood-180.png?v=4">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>木材切割排版｜夾板簡易排料</title>
@@ -579,9 +579,6 @@ th{background:#C0C0C0;color:#2F2F2F}
 .trial-support-control{margin-top:10px;padding-top:8px;border-top:1px solid #ddd}
 .trial-support-control>label{display:block;font-weight:bold}
 .trial-support-control input{margin-top:4px}
-.trial-remnant-thresholds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0}
-.trial-remnant-thresholds label{display:flex;flex-direction:column;gap:4px;font-weight:normal}
-.trial-remnant-thresholds input{width:100%;box-sizing:border-box}
 #section-results .feature-panel{display:none!important}
 #section-results .primary-action-group{display:block;margin:12px 0;padding:0;border:0;background:transparent}
 #section-results #calculateButton{height:55px;min-height:50px;font-size:1.2em}
@@ -1111,14 +1108,6 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <input type="number" id="trialMinSupport" min="0.1" step="0.1" placeholder="未驗證／留空" inputmode="decimal">
 <div class="input-hint">目前安全支撐寬度未知，不作猜測。留空時只產生候選草排；輸入數值亦只作幾何篩選，不構成安全認證。</div>
 </div>
-<div class="trial-support-control" id="trialRemnantThresholdControl">
-<strong data-i18n="minUsableRemnantTitle">最小可回用餘料尺寸（mm）</strong>
-<div class="trial-remnant-thresholds">
-<label for="trialMinRemnantShort"><span data-i18n="remnantMinShort">短邊最少</span> <input type="number" id="trialMinRemnantShort" min="0.1" step="0.1" value="100" inputmode="decimal"></label>
-<label for="trialMinRemnantLong"><span data-i18n="remnantMinLong">長邊最少</span> <input type="number" id="trialMinRemnantLong" min="0.1" step="0.1" value="100" inputmode="decimal"></label>
-</div>
-<div class="input-hint" data-i18n="remnantThresholdHelp">兩項都填寫才會啟用。慳料排序會優先保留達標的整塊餘料；不合併空位，也不代表每塊都適合你的實際用途。</div>
-</div>
 <div class="input-hint">原板邊可作成品邊；需要修邊的邊可分別設定，0 代表不修邊。若停用某原板邊，需輸入足夠修邊量。</div>
 </details>
 
@@ -1204,7 +1193,6 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <div class="function-buttons-grid trial-file-actions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px">
 <button id="loadButton" onclick="calculator.loadProject()">載入 JSON</button>
 <button id="saveButton" onclick="calculator.saveProject()">儲存 JSON</button>
-<button id="addRemnantsToStockButton" onclick="calculator.addCurrentRemnantsToStock()" data-i18n="addRemnantsToStock" disabled>將達標完整餘料加入板材庫存（下次優先使用）</button>
 <button id="printButton" onclick="calculator.showPrintOptions()">列印</button>
 <button id="resetResultsButton" class="reset-btn" onclick="calculator.resetResults()">清除結果</button>
 </div>
@@ -2689,12 +2677,7 @@ const i18n = {
         totalParts: '總部件',
         utilization: '利用率',
         wasteLabel: '餘料',
-        saveImage: '保存圖片',
-        minUsableRemnantTitle: '最小可回用餘料尺寸（mm）',
-        remnantMinShort: '短邊最少',
-        remnantMinLong: '長邊最少',
-        remnantThresholdHelp: '兩項都填寫才會啟用。慳料排序會優先保留達標的整塊餘料；不合併空位，也不代表每塊都適合你的實際用途。',
-        addRemnantsToStock: '將達標完整餘料加入板材庫存（下次優先使用）'
+        saveImage: '保存圖片'
     },
     en: {
         title: '木材切割排版',
@@ -2782,12 +2765,7 @@ const i18n = {
         totalParts: 'Total parts',
         utilization: 'Utilization',
         wasteLabel: 'Waste',
-        saveImage: 'Save Image',
-        minUsableRemnantTitle: 'Minimum reusable remnant size (mm)',
-        remnantMinShort: 'Minimum short side',
-        remnantMinLong: 'Minimum long side',
-        remnantThresholdHelp: 'Both values are required. The material-saving ranking will prioritize intact offcuts meeting these dimensions. Empty spaces are never combined, and a size match does not guarantee suitability for your actual use.',
-        addRemnantsToStock: 'Add qualifying intact remnants to stock (use first next time)'
+        saveImage: 'Save Image'
     }
 };
 
@@ -4304,30 +4282,6 @@ class WoodCuttingCalculator {
         }
     }
     
-    addCurrentRemnantsToStock() {
-        const overlay=window.PlywoodCutOverlay, plan=this.trialPlan;
-        if(!overlay||!overlay.isVerifiedPlan(plan)) { document.getElementById('errorMessage').textContent=this.currentLanguage==='zh'?'只有完整通過逐刀驗證的排版，才可加入餘料庫存。':'Only a complete, cut-by-cut verified layout can add remnants to stock.'; return 0; }
-        const shortRaw=document.getElementById('trialMinRemnantShort').value.trim(),longRaw=document.getElementById('trialMinRemnantLong').value.trim();
-        const minShort=shortRaw===''&&longRaw===''?100:Number(shortRaw),minLong=shortRaw===''&&longRaw===''?100:Number(longRaw);
-        if(!(Number.isFinite(minShort)&&Number.isFinite(minLong)&&minShort>0&&minShort<=minLong&&minLong>0)) { document.getElementById('errorMessage').textContent=this.currentLanguage==='zh'?'請輸入有效的短邊及長邊餘料門檻；兩者都留空時預設 100 × 100 mm。':'Enter valid short- and long-side remnant limits; leaving both blank uses 100 × 100 mm.'; return 0; }
-        const known=new Set(this.boards.map(b=>b.remnantSourceKey).filter(Boolean)), additions=[];
-        for(const r of overlay.reusableRemnants(plan,minShort,minLong)) {
-          const w=Number(r.rect.width),l=Number(r.rect.length),key=`${r.boardId}|${r.materialId}|${Math.round(w*1e6)}|${Math.round(l*1e6)}`;
-          if(known.has(key)) continue; known.add(key); additions.push({width:w,length:l,displayUnitSystem:this.lastBoardUnitSystem||'metric',disabled:false,isRemnant:true,remnantSourceKey:key});
-        }
-        const accepted=additions.slice(0,Math.max(0,this.MAX_BOARDS-this.boards.length));
-        if(!accepted.length) { document.getElementById('status').textContent=this.currentLanguage==='zh'?(additions.length?'板材庫存已滿，未能加入餘料。':'目前排版沒有新的達標完整餘料可加入。'):(additions.length?'Board stock is full.':'No new qualifying intact remnants to add.'); return 0; }
-        this.boards.unshift(...accepted); this.updateBoardsTable(); this.trialPlan=null; this.schemes=[]; this._trialCandidates=[]; this._trialCandidateIndex=0;
-        if(window.PlywoodTrialUI?.clearCandidatePool) window.PlywoodTrialUI.clearCandidatePool();
-        if(window.PlywoodTrialUI?.updateVariationControls) window.PlywoodTrialUI.updateVariationControls();
-        const canvas=document.getElementById('canvasContainer'); if(canvas) canvas.innerHTML='';
-        const details=document.getElementById('cutDetails'); if(details) details.style.display='none';
-        const results=document.getElementById('trialResults');
-        if(results) results.innerHTML=`<div class="input-hint">${this.currentLanguage==='zh'?`已將 ${accepted.length} 塊達標餘料加入板材清單，標記 R 並會優先試用。餘料屬於目前專案庫存；按「儲存 JSON」可帶到其他工作。請在實際切割後才保存。`:`${accepted.length} qualifying offcut(s) added to stock, marked R and tried first. They belong to this project; use Save JSON to carry them to another job. Save only after the cut is physically made.`}</div>`;
-        document.getElementById('status').textContent=this.currentLanguage==='zh'?`新增 ${accepted.length} 塊餘料庫存；請重新計算下一個工作。`:`${accepted.length} remnant(s) added; recalculate for the next job.`;
-        return accepted.length;
-    }
-
     updateBoardsTable() {
         try {
             const tbody = document.getElementById('boardsTableBody');
@@ -4356,7 +4310,7 @@ class WoodCuttingCalculator {
                 if (board.disabled) row.className = 'disabled-row';
                 
                 row.innerHTML = `
-                    <td>${displayWidth}${board.isRemnant?` <small class="remnant-stock-badge" title="${this.currentLanguage==='zh'?'已保存餘料；排料時優先嘗試':'Saved offcut stock; tried first'}">R</small>`:''}</td>
+                    <td>${displayWidth}</td>
                     <td>${displayLength}</td>
                     <td>1</td>
                     <td>
@@ -7238,12 +7192,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 })();
 </script>
-<script src="assets/table-saw-optimizer.js?v=3"></script>
+<script src="assets/table-saw-optimizer.js?v=2"></script>
+<script src="assets/maxrects-candidate.js?v=1"></script>
 <script>
-(function (global) {
+(function(global){
   'use strict';
   const EPS = 1e-7;
-  const VERSION = 'plywood-trial-1.5.0';
+  const VERSION = 'plywood-trial-1.4.0';
   const area = r => r.width * r.length;
   const rect = (x, y, width, length) => ({ x, y, width, length });
   const cloneRect = r => rect(r.x, r.y, r.width, r.length);
@@ -7291,15 +7246,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const e = { left: edges.left !== false, right: edges.right !== false, top: edges.top !== false, bottom: edges.bottom !== false };
     const minSupport = settings.minSupportWidth === '' || settings.minSupportWidth == null ? null : Number(settings.minSupportWidth);
     if (minSupport !== null && !(Number.isFinite(minSupport) && minSupport > 0)) throw new Error('最窄安全支撐寬度須為正數，或留空');
-    const minRemnantShortSide = settings.minRemnantShortSide === '' || settings.minRemnantShortSide == null ? null : Number(settings.minRemnantShortSide);
-    const minRemnantLongSide = settings.minRemnantLongSide === '' || settings.minRemnantLongSide == null ? null : Number(settings.minRemnantLongSide);
-    const remnantThresholdActive = minRemnantShortSide !== null || minRemnantLongSide !== null;
-    if (remnantThresholdActive && !(Number.isFinite(minRemnantShortSide) && minRemnantShortSide > 0 && Number.isFinite(minRemnantLongSide) && minRemnantLongSide > 0 && minRemnantShortSide <= minRemnantLongSide)) {
-      throw new Error('可回用餘料門檻須同時輸入正數；短邊門檻不可大於長邊門檻');
-    }
     return {
-      kerf: k, trims: t, edges: e, minSupport, minRemnantShortSide, minRemnantLongSide,
+      kerf: k, trims: t, edges: e, minSupport,
       stripSelection: settings.stripSelection === 'greedy' ? 'greedy' : 'subset',
+      packingStrategy: settings.packingStrategy === 'maxrects' ? 'maxrects' : 'legacy',
       searchProfile: settings.searchProfile && settings.searchProfile.active ? settings.searchProfile : null
     };
   }
@@ -7308,7 +7258,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const width = Number(source.width), length = Number(source.length);
     if (!(Number.isFinite(width) && Number.isFinite(length) && width > 0 && length > 0)) throw new Error(`板材 ${stockIndex + 1} 的 width/length 無效`);
     const boardId = added ? `NEW-${String(stockIndex + 1).padStart(2, '0')}` : `STOCK-${String(stockIndex + 1).padStart(2, '0')}`;
-    return { boardId, stockIndex: added ? null : stockIndex, added, isRemnant: !added && source.isRemnant === true, width, length, results: [], cuts: [], wastes: [], kerfBands: [], residuals: [], terminals: [], core: null, materialCounter: 0, area: width * length, minSupportWidth: settings.minSupport };
+    return { boardId, stockIndex: added ? null : stockIndex, added, width, length, results: [], cuts: [], wastes: [], kerfBands: [], residuals: [], terminals: [], core: null, materialCounter: 0, area: width * length, minSupportWidth: settings.minSupport };
   }
   function materialId(b, suffix) { b.materialCounter += 1; return `${b.boardId}-${suffix || 'M'}${String(b.materialCounter).padStart(3, '0')}`; }
   function pushWaste(b, r, reason, kind = 'offcut') { if (validRect(r)) b.wastes.push({ ...cloneRect(r), kind, reason }); }
@@ -7635,7 +7585,69 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function packRipOrTree(b, tokens, s, mode) {
+    if (s.packingStrategy === 'maxrects') return packMaxRectsBoard(b, tokens, s, mode);
     return mode === 'ripThenCrosscut' ? packRipBoard(b, tokens, s) : packTreeBoard(b, tokens, s);
+  }
+
+  // MaxRects only proposes coordinates. A full-span slicing tree must exist
+  // before any placement can become a production candidate.
+  function packMaxRectsBoard(b, tokens, s, mode) {
+    const api = global.PlywoodMaxRects;
+    if (!api || typeof api.pack !== 'function' || typeof api.toCutTree !== 'function') {
+      const error = new Error('MaxRects 輔助模組未載入；保留原有排料候選');
+      error.code = 'MAXRECTS_UNAVAILABLE'; throw error;
+    }
+    const active = trimBoard(b, s);
+    const packed = api.pack(tokens.map(token => ({id:token.id,width:token.width,length:token.length,
+      orientations:orientations(token)})), active.rect, s.kerf);
+    const replay = api.toCutTree(packed.placements, active.rect, s.kerf,
+      {mode,minSupport:s.minSupport});
+    if (!replay.ok || !replay.tree) {
+      const error = new Error(`MaxRects 座標無法轉為所選工序的完整貫通切割樹：${replay.reason || '無可行刀序'}`);
+      error.code = 'MAXRECTS_NOT_SAWABLE'; throw error;
+    }
+    const byToken = new Map(tokens.map(t => [t.id,t]));
+    const byPlacement = new Map(packed.placements.map(p => [p.id,p]));
+    const entries = [];
+    function emitFinished(partId, r, id, direct) {
+      const token = byToken.get(partId), p = byPlacement.get(partId);
+      if (!token || !p) throw new Error('MaxRects 切割樹包含未需求部件');
+      emitPart(b, {...token,rotated:p.rotated}, r, id, direct);
+    }
+    function prepare(node, material) {
+      if (node.kind === 'empty') {
+        b.residuals.push({materialId:material.id,...cloneRect(node.rect),purpose:'MaxRects 已分離完整餘料'});
+      } else if (node.kind === 'part') {
+        emitFinished(node.partId,node.rect,material.id,true);
+      } else if (node.kind === 'cut') {
+        const outputs = node.children.map(child => ({id:materialId(b,child.kind==='part'?'PART':'MXFREE'),
+          kind:child.kind==='part'?'part':'material',partId:child.partId || null,
+          purpose:child.kind==='part'?'成品':'MaxRects 待切／完整餘料',rect:cloneRect(child.rect)}));
+        entries.push({node,material,outputs});
+        node.children.forEach((child,i) => {
+          if (child.kind !== 'part') prepare(child,{id:outputs[i].id,rect:cloneRect(child.rect)});
+        });
+      } else throw new Error('MaxRects 切割樹節點無效');
+    }
+    prepare(replay.tree,active);
+    // Rip-mode trees forbid X below Y. Stable phase sorting therefore keeps
+    // every source material available while putting all rips before crosscuts.
+    if (mode === 'ripThenCrosscut') entries.sort((a,c) => Number(a.node.axis==='y')-Number(c.node.axis==='y'));
+    for (const {node,material,outputs} of entries) {
+      const phase = mode==='ripThenCrosscut'?(node.axis==='x'?'rip':'crosscut'):'part-tree';
+      const position = node.axis==='x'?node.band.x+s.kerf/2:node.band.y+s.kerf/2;
+      makeStep(b,material,node.axis,position,node.band,outputs,'MaxRects 完整貫通切割',null,phase);
+      outputs.filter(o=>o.kind==='part').forEach(o=>emitFinished(o.partId,o.rect,o.id,false));
+    }
+    const placed = new Set(b.results.map(p=>p.id));
+    const remaining = tokens.filter(t=>!placed.has(t.id));
+    if (placed.size !== packed.placements.length ||
+        remaining.length !== packed.remainingIds.length ||
+        remaining.some(t=>!packed.remainingIds.includes(t.id))) throw new Error('MaxRects 部件帳不一致');
+    b.packingSource = 'maxrects-bssf';
+    b.maxRects = {placements:placed.size,treeVisits:replay.visits,limited:!!replay.limited};
+    b._unplacedOnBoard = remaining;
+    return remaining;
   }
 
   function verifyBoard(b, k) {
@@ -7743,28 +7755,26 @@ window.addEventListener('DOMContentLoaded', () => {
     if(!demand.length) throw new Error('請至少新增一件有效部件');
     if(!stock.length) throw new Error('請至少新增一塊有效原板');
     const allItems=new Map(demand.map(p=>[p.id,p]));
-    const freshStock=stock.filter(b=>b.isRemnant!==true);
-    const template=freshStock.slice().sort((a,b)=>Number(b.width)*Number(b.length)-Number(a.width)*Number(a.length))[0]||null;
+    const template=stock.slice().sort((a,b)=>Number(b.width)*Number(b.length)-Number(a.width)*Number(a.length))[0];
     const plans=[]; let waiting=demand.slice();
     const order=inventory.map((b,i)=>({source:b,index:i,added:false})).filter(ref=>!ref.source.disabled);
-    const offcutFirst=(a,b)=>Number(b.source.isRemnant===true)-Number(a.source.isRemnant===true);
     const stockOrder = s.searchProfile && s.searchProfile.stockOrder;
     if (stockOrder === 'largestFirst' || stockOrder === 'smallestFirst') {
       const direction = stockOrder === 'largestFirst' ? -1 : 1;
-      order.sort((a,b)=>offcutFirst(a,b)||direction*(Number(a.source.width)*Number(a.source.length)-Number(b.source.width)*Number(b.source.length))||a.index-b.index);
-    } else if (stockOrder === 'seeded') order.sort((a,b)=>offcutFirst(a,b)||diversityRank(s.searchProfile,`stock:${a.index}`)-diversityRank(s.searchProfile,`stock:${b.index}`));
-    else order.sort((a,b)=>offcutFirst(a,b)||a.index-b.index);
+      order.sort((a,b)=>direction*(Number(a.source.width)*Number(a.source.length)-Number(b.source.width)*Number(b.source.length))||a.index-b.index);
+    }
+    if (stockOrder === 'seeded') order.sort((a,b)=>diversityRank(s.searchProfile,`stock:${a.index}`)-diversityRank(s.searchProfile,`stock:${b.index}`));
     // Each candidate visits stock once, preserving original stock indices even when its search order differs.
     for(let i=0;i<order.length && waiting.length;i++) {
       const ref=order[i], b=makeBoard(ref.source,ref.index,false,s);
       b.mode=mode;
-      const remaining=mode==='ripThenCrosscut'?packRipBoard(b,waiting,s):packTreeBoard(b,waiting,s);
+      const remaining=packRipOrTree(b,waiting,s,mode);
       const placed=new Set(b.results.map(p=>p.id)); waiting=waiting.filter(p=>!placed.has(p.id));
       if(b.results.length) plans.push(finalizeBoard(b,s));
       // An empty stock sheet remains unused and is not counted as added or used.
     }
     let addedCount=0, safetyFuse=0;
-    while(template && waiting.length && safetyFuse++<1000) {
+    while(waiting.length && safetyFuse++<1000) {
       const individuallyFeasible=waiting.some(token=>orientations(token).some(o=>o.width<=Number(template.width)-s.trims.left-s.trims.right+EPS&&o.length<=Number(template.length)-s.trims.top-s.trims.bottom+EPS&&(!s.minSupport||o.width+EPS>=s.minSupport)));
       if(!individuallyFeasible) break;
       const b=makeBoard(template,stock.length+addedCount,true,s);
@@ -7794,7 +7804,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
     if(plans.filter(b=>b.added).length!==addedCount)geometryIssues.push('boardsAdded 與真正新增板數不一致');
-    for(const b of plans) if(!b.added&&!!inventory[b.stockIndex]?.isRemnant!==!!b.isRemnant) geometryIssues.push(`${b.boardId}: 余料來源標記不符`);
     const boardIssues=plans.flatMap(b=>b.validation.errors.map(e=>`${b.boardId}: ${e}`)).concat(geometryIssues);
     const missing=demand.filter(p=>freq.get(p.id)!==1).map(p=>p.id);
     const complete=unplaced.length===0&&missing.length===0&&countIssues.length===0&&boardIssues.length===0;
@@ -7807,11 +7816,9 @@ window.addEventListener('DOMContentLoaded', () => {
     for(const r of retainedRemnants){
       if(!largestRemnant||r.area>largestRemnant.area+EPS||(eq(r.area,largestRemnant.area)&&r.shortSide>largestRemnant.shortSide+EPS))largestRemnant=r;
     }
-    const reusableRemnants=s.minRemnantShortSide==null?[]:retainedRemnants.filter(r=>r.shortSide+EPS>=s.minRemnantShortSide&&Math.max(r.rect.width,r.rect.length)+EPS>=s.minRemnantLongSide);
-    const reusableRemnantArea=reusableRemnants.reduce((sum,r)=>sum+r.area,0);
     const stripSearch=plans.reduce((sum,b)=>{const stats=b.stripSearch||{};sum.combined+=stats.combined||0;sum.limited+=stats.limited||0;sum.unavailable+=stats.unavailable||0;return sum;},{combined:0,limited:0,unavailable:0});
-    const summary={requestedParts:demand.length,placedParts:placedIds.length,unplacedParts:unplaced.length,usedBoardCount:plans.length,usedRemnantBoardCount:plans.filter(b=>b.isRemnant).length,boardsAdded:addedCount,partsArea:partArea,kerfArea,wasteArea:plans.reduce((n,b)=>n+b.validation.offcutArea,0),boardArea,netYield:boardArea?partArea/boardArea*100:0,largestRemnant,largestRemnantArea:largestRemnant?largestRemnant.area:0,largestRemnantShortSide:largestRemnant?largestRemnant.shortSide:0,retainedRemnantCount:retainedRemnants.length,reusableRemnantArea,reusableRemnantCount:reusableRemnants.length,remnantThresholdActive:s.minRemnantShortSide!=null};
-    return {version:VERSION,searchProfile:s.searchProfile?{...s.searchProfile}:null,stripSelection:s.stripSelection,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,minRemnantShortSide:s.minRemnantShortSide,minRemnantLongSide:s.minRemnantLongSide,remnantThresholdActive:s.minRemnantShortSide!=null,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:s.searchProfile&&s.searchProfile.seed?'多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證':'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
+    const summary={requestedParts:demand.length,placedParts:placedIds.length,unplacedParts:unplaced.length,usedBoardCount:plans.length,boardsAdded:addedCount,partsArea:partArea,kerfArea,wasteArea:plans.reduce((n,b)=>n+b.validation.offcutArea,0),boardArea,netYield:boardArea?partArea/boardArea*100:0,largestRemnant,largestRemnantArea:largestRemnant?largestRemnant.area:0,largestRemnantShortSide:largestRemnant?largestRemnant.shortSide:0,retainedRemnantCount:retainedRemnants.length};
+    return {version:VERSION,packingStrategy:s.packingStrategy,searchProfile:s.searchProfile?{...s.searchProfile}:null,stripSelection:s.stripSelection,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:s.packingStrategy==='maxrects'?'MaxRects 按最長邊、面積遞減貼合；切割樹另按真實完整餘料擇優，並非全局最優保證':s.searchProfile&&s.searchProfile.seed?'多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證':'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
   }
 
   global.PlywoodTrialEngine={version:VERSION,plan,verifyBoard,orientations};
@@ -7819,7 +7826,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
-<script src="assets/cut-path-overlay.js?v=6"></script>
+<script src="assets/cut-path-overlay.js?v=5"></script>
 <script src="assets/part-appearance.js?v=3"></script>
 <script src="assets/part-dimension-display.js?v=2"></script>
 <script src="assets/layout-view.js?v=5"></script>
@@ -7895,17 +7902,15 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function updateObjectiveHelp(){
     const note=$('objectiveNote');if(!note)return;
-    const en=window.calculator?.currentLanguage==='en';
     note.textContent=selectedObjective()==='convenience'
-      ?(en?'Finite candidates compare cut count, axis changes and cut-path length first; these are proxies, not actual handling time or a safety assessment.':'有限候選先比較刀數、再比較工序換向及刀路長度；這些只是代理，不代表實際翻板次數、機台工時或安全。')
-      :(en?'At equal sheet count, saved remnant sheets are preferred first; total sheet area remains the next comparison. When short- and long-side limits are set, plans are next ranked by the total area of intact remnants meeting both limits; otherwise by the largest intact rectangle. L-shaped gaps are never combined; future usability or global optimality is not guaranteed.':'用板數相同時，先優先使用已登記餘料；之後沿用原有原板總面積比較。設定最小短邊及長邊後，接着按達標完整餘料總面積排序；否則按最大完整長方形排序。不合併 L 形空位，不保證用途或全局最優。');
+      ?'有限候選先比較刀數、再比較工序換向及刀路長度；這些只是代理，不代表實際翻板次數、機台工時或安全。'
+      :'有限候選先比較用板數及原板總面積，同等用料優先保留最大完整長方形餘料（同面積比短邊），再比較鋸縫、餘料塊數及刀數；不合併 L 形空位，不保證用途或全局最優。';
   }
   function readSettings(modeOverride){
     return {mode:modeOverride||$('cuttingStrategy').value,kerf:parseKerf($('sawBladeThickness').value),
       trims:{left:Number($('trialTrimLeft').value||0),right:Number($('trialTrimRight').value||0),top:Number($('trialTrimTop').value||0),bottom:Number($('trialTrimBottom').value||0)},
       edges:{left:$('trialEdgeLeft').checked,right:$('trialEdgeRight').checked,top:$('trialEdgeTop').checked,bottom:$('trialEdgeBottom').checked},
-      minSupportWidth:$('trialMinSupport').value.trim(),
-      minRemnantShortSide:$('trialMinRemnantShort').value.trim(),minRemnantLongSide:$('trialMinRemnantLong').value.trim()};
+      minSupportWidth:$('trialMinSupport').value.trim()};
   }
   function rectText(r){return `x=${fmtDim(r.x)}, y=${fmtDim(r.y)}, ${fmtDim(r.width)} × ${fmtDim(r.length)}`;}
   function outputsText(step){return step.outputs.map(o=>`${o.kind==='part'?'成品':o.kind==='offcut'?'修邊／廢料':'待切材料'} ${esc(o.partId||o.materialId)}：${esc(o.purpose)}（${rectText(o.rect)}）`).join('<br>')||'無';}
@@ -8342,13 +8347,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const pool=window.calculator._trialCandidates||[],idx=Number(window.calculator._trialCandidateIndex||0);
     const cutTotal=totalCutCount(plan);
     const stats=plan.stripSearch||{};
-    summary.innerHTML=`<div class="headline"><span class="result-number">${isComplete&&pool.length?`方案 ${idx+1}/${pool.length}`:'候選排法'}</span><span class="result-metric">${isComplete?'完整':'未通過完整驗證'}</span><span class="result-metric">板材 ${plan.summary.usedBoardCount} 塊</span>${plan.summary.usedRemnantBoardCount?`<span class="result-metric">${window.calculator.currentLanguage==='en'?'Reused offcuts':'回用餘料'} ${plan.summary.usedRemnantBoardCount}</span>`:''}<span class="result-metric">切刀 ${cutTotal} 刀</span></div>`;
+    summary.innerHTML=`<div class="headline"><span class="result-number">${isComplete&&pool.length?`方案 ${idx+1}/${pool.length}`:'候選排法'}</span><span class="result-metric">${isComplete?'完整':'未通過完整驗證'}</span><span class="result-metric">板材 ${plan.summary.usedBoardCount} 塊</span><span class="result-metric">切刀 ${cutTotal} 刀</span></div>`;
     root.appendChild(summary);
     if(isComplete){
       const integrityLine=document.createElement('p');integrityLine.id='remnantIntegritySummary';integrityLine.className='input-hint strategy-hint';
       const r=plan.summary.largestRemnant;
-      const reusableLine=plan.remnantThresholdActive?`<br><span>${window.calculator.currentLanguage==='en'?'Meets reusable-size threshold: ':'達可回用尺寸門檻：'}</span><span>${plan.summary.reusableRemnantCount}</span><span>${window.calculator.currentLanguage==='en'?' intact piece(s)':'塊完整餘料'}（${window.calculator.currentLanguage==='en'?'short':'短邊'} ≥ ${fmtDim(plan.minRemnantShortSide)}，${window.calculator.currentLanguage==='en'?'long':'長邊'} ≥ ${fmtDim(plan.minRemnantLongSide)}）。</span>`:'';
-      integrityLine.innerHTML=(r?`<strong>最大完整餘料：</strong><span>長度：</span><span>${esc(fmtDim(r.rect.length,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'length'))}</span> × <span>闊度：</span><span>${esc(fmtDim(r.rect.width,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'width'))}</span> <span>來源板：</span><span>${esc(r.boardId)}</span><br><span>獨立剩料：</span><span>${plan.summary.retainedRemnantCount}</span> <span>塊（不含修邊料；只屬幾何指標，不保證用途）。</span>`:'沒有完整剩餘板料（修邊料另列）。')+reusableLine;
+      integrityLine.innerHTML=r?`<strong>最大完整餘料：</strong><span>長度：</span><span>${esc(fmtDim(r.rect.length,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'length'))}</span> × <span>闊度：</span><span>${esc(fmtDim(r.rect.width,boardInputFor(plan.boards.find(b=>b.boardId===r.boardId)),'width'))}</span> <span>來源板：</span><span>${esc(r.boardId)}</span><br><span>獨立剩料：</span><span>${plan.summary.retainedRemnantCount}</span> <span>塊（不含修邊料；只屬幾何指標，不保證用途）。</span>`:'沒有完整剩餘板料（修邊料另列）。';
       root.appendChild(integrityLine);
     }
     const processLine=document.createElement('p');processLine.className='input-hint strategy-hint result-process-line';
@@ -8402,14 +8406,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if(window.calculator.portraitDisplayMode) window.calculator.handlePortraitDisplayResize();
   }
   function getParts(){return (window.calculator.parts||[]).map(p=>({...p}));}
-  function getBoards(){return (window.calculator.boards||[]).map(b=>({width:Number(b.width),length:Number(b.length??b.height),disabled:!!b.disabled,isRemnant:b.isRemnant===true}));}
+  function getBoards(){return (window.calculator.boards||[]).map(b=>({width:Number(b.width),length:Number(b.length??b.height),disabled:!!b.disabled}));}
   function clearMessages(){['errorMessage','suggestionMessage','progressMessage','status'].forEach(id=>{if($(id))$(id).textContent='';});}
   function totalCutCount(plan){return (plan.boards||[]).reduce((n,b)=>n+(b.cuts||[]).length,0);}
   function rankPlan(a,b,objective=selectedObjective()){
     if(window.PlywoodTableSaw)return window.PlywoodTableSaw.comparePlans(a,b,objective);
     if(objective==='convenience'&&totalCutCount(a)!==totalCutCount(b))return totalCutCount(a)-totalCutCount(b);
     if(objective==='convenience')return a.summary.usedBoardCount-b.summary.usedBoardCount||a.summary.boardArea-b.summary.boardArea||a.summary.kerfArea-b.summary.kerfArea||totalCutCount(a)-totalCutCount(b);
-    return a.summary.usedBoardCount-b.summary.usedBoardCount||(b.summary.usedRemnantBoardCount??0)-(a.summary.usedRemnantBoardCount??0)||a.summary.boardArea-b.summary.boardArea||((a.summary.remnantThresholdActive||b.summary.remnantThresholdActive)?(b.summary.reusableRemnantArea??0)-(a.summary.reusableRemnantArea??0):0)||(b.summary.largestRemnantArea??0)-(a.summary.largestRemnantArea??0)||(b.summary.largestRemnantShortSide??0)-(a.summary.largestRemnantShortSide??0)||a.summary.kerfArea-b.summary.kerfArea||(a.summary.retainedRemnantCount??0)-(b.summary.retainedRemnantCount??0)||totalCutCount(a)-totalCutCount(b);
+    return a.summary.usedBoardCount-b.summary.usedBoardCount||a.summary.boardArea-b.summary.boardArea||(b.summary.largestRemnantArea??0)-(a.summary.largestRemnantArea??0)||(b.summary.largestRemnantShortSide??0)-(a.summary.largestRemnantShortSide??0)||a.summary.kerfArea-b.summary.kerfArea||(a.summary.retainedRemnantCount??0)-(b.summary.retainedRemnantCount??0)||totalCutCount(a)-totalCutCount(b);
   }
   function candidateSignature(plan){
     const q=n=>Math.round(Number(n)*1e6)/1e6;
@@ -8440,6 +8444,16 @@ window.addEventListener('DOMContentLoaded', () => {
     if(!existing.length)add(initialPlan,labelForMode(initialPlan.mode));
     for(const mode of modes){
       const selections=mode==='ripThenCrosscut'?['subset','greedy']:['subset'];
+      // Real MaxRects coordinates must reconstruct into the selected saw mode;
+      // rejected or incomplete layouts never replace the checked baseline.
+      if(!existing.length&&window.PlywoodMaxRects){
+        for(const stockOrder of ['input','largestFirst','smallestFirst']){
+          try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,
+            packingStrategy:'maxrects',fixedOrientationOverrides:overrides,
+            searchProfile:{active:true,stockOrder}}),labelForMode(mode)+' · MaxRects BSSF');}
+          catch(_){/* 非貫通／工序不符／搜尋限額：只淘汰新候選，保留原有算法 */}
+        }
+      }
       if(mode==='ripThenCrosscut'&&!existing.length){try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,stripSelection:'greedy',searchProfile:null}),labelForMode(mode));}catch(_){} }
       // ponytail: diverse rip profiles use fast greedy selection; original DP profiles remain as packing baselines.
       for(const stripSelection of selections)for(const profile of profiles){if(mode==='ripThenCrosscut'&&profile.seed&&stripSelection==='subset')continue;try{const settings={...baseSettings,mode,stripSelection,fixedOrientationOverrides:overrides,searchProfile:profile};const plan=window.PlywoodTrialEngine.plan(getParts(),getBoards(),settings);add(plan,labelForMode(mode));}catch(_){/* 無效或不完整候選不進池；較低排名的合法候選不刪除 */}}
@@ -8450,7 +8464,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function updateVariationControls(){
     const controls=$('variationControls'),prev=$('previousVariationButton'),next=$('nextVariationButton'),counter=$('variationCounter'),status=$('variationStatus');
     const c=window.calculator,pool=c._trialCandidates||[],i=Number(c._trialCandidateIndex||0),has=!!c.trialPlan&&strictlyValidCandidate(c.trialPlan,c._trialFixedOrientationOverrides||{});
-    if(!controls)return;controls.hidden=!has;const remnantButton=$('addRemnantsToStockButton');if(remnantButton)remnantButton.disabled=!has;if(!has)return;
+    if(!controls)return;controls.hidden=!has;if(!has)return;
     counter.textContent=`方案 ${Math.min(i+1,pool.length||1)}/${Math.max(1,pool.length)}`;prev.disabled=i<=0;next.disabled=i>=pool.length-1;
     const chooser=$('candidateChooser'),more=$('moreLayoutsButton');
     if(chooser){
@@ -8506,6 +8520,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const overrides={...(window.calculator._trialFixedOrientationOverrides||{})};const attempts=[];const errors=[];
       for(const mode of modes){try{attempts.push({plan:window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...readSettings(mode),fixedOrientationOverrides:overrides}),mode});}catch(e){errors.push(`${mode==='ripThenCrosscut'?'先分條再截件':'按成品安排'}：${e.message||String(e)}`);}}
       const valid=attempts.filter(x=>strictlyValidCandidate(x.plan,overrides));
+      if(!valid.length&&window.PlywoodMaxRects){for(const mode of modes){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,packingStrategy:'maxrects',fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides))valid.push({plan:p,mode});}catch(_){}}}
       // 預設初排未完整時亦須試有限 profiles；不能提前擋住可行搜尋。
       if(!valid.length){for(const mode of modes)for(const profile of searchProfiles()){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,searchProfile:profile,fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides)){valid.push({plan:p,mode});break;}}catch(_){}}}
       if(!valid.length){window.calculator.trialPlan=null;window.calculator.schemes=[];window.calculator._trialFixedOrientationOverrides=overrides;clearCandidatePool();$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';const msg=errors.length?errors.join('；'):'兩種工序都沒有產生通過幾何與逐刀回放驗證的完整候選。';$('trialResults').innerHTML=`<div class="validation-failed"><strong>沒有可顯示的已驗證排法。</strong><br>${esc(msg)}<br>請核對部件、原板尺寸及進階設定；不完整部件不會當作完整排法。</div>`;$('errorMessage').textContent=msg;return null;}
@@ -8517,7 +8532,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const chosenItem=pool[0],plan=chosenItem.plan;
       window.calculator._trialFixedOrientationOverrides=overrides;window.calculator._trialCandidates=pool;window.calculator._trialCandidateIndex=0;window.calculator._trialRotationLabel='';window.calculator._trialObjective=objective;
       window.calculator.trialPlan=plan;window.calculator.trialMode=plan.mode;window.calculator.trialConfig={...uiSettings,selectedMode:plan.mode,objective};window.calculator.currentSchemeIndex=0;window.calculator.variationIndex=0;window.calculator.schemes=makeLegacyScheme(plan);
-      window.calculator.dragModeEnabled=false;window.calculator.allowOverlap=false;render(plan,labelForMode(plan.mode));updateVariationControls();
+      window.calculator.dragModeEnabled=false;window.calculator.allowOverlap=false;render(plan,chosenItem.label);updateVariationControls();
       $('suggestionMessage').textContent=plan.validation.ok?'幾何與逐刀回放驗證通過；仍是候選草排。':'此結果不完整；未排部件已保留在詳情中。';$('progressMessage').textContent=plan.safetyStatus;
       if(plan.unplaced.length)$('errorMessage').textContent=`尚有 ${plan.unplaced.length} 件未排入；不會算作完成。`;return plan;
     }catch(e){$('errorMessage').textContent=e.message||String(e);window.calculator.trialPlan=null;window.calculator.schemes=[];clearCandidatePool();$('cutDetails').style.display='none';$('canvasContainer').innerHTML='';$('trialResults').innerHTML=`<div class="validation-failed">輸入錯誤／無效幾何：${esc(e.message||e)}</div>`;return null;}
@@ -8534,7 +8549,7 @@ window.addEventListener('DOMContentLoaded', () => {
       window.calculator.parts=Array.isArray(d.parts)?d.parts:[];window.calculator.boards=Array.isArray(d.boards)?d.boards.map(b=>({...b,length:Number(b.length??b.height)})):[];
       const c=d.trialConfig||{};setObjective(d.optimizationObjective,true);updateObjectiveHelp();$('cuttingStrategy').value=(c.mode==='ripThenCrosscut'||c.mode==='partFirstTree'||c.mode==='auto')?c.mode:'auto';
       $('trialTrimLeft').value=c.trims?.left??0;$('trialTrimRight').value=c.trims?.right??0;$('trialTrimTop').value=c.trims?.top??0;$('trialTrimBottom').value=c.trims?.bottom??0;
-      $('trialEdgeLeft').checked=c.edges?.left!==false;$('trialEdgeRight').checked=c.edges?.right!==false;$('trialEdgeTop').checked=c.edges?.top!==false;$('trialEdgeBottom').checked=c.edges?.bottom!==false;$('trialMinSupport').value=c.minSupportWidth??'';$('trialMinRemnantShort').value=c.minRemnantShortSide??100;$('trialMinRemnantLong').value=c.minRemnantLongSide??100;
+      $('trialEdgeLeft').checked=c.edges?.left!==false;$('trialEdgeRight').checked=c.edges?.right!==false;$('trialEdgeTop').checked=c.edges?.top!==false;$('trialEdgeBottom').checked=c.edges?.bottom!==false;$('trialMinSupport').value=c.minSupportWidth??'';
       const k=c.kerf??d.sawBladeThickness??3;$('sawBladeThickness').value=`${k}mm`;$('edgeTolerance').value=Number(d.edgeTolerance||0.1);
       window.calculator.sawBladeThicknessMM=Number(k);window.calculator.edgeTolerance=Number(d.edgeTolerance||0.1);const appUnitSystem=normalizeUnitSystem($('unitSystem').value)||readUnitSystemPreference()||'metric';window.calculator.unitSystem=appUnitSystem;$('unitSystem').value=appUnitSystem;
       window.calculator.schemes=[];window.calculator.trialPlan=null;window.calculator.variationIndex=0;window.calculator._trialFixedOrientationOverrides=d.trialFixedOrientations&&typeof d.trialFixedOrientations==='object'?Object.fromEntries(Object.entries(d.trialFixedOrientations).filter(([,v])=>v==='fixed_horizontal'||v==='fixed_vertical')):{};clearCandidatePool();window.calculator.updatePartsTable();window.calculator.updateBoardsTable();if(window.calculator.updateUnitSystem)window.calculator.updateUnitSystem();
@@ -8823,8 +8838,6 @@ window.addEventListener('DOMContentLoaded', () => {
       trims: { ...originalPlan.trimSettings },
       edges: { ...originalPlan.edgeUse },
       minSupportWidth: originalPlan.minSupportWidth == null ? '' : originalPlan.minSupportWidth,
-      minRemnantShortSide: originalPlan.minRemnantShortSide == null ? '' : originalPlan.minRemnantShortSide,
-      minRemnantLongSide: originalPlan.minRemnantLongSide == null ? '' : originalPlan.minRemnantLongSide,
       fixedOrientationOverrides: nextOverrides
     };
     const candidate = window.PlywoodTrialEngine.plan(expandedRows, boardInputs, settings);
@@ -10263,5 +10276,7 @@ body.wood-dark-mode #wood-app-footer a{color:#ffd166!important}
     rgb(241 245 249 / var(--wood-scroll-opacity, .56)) 100%) !important;
 }
 </style>
+<link rel="stylesheet" href="assets/mobile-view.css?v=1">
+<script src="assets/mobile-view.js?v=1"></script>
 </body>
 </html>

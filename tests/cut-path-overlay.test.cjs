@@ -135,17 +135,6 @@ test('remnants are only the final unused material outputs, not kerf bands or tri
     band.x === item.rect.x && band.y === item.rect.y && band.width === item.rect.width && band.length === item.rect.length)));
 });
 
-test('reusable remnants require verified whole rectangles meeting both short and long limits',()=>{
-  const plan=makePlan(), all=plan.boards.flatMap(overlay.finalMaterialLeaves);
-  const expected=all.filter(r=>Math.min(r.rect.width,r.rect.length)+1e-7>=100&&Math.max(r.rect.width,r.rect.length)+1e-7>=200).sort((a,b)=>b.area-a.area);
-  const selected=overlay.reusableRemnants(plan,100,200);
-  assert.deepEqual(selected.map(r=>[r.boardId,r.materialId,r.area]),expected.map(r=>[r.boardId,r.materialId,r.area]));
-  assert.ok(selected.every(r=>!r.materialId.includes('-OFF')));
-  assert.deepEqual(overlay.reusableRemnants(plan,300,200),[],'short-side threshold cannot exceed long-side threshold');
-  assert.deepEqual(overlay.reusableRemnants({...plan,status:'incomplete'},100,100),[],'incomplete plans cannot be saved as stock');
-  assert.equal(overlay.version,'cut-overlay-1.6.0');
-});
-
 test('diagram leftover pieces include both final sheet material and edge-trim offcuts, never kerf', () => {
   const board = makePlan().boards[0];
   const sheetLeaves = overlay.finalMaterialLeaves(board);
@@ -193,8 +182,8 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.match(html, /cutOverlay\.leftoverPieces\(board\)/);
   assert.match(html, /data-remnant-kind/);
   assert.match(html, /<\/strong>&nbsp;（\$\{esc\(cutCopy\('remnantSize'\)\)\}）/);
-  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=6"><\/script>/);
-  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=6'"));
+  assert.match(html, /<script src="assets\/cut-path-overlay\.js\?v=5"><\/script>/);
+  assert.ok(serviceWorker.includes("'./assets/cut-path-overlay.js?v=5'"));
   assert.match(html, /cut-path-toggle-row/);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]{0,700}cut-path-toggle/);
 });

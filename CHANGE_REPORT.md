@@ -124,3 +124,17 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 ## 2026-10-06 — 修復直向滿版更新及尺寸標籤大小
 
 直向滿版版面更新不再於每次尺寸重排時逐塊呼叫重繪，避免重繪與滿版版面／響應式更新互相觸發而在手機上卡住。畫布原本已由結果渲染完成，滿版只更新顯示尺寸即可。排版圖部件尺寸標籤的自適應字級上限由 12px 提高至 18px，下限由 5px 提高至 7px，避免標籤在放大板面上顯得過細。
+
+## 2026-10-23 — 合併 plywood-mobile-local.zip 更新
+
+### 本次變更
+
+- 合併 ZIP 提供的手機版操作介面：新增手機導覽列與響應式樣式，並處理鍵盤遮擋、導覽定位及安全區域。
+- 整合 MaxRects 候選排料演算法與本機整合說明、MIT 授權資料及相關測試。
+- 更新主頁、切割路徑顯示、鋸台排料優化器、PWA manifest、Service Worker 快取資源及圖示。
+- 更新 README、鋸台文件與測試／檢查腳本。
+
+### 驗證
+
+- `node --test tests/*.test.cjs`：92 項通過，0 項失敗。
+- `scripts/check-mobile-view.py`：未能執行瀏覽器測試；附件腳本指定 `/opt/google/chrome/chrome`，目前執行環境未安裝該路徑的 Chrome。

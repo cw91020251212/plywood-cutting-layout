@@ -9655,9 +9655,10 @@ body.wood-dark-mode {
   #wood-info-message{display:flex;align-items:center;gap:8px;width:100%;min-width:0;color:#ff0;font-size:.95rem;text-shadow:0 1px 0 rgba(0,0,0,.65)}
   #wood-status-text{min-width:0;overflow-x:auto;white-space:nowrap;flex:1}
   #wood-status-text::-webkit-scrollbar{height:2px} #wood-status-text::-webkit-scrollbar-thumb{background:rgba(255,255,0,.22);border-radius:999px}
-  #wood-info-overlay{position:fixed;inset:0;z-index:7000;display:none;background:rgba(32,32,32,.78);align-items:flex-end;justify-content:center}
+  #wood-info-overlay{position:fixed;inset:0;z-index:21000;display:none;background:rgba(32,32,32,.78);align-items:flex-end;justify-content:center}
   #wood-info-overlay[data-open="true"]{display:flex}
   #wood-info-modal{width:min(820px,calc(100vw - 24px));margin-bottom:calc(var(--wood-info-h) + 18px + env(safe-area-inset-bottom));padding:14px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(18,22,28,.94);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #wood-info-modal{box-sizing:border-box;max-height:calc(100dvh - var(--wood-info-h) - 54px - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain}
   #wood-info-modal h3{margin:0 0 8px;font-size:14px} #wood-info-full{margin:0;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
   #wood-info-close{margin-top:10px;color:rgba(255,255,255,.7);font-size:12px}
   #wood-scroll-nav{position:fixed;right:calc(12px + env(safe-area-inset-right));bottom:calc(var(--wood-info-h) + 14px + env(safe-area-inset-bottom));z-index:6000;display:flex;flex-direction:column;gap:9px;opacity:0;pointer-events:none;transition:opacity .18s ease}
@@ -9705,6 +9706,7 @@ body.wood-dark-mode {
 <div id="wood-info-bar" role="status" aria-live="polite"><div id="wood-info-message"><span aria-hidden="true">ℹ️</span><span id="wood-status-text">系統已就緒，可輸入部件及板材尺寸。</span></div></div>
 <div id="wood-info-overlay" aria-hidden="true"><div id="wood-info-modal" role="dialog" aria-modal="true" aria-label="最新資訊"><h3 id="wood-info-title">最新資訊</h3><p id="wood-info-full"></p><div id="wood-info-close">（點擊背景關閉）</div></div></div>
 <div id="wood-scroll-nav" aria-label="頁面快速導航"><button id="wood-to-top" type="button" aria-label="返回頂部">▲</button><button id="wood-to-bottom" type="button" aria-label="前往底部">▼</button></div>
+<script src="assets/scheme-comparison.js?v=1"></script>
 <script id="wood-reference-tools-script">
 (function(){
   const $=id=>document.getElementById(id), body=document.body, panel=$('wood-settings-panel'), lang=$('languageSwitchButton');
@@ -9833,11 +9835,16 @@ body.wood-dark-mode {
       pageMessageDescription(),text('下一步：','Next:')+nextStep()];
     const plan=window.calculator&&window.calculator.trialPlan;
     if(plan&&plan.status==='candidate') lines.push(text('候選草排提醒：程式檢查不等同現場作業或機台安全認證，請由師傅實際核對。','Candidate-layout note: program checks are not a certification of workshop procedure or machine safety; have a person verify the plan in practice.'));
+    const comparison=window.PlywoodSchemeComparison&&window.PlywoodSchemeComparison.build(window.calculator,isEnglish());
+    if(comparison)lines.unshift(comparison.full);
     return lines.join('\n\n');
   }
   function refreshInfo(){
     refreshFontReadout();
-    if(status)status.textContent=appState()+' ｜ '+fontMessage();
+    const comparison=window.PlywoodSchemeComparison&&window.PlywoodSchemeComparison.build(window.calculator,isEnglish());
+    const error=$('errorMessage');
+    if(status)status.textContent=(comparison&&!(error&&error.textContent.trim())?comparison.compact:appState()+' ｜ '+fontMessage());
+    if($('wood-info-overlay').dataset.open==='true')$('wood-info-full').textContent=buildFullInfo();
   }
   function setStatus(message){if(message)externalNotice=String(message);refreshInfo();}
   window.woodSetStatus=setStatus;
@@ -9867,7 +9874,7 @@ body.wood-dark-mode {
   }
   window.woodUpdateToolLanguage=updateToolLanguage;
   setTimeout(updateToolLanguage,0);
-  ['errorMessage','suggestionMessage','progressMessage','status','partsTableBody','boardsTableBody','trialResults'].forEach(id=>{const el=$(id);if(!el)return;new MutationObserver(refreshInfo).observe(el,{childList:true,characterData:true,subtree:true});});
+  ['errorMessage','suggestionMessage','progressMessage','status','partsTableBody','boardsTableBody','trialResults','variationStatus'].forEach(id=>{const el=$(id);if(!el)return;new MutationObserver(refreshInfo).observe(el,{childList:true,characterData:true,subtree:true});});
   document.addEventListener('input',e=>{if(e.target.closest('#section-parts,#section-boards'))refreshInfo();},true);
   document.addEventListener('change',e=>{if(e.target.closest('#section-parts,#section-boards'))refreshInfo();},true);
   if(lang) lang.addEventListener('click',()=>setTimeout(updateToolLanguage,100));

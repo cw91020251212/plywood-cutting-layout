@@ -11,7 +11,7 @@
   function install(w,d){
     if(!d)return;
     const hints=[];
-    ['partsTable','boardsTable','resultsTable'].forEach(id=>{
+    ['resultsTable'].forEach(id=>{
       const table=d.getElementById(id),wrapper=table?.closest('.table-wrapper');if(!wrapper||d.getElementById(id+'-mobile-hint'))return;
       const hint=d.createElement('p');hint.className='mobile-table-hint';hint.id=id+'-mobile-hint';
       wrapper.before(hint);wrapper.setAttribute('tabindex','0');wrapper.setAttribute('role','region');wrapper.setAttribute('aria-describedby',hint.id);

@@ -10,6 +10,23 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const css=fs.readFileSync(path.join(root,'assets/mobile-view.css'),'utf8');
 const js=fs.readFileSync(path.join(root,'assets/mobile-view.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+test('parts and stock tables retain their original presentation',()=>{
+  const touched=[];
+  const table={closest:()=>{touched.push('table wrapper');throw Error('Input tables must not be modified');}};
+  const document={
+    getElementById:id=>['partsTable','boardsTable'].includes(id)?table:null,
+    createElement:()=>{throw Error('Unexpected hint');},
+    addEventListener:()=>{},body:{classList:{toggle:()=>{}}}
+  };
+  mobile.install({},document);
+  assert.deepEqual(touched,[]);
+  assert.doesNotMatch(css,/#(?:parts|boards)Table\s*\{/);
+  assert.doesNotMatch(css,/#(?:parts|boards)Table\s+(?:th|td)\b/);
+  assert.match(css,/button:not\(#partsTable button\):not\(#boardsTable button\)/);
+  assert.match(css,/input\[type=checkbox\]:not\(#partsTable input\):not\(#boardsTable input\)/);
+  assert.match(css,/input:not\(#partsTable input\):not\(#boardsTable input\)/);
+  assert.match(css,/\.table-wrapper:not\(#section-parts \.table-wrapper\):not\(#section-boards \.table-wrapper\)/);
+});
 test('phone resources load last and are included in versioned offline cache',()=>{
   for(const file of ['mobile-view.css','mobile-view.js']){
     assert.ok(html.includes(`assets/${file}?v=2`));

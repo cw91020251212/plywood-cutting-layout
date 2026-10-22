@@ -10,7 +10,7 @@
   .section-title{font-size:1.12em;padding:10px;gap:6px}
   .section-title .section-heading-label svg{width:26px;height:26px;flex-basis:26px}
   .section-intro{font-size:.9em;line-height:1.55}
-  input,select,textarea,.contenteditable-number-editor{font-size:16px!important}
+  input:not(#partsTable input):not(#boardsTable input),select:not(#partsTable select):not(#boardsTable select),textarea:not(#partsTable textarea):not(#boardsTable textarea),.contenteditable-number-editor:not(#partsTable .contenteditable-number-editor):not(#boardsTable .contenteditable-number-editor){font-size:16px!important}
   #section-parts .dimension-unit-row:not([style*="display: none"]),
   #section-boards .dimension-unit-row:not([style*="display: none"]){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%!important;max-width:100%;margin:0;overflow:visible}
   #section-parts .dimension-unit-field,#section-boards .dimension-unit-field{display:block;position:relative;min-width:0}
@@ -18,13 +18,10 @@
   #section-boards .dimension-unit-field>.dimension-input{width:100%;min-width:0;max-width:100%;height:48px;min-height:48px;margin:5px 0;padding:8px 32px 8px 4px;box-sizing:border-box}
   #section-parts .dimension-unit-field>.unit-label,
   #section-boards .dimension-unit-field>.unit-label{position:absolute;right:4px;top:50%;transform:translateY(-50%);min-width:0;font-size:12px;line-height:1;pointer-events:none}
-  .table-wrapper,.trial-cuts-wrap{max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
-  #partsTable{min-width:490px}
-  #boardsTable{min-width:340px}
+  .table-wrapper:not(#section-parts .table-wrapper):not(#section-boards .table-wrapper),.trial-cuts-wrap{max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
   #resultsTable{min-width:650px}
-  #partsTable th,#partsTable td,#boardsTable th,#boardsTable td{padding:8px 6px;font-size:14px}
-  .table-wrapper button,.trial-replay-panel button{min-height:44px!important;height:auto!important;min-width:44px;padding:8px!important;white-space:normal}
-  .table-wrapper input[type=checkbox]{width:24px!important;height:24px!important}
+  .table-wrapper button:not(#partsTable button):not(#boardsTable button),.trial-replay-panel button{min-height:44px!important;height:auto!important;min-width:44px;padding:8px!important;white-space:normal}
+  .table-wrapper input[type=checkbox]:not(#partsTable input):not(#boardsTable input){width:24px!important;height:24px!important}
   .mobile-table-hint{margin:7px 0 0;font-size:13px;line-height:1.4;color:#46565a}
   .trial-file-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .trial-file-actions button{font-size:1em!important;margin:0!important;padding:10px 5px!important;height:auto!important;min-height:48px}

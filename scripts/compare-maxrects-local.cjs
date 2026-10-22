@@ -16,7 +16,7 @@ function compare(rows,fixed,mode,stock=[{width:1220,length:2440}]) {
     vm.runInNewContext(source,context);
     const start=html.indexOf('  function totalCutCount(plan)'),end=html.indexOf('  function updateVariationControls()',start);
     vm.runInNewContext(`const selectedObjective=()=> 'saving';const getParts=()=>window.calculator.parts.map(p=>({...p}));const getBoards=()=>window.calculator.boards.map(b=>({...b}));const safeForDisplay=p=>p.validation.boardIssues.length===0&&p.validation.countIssues.length===0&&p.boards.every(b=>b.validation.ok);${html.slice(start,end)};globalThis.build=buildCandidatePool;`,context);
-    const settings={mode,kerf:3,trims:{},edges:{},minSupportWidth:''};
+    const settings={mode,kerf:3,trims:{},edges:{},minSupportWidth:'',enableMaxRects:enabled};
     const engine=context.window.PlywoodTrialEngine;
     const startTime=performance.now();
     const pool=context.build(engine.plan(parts,stock,settings),settings,[mode],x=>x,'saving');

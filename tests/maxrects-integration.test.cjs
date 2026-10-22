@@ -98,10 +98,22 @@ test('the actual candidate pool calls MaxRects, preserves legacy baselines and n
   let calls=0;
   const wrapped={...maxrects,pack(...args){calls++;return maxrects.pack(...args);}};
   const integrated=load(parts,boards,wrapped),original=load(parts,boards,null);
-  const first=integrated.engine.plan(parts,boards,base);
+  const enabled={...base,enableMaxRects:true};
+  const first=integrated.engine.plan(parts,boards,enabled);
   const profiles=[{active:true,fit:0,priority:0}];
-  const before=original.pool.buildCandidatePool(original.engine.plan(parts,boards,base),base,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
-  const after=integrated.pool.buildCandidatePool(first,base,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
+  const before=original.pool.buildCandidatePool(original.engine.plan(parts,boards,enabled),enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
+  const disabledBase=integrated.engine.plan(parts,boards,base);
+  for(const opt of [undefined,false,1,'true']) {
+    const settings={...base}; if(opt!==undefined) settings.enableMaxRects=opt;
+    const n=calls;
+    const disabled=integrated.pool.buildCandidatePool(disabledBase,settings,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
+    assert.equal(calls,n,`toggle ${String(opt)} must not invoke MaxRects`);
+    const oldOnly=original.pool.buildCandidatePool(original.engine.plan(parts,boards,base),base,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
+    assert.ok(disabled.length>0);
+    assert.equal(disabled[0].signature,integrated.pool.candidateSignature(disabledBase).signature);
+    assert.ok(oldOnly.length>0);
+  }
+  const after=integrated.pool.buildCandidatePool(first,enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',profiles);
   assert.ok(calls>=2,'the module must actually be called by the production pool');
   assert.ok(after.every(x=>integrated.pool.strictlyValidCandidate(x.plan,{})));
   assert.ok(before.every(x=>after.some(y=>y.signature===x.signature)));
@@ -111,8 +123,9 @@ test('the actual candidate pool calls MaxRects, preserves legacy baselines and n
 test('unavailable or rejected MaxRects cannot remove a verified baseline; explicit failure stays explicit',()=>{
   const parts=[{width:300,length:400,count:1,orientationPreference:'auto'}],boards=[{width:1000,length:1000}];
   for(const api of [null,{...maxrects,toCutTree:()=>({ok:false,tree:null,reason:'test rejection',visits:1})}]) {
-    const {engine,pool}=load(parts,boards,api),initial=engine.plan(parts,boards,base);
-    const candidates=pool.buildCandidatePool(initial,base,['ripThenCrosscut','partFirstTree'],x=>x,'saving',[]);
+    const enabled={...base,enableMaxRects:true};
+    const {engine,pool}=load(parts,boards,api),initial=engine.plan(parts,boards,enabled);
+    const candidates=pool.buildCandidatePool(initial,enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',[]);
     assert.ok(candidates.length>0);
     assert.ok(candidates.every(x=>pool.strictlyValidCandidate(x.plan,{})));
     assert.throws(()=>engine.plan(parts,boards,{...base,packingStrategy:'maxrects'}),e=>['MAXRECTS_UNAVAILABLE','MAXRECTS_NOT_SAWABLE'].includes(e.code));
@@ -139,7 +152,7 @@ test('fixed-direction cabinet preserves the 1473 x 637 physical leaf without ext
     .map(([length,width,count])=>({length,width,count,orientationPreference:'fixed_vertical'}));
   const boards=[{width:1220,length:2440}];
   const {engine,pool}=load(parts,boards);
-  const settings={...base,mode:'partFirstTree'};
+  const settings={...base,mode:'partFirstTree',enableMaxRects:true};
   const original=load(parts,boards,null);
   const before=original.pool.buildCandidatePool(original.engine.plan(parts,boards,settings),settings,['partFirstTree'],x=>x,'saving');
   assert.equal(before[0].plan.summary.largestRemnantArea,1471*600);

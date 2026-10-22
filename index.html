@@ -1168,6 +1168,12 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
     </select>
     <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
   </div>
+  <div class="setting-block algorithm-setting">
+    <label class="setting-switch-row" for="enableMaxRects">
+      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設關閉，只用原有排版算法。開啟後加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。切換後請按「計算」重新比較。</small></span>
+      <span class="switch-control"><input type="checkbox" id="enableMaxRects" aria-describedby="maxRectsNote"><span class="switch-slider" aria-hidden="true"></span></span>
+    </label>
+  </div>
   <div class="setting-block display-unit-setting">
     <label class="setting-switch-row" for="autoDisplayUnits">
       <span class="setting-switch-copy"><strong>自動換算顯示單位</strong><small>開啟後統一換算；關閉時保留新增時輸入的尺／寸／分或米／厘米／毫米。</small></span>
@@ -7908,6 +7914,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function readSettings(modeOverride){
     return {mode:modeOverride||$('cuttingStrategy').value,kerf:parseKerf($('sawBladeThickness').value),
+      enableMaxRects:$('enableMaxRects').checked===true,
       trims:{left:Number($('trialTrimLeft').value||0),right:Number($('trialTrimRight').value||0),top:Number($('trialTrimTop').value||0),bottom:Number($('trialTrimBottom').value||0)},
       edges:{left:$('trialEdgeLeft').checked,right:$('trialEdgeRight').checked,top:$('trialEdgeTop').checked,bottom:$('trialEdgeBottom').checked},
       minSupportWidth:$('trialMinSupport').value.trim()};
@@ -8446,7 +8453,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const selections=mode==='ripThenCrosscut'?['subset','greedy']:['subset'];
       // Real MaxRects coordinates must reconstruct into the selected saw mode;
       // rejected or incomplete layouts never replace the checked baseline.
-      if(!existing.length&&window.PlywoodMaxRects){
+      if(baseSettings.enableMaxRects===true&&!existing.length&&window.PlywoodMaxRects){
         for(const stockOrder of ['input','largestFirst','smallestFirst']){
           try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,
             packingStrategy:'maxrects',fixedOrientationOverrides:overrides,
@@ -8520,7 +8527,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const overrides={...(window.calculator._trialFixedOrientationOverrides||{})};const attempts=[];const errors=[];
       for(const mode of modes){try{attempts.push({plan:window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...readSettings(mode),fixedOrientationOverrides:overrides}),mode});}catch(e){errors.push(`${mode==='ripThenCrosscut'?'先分條再截件':'按成品安排'}：${e.message||String(e)}`);}}
       const valid=attempts.filter(x=>strictlyValidCandidate(x.plan,overrides));
-      if(!valid.length&&window.PlywoodMaxRects){for(const mode of modes){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,packingStrategy:'maxrects',fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides))valid.push({plan:p,mode});}catch(_){}}}
+      if(uiSettings.enableMaxRects===true&&!valid.length&&window.PlywoodMaxRects){for(const mode of modes){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,packingStrategy:'maxrects',fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides))valid.push({plan:p,mode});}catch(_){}}}
       // 預設初排未完整時亦須試有限 profiles；不能提前擋住可行搜尋。
       if(!valid.length){for(const mode of modes)for(const profile of searchProfiles()){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,searchProfile:profile,fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides)){valid.push({plan:p,mode});break;}}catch(_){}}}
       if(!valid.length){window.calculator.trialPlan=null;window.calculator.schemes=[];window.calculator._trialFixedOrientationOverrides=overrides;clearCandidatePool();$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';const msg=errors.length?errors.join('；'):'兩種工序都沒有產生通過幾何與逐刀回放驗證的完整候選。';$('trialResults').innerHTML=`<div class="validation-failed"><strong>沒有可顯示的已驗證排法。</strong><br>${esc(msg)}<br>請核對部件、原板尺寸及進階設定；不完整部件不會當作完整排法。</div>`;$('errorMessage').textContent=msg;return null;}
@@ -8548,6 +8555,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const d=JSON.parse(reader.result);if(!d||typeof d!=='object')throw new Error('JSON 根資料不是物件');
       window.calculator.parts=Array.isArray(d.parts)?d.parts:[];window.calculator.boards=Array.isArray(d.boards)?d.boards.map(b=>({...b,length:Number(b.length??b.height)})):[];
       const c=d.trialConfig||{};setObjective(d.optimizationObjective,true);updateObjectiveHelp();$('cuttingStrategy').value=(c.mode==='ripThenCrosscut'||c.mode==='partFirstTree'||c.mode==='auto')?c.mode:'auto';
+      $('enableMaxRects').checked=c.enableMaxRects===true;
       $('trialTrimLeft').value=c.trims?.left??0;$('trialTrimRight').value=c.trims?.right??0;$('trialTrimTop').value=c.trims?.top??0;$('trialTrimBottom').value=c.trims?.bottom??0;
       $('trialEdgeLeft').checked=c.edges?.left!==false;$('trialEdgeRight').checked=c.edges?.right!==false;$('trialEdgeTop').checked=c.edges?.top!==false;$('trialEdgeBottom').checked=c.edges?.bottom!==false;$('trialMinSupport').value=c.minSupportWidth??'';
       const k=c.kerf??d.sawBladeThickness??3;$('sawBladeThickness').value=`${k}mm`;$('edgeTolerance').value=Number(d.edgeTolerance||0.1);
@@ -8574,6 +8582,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('candidateChooser').addEventListener('change',event=>commitCandidate((window.calculator._trialCandidates||[]).findIndex(item=>String(item.key)===event.target.value)));
   $('moreLayoutsButton').addEventListener('click',()=>searchMoreCandidates().catch(error=>{$('errorMessage').textContent=error.message||String(error);}));
   ['cuttingStrategy','sawBladeThickness','trialTrimLeft','trialTrimRight','trialTrimTop','trialTrimBottom','trialEdgeLeft','trialEdgeRight','trialEdgeTop','trialEdgeBottom','trialMinSupport'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{showModeDescription();if(window.calculator.trialPlan)resetResults();});});
+  $('enableMaxRects').addEventListener('change',()=>{resetResults();$('status').textContent=$('enableMaxRects').checked?'已開啟新算法候選；按「計算」與原有方案一同比較。':'已關閉新算法；按「計算」只用原有排版算法。';});
   $('cuttingStrategy').addEventListener('change',showModeDescription);
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
@@ -9429,6 +9438,10 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(['開啟','Open'],['Guillotine切割','Guillotine cutting'],['Guillotine切割Layout','Guillotine cutting layout'],['kerf width（預設 3 mm）','Kerf (default: 3 mm)'],['最窄safe support width（mm；未知可留空）','Minimum safe support width (mm; leave blank if unknown)'],['Move part編號','Part number to move'],['part編號','Part number'],['部件編號','Part number'],['板材編號','Sheet number'],['編號','number'],['（米）','(m)'],['（厘米）','(cm)'],['（毫米）','(mm)'],['（尺）','(ft)'],['（呎）','(ft)'],['（寸）','(in)'],['（分）','(eighths of an inch)']);
   dict.push(['庫存原板','stock sheet'],['原板實際尺寸：','Real sheet size: '],['原板實際尺寸','Real sheet size'],['原板 ','Sheet '],['本板成品 ','Parts on this sheet '],['本板成品','Parts on this sheet'],['板面積','sheet area'],['刀序','cut order'],['回放驗證：通過','replay check: passed'],['回放驗證：未通過','replay check: failed'],['回放驗證','replay check'],['通過','passed'],['未通過','failed'],['顏色尺寸圖例','color and size legend'],['分出長條','Rip strip'],['長條待截餘料','strip offcut to crosscut'],['待截件長條料','strip to crosscut'],['待分條原板餘料','sheet offcut to rip'],['從長條','From the strip'],['長條料','strip stock'],['長條','strip'],['原板餘料','sheet offcut'],['待分條','to rip'],['待截件','to crosscut'],['庫存原板 #','stock sheet #'],['回放驗證：','Replay check: '],['截出','cut out'],['排料微調','layout controls'],['微調','adjustments'],['請至少新增一件有效部件','Add at least one valid part'],['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical'],['單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。','Rotating one part succeeded. The layout was re-planned and passed geometry and cut-by-cut replay checks.'],['｜單件旋轉後重排',' | one-part rotation and re-plan']);
   dict.push(
+    ['試用新排版算法（MaxRects）','Try new layout algorithm (MaxRects)'],
+    ['預設關閉，只用原有排版算法。開啟後加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。切換後請按「計算」重新比較。','Off by default: use only the original algorithm. When enabled, add new-algorithm candidates alongside the original layouts; the new algorithm may not win. All layouts still pass the existing checks. After switching, press Calculate to compare again.'],
+    ['已開啟新算法候選；按「計算」與原有方案一同比較。','New-algorithm candidates enabled. Press Calculate to compare with the original layouts.'],
+    ['已關閉新算法；按「計算」只用原有排版算法。','New algorithm disabled. Press Calculate to use only the original algorithm.'],
     ['鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to rip, then crosscut; every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
     ['今次採用工序：','Process used:'],
     ['查看逐刀刀序與餘料','Review cut order and offcuts'],

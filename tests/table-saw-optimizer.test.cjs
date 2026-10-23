@@ -201,10 +201,10 @@ test('fixed orientations, trim, exact-fit pieces and decimal dimensions retain c
   }
 });
 
-test('non-finite counts fail before expansion; PWA loads versioned production assets and table-saw default',()=>{
+test('non-finite counts fail before expansion; PWA loads versioned production assets and auto-process default',()=>{
   const {engine}=loadEngine();
   assert.throws(()=>engine.plan([{width:10,length:10,count:Infinity}],boards,settings),/數量無效/);
-  assert.match(html,/<option value="ripThenCrosscut" selected>/);
+  assert.match(html,/<option value="auto" selected>/);
   assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=2"><\/script>/);
   assert.match(html,/<script src="assets\/part-appearance\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
@@ -249,7 +249,7 @@ test('each PWA core asset exists in the deployed repository',()=>{
 
 test('table-saw guidance is bilingual, exposes the actual process and preserves customary feet-inch-fen inputs',()=>{
   assert.match(html,/id="tableSawWorkflowHint"[^>]*>鋸枱提示：預設/);
-  assert.match(html,/Table-saw note: defaults to rip, then crosscut/);
+  assert.match(html,/Table-saw note: defaults to auto \(compare both processes\)/);
   assert.match(html,/['"]今次採用工序：['"],['"]Process used:['"]/);
   assert.match(html,/查看逐刀刀序與餘料/);
   assert.match(html,/Review cut order and offcuts/);

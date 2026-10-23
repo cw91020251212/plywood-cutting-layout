@@ -14,10 +14,18 @@ function section(startMarker,endMarker){
   return js.slice(a,b);
 }
 
-test('MaxRects checkbox exists and defaults unchecked',()=>{
+test('MaxRects checkbox exists and defaults checked',()=>{
   const match=html.match(/<input\b(?=[^>]*\bid=["']enableMaxRects["'])([^>]*)>/i);
   assert.ok(match,'enableMaxRects checkbox is present');
-  assert.doesNotMatch(match[1],/\bchecked\b/i);
+  assert.match(match[1],/\bchecked\b/i);
+});
+
+test('cutting process defaults exclusively to auto comparison',()=>{
+  const select=html.match(/<select\b[^>]*\bid=["']cuttingStrategy["'][^>]*>([\s\S]*?)<\/select>/i);
+  assert.ok(select,'cuttingStrategy select is present');
+  const selected=[...select[1].matchAll(/<option\b([^>]*)>/gi)].filter(x=>/\bselected\b/i.test(x[1]));
+  assert.equal(selected.length,1,'only one cutting process may be selected by default');
+  assert.match(selected[0][1],/\bvalue=["']auto["']/i);
 });
 
 test('readSettings normalizes the toggle to a strict boolean',()=>{

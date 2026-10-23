@@ -1132,7 +1132,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <div class="section" id="section-results">
 <div class="section-title"><span class="section-heading-label"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M4 10h16M10 4.5V10M15 10v9.5M4 15h11"/><path d="m6.5 17.2 1.7 1.7 3-3.2"/></svg><span>切割結果</span></span><span class="step-number">4/4</span></div>
 <p class="section-intro">不確定如何設定時，保留預設選項即可開始計算。</p>
-<p id="tableSawWorkflowHint" class="input-hint strategy-hint table-saw-workflow-hint">鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。</p>
+<p id="tableSawWorkflowHint" class="input-hint strategy-hint table-saw-workflow-hint">鋸枱提示：預設「自動（比較兩種工序）」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。</p>
 <div class="board-added-notification" id="boardAddedNotification"></div>
 <div class="feature-panel">
 <label>鋸路方向:</label>
@@ -1163,15 +1163,15 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
     <label for="cuttingStrategy">切割流程</label>
     <select id="cuttingStrategy" aria-describedby="modeNote">
       <option value="auto" selected>自動（比較兩種工序）</option>
-      <option value="ripThenCrosscut" selected>先分條再截件</option>
+      <option value="ripThenCrosscut">先分條再截件</option>
       <option value="partFirstTree">按成品安排</option>
     </select>
     <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
   </div>
   <div class="setting-block algorithm-setting">
     <label class="setting-switch-row" for="enableMaxRects">
-      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設關閉，只用原有排版算法。開啟後加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。切換後請按「計算」重新比較。</small></span>
-      <span class="switch-control"><input type="checkbox" id="enableMaxRects" aria-describedby="maxRectsNote"><span class="switch-slider" aria-hidden="true"></span></span>
+      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後只用原有排版算法。切換後請按「計算」重新比較。</small></span>
+      <span class="switch-control"><input type="checkbox" id="enableMaxRects" aria-describedby="maxRectsNote" checked><span class="switch-slider" aria-hidden="true"></span></span>
     </label>
   </div>
   <div class="setting-block display-unit-setting">
@@ -9439,10 +9439,10 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(['庫存原板','stock sheet'],['原板實際尺寸：','Real sheet size: '],['原板實際尺寸','Real sheet size'],['原板 ','Sheet '],['本板成品 ','Parts on this sheet '],['本板成品','Parts on this sheet'],['板面積','sheet area'],['刀序','cut order'],['回放驗證：通過','replay check: passed'],['回放驗證：未通過','replay check: failed'],['回放驗證','replay check'],['通過','passed'],['未通過','failed'],['顏色尺寸圖例','color and size legend'],['分出長條','Rip strip'],['長條待截餘料','strip offcut to crosscut'],['待截件長條料','strip to crosscut'],['待分條原板餘料','sheet offcut to rip'],['從長條','From the strip'],['長條料','strip stock'],['長條','strip'],['原板餘料','sheet offcut'],['待分條','to rip'],['待截件','to crosscut'],['庫存原板 #','stock sheet #'],['回放驗證：','Replay check: '],['截出','cut out'],['排料微調','layout controls'],['微調','adjustments'],['請至少新增一件有效部件','Add at least one valid part'],['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical'],['單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。','Rotating one part succeeded. The layout was re-planned and passed geometry and cut-by-cut replay checks.'],['｜單件旋轉後重排',' | one-part rotation and re-plan']);
   dict.push(
     ['試用新排版算法（MaxRects）','Try new layout algorithm (MaxRects)'],
-    ['預設關閉，只用原有排版算法。開啟後加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。切換後請按「計算」重新比較。','Off by default: use only the original algorithm. When enabled, add new-algorithm candidates alongside the original layouts; the new algorithm may not win. All layouts still pass the existing checks. After switching, press Calculate to compare again.'],
+    ['預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後只用原有排版算法。切換後請按「計算」重新比較。','On by default: add new-algorithm candidates alongside the original layouts; the new algorithm may not win. All layouts still pass the existing checks. When disabled, use only the original algorithm. After switching, press Calculate to compare again.'],
     ['已開啟新算法候選；按「計算」與原有方案一同比較。','New-algorithm candidates enabled. Press Calculate to compare with the original layouts.'],
     ['已關閉新算法；按「計算」只用原有排版算法。','New algorithm disabled. Press Calculate to use only the original algorithm.'],
-    ['鋸枱提示：預設「先分條再截件」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to rip, then crosscut; every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
+    ['鋸枱提示：預設「自動（比較兩種工序）」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to auto (compare both processes); every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
     ['今次採用工序：','Process used:'],
     ['查看逐刀刀序與餘料','Review cut order and offcuts'],
     ['部件顏色風格','Part color style'],

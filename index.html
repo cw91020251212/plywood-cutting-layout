@@ -1170,14 +1170,14 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
   </div>
   <div class="setting-block algorithm-setting">
     <label class="setting-switch-row" for="enableMaxRects">
-      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後不加入 MaxRects 候選，其他算法開關不變。切換後請按「計算」重新比較。</small></span>
-      <span class="switch-control"><input type="checkbox" id="enableMaxRects" aria-describedby="maxRectsNote" checked><span class="switch-slider" aria-hidden="true"></span></span>
+      <span class="setting-switch-copy"><strong>MaxRects</strong></span>
+      <span class="switch-control"><input type="checkbox" id="enableMaxRects" checked><span class="switch-slider" aria-hidden="true"></span></span>
     </label>
   </div>
   <div class="setting-block algorithm-setting">
     <label class="setting-switch-row" for="enableGuillotine">
-      <span class="setting-switch-copy"><strong>試用貫通多策略排料（OpenCutList 同類方法）</strong><small id="guillotineNote">預設關閉。獨立實作貫通切割、多種排序與切分策略，並非 OpenCutList 原碼或完整複刻。開啟後加入候選，不取代原有／MaxRects 方案；只比較逐刀驗證後的完整餘板，不保證更省料。切換後請按「計算」。</small></span>
-      <span class="switch-control"><input type="checkbox" id="enableGuillotine" aria-describedby="guillotineNote"><span class="switch-slider" aria-hidden="true"></span></span>
+      <span class="setting-switch-copy"><strong>Guillotine</strong></span>
+      <span class="switch-control"><input type="checkbox" id="enableGuillotine"><span class="switch-slider" aria-hidden="true"></span></span>
     </label>
   </div>
   <div class="setting-block display-unit-setting">
@@ -9483,8 +9483,8 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(['開啟','Open'],['Guillotine切割','Guillotine cutting'],['Guillotine切割Layout','Guillotine cutting layout'],['kerf width（預設 3 mm）','Kerf (default: 3 mm)'],['最窄safe support width（mm；未知可留空）','Minimum safe support width (mm; leave blank if unknown)'],['Move part編號','Part number to move'],['part編號','Part number'],['部件編號','Part number'],['板材編號','Sheet number'],['編號','number'],['（米）','(m)'],['（厘米）','(cm)'],['（毫米）','(mm)'],['（尺）','(ft)'],['（呎）','(ft)'],['（寸）','(in)'],['（分）','(eighths of an inch)']);
   dict.push(['庫存原板','stock sheet'],['原板實際尺寸：','Real sheet size: '],['原板實際尺寸','Real sheet size'],['原板 ','Sheet '],['本板成品 ','Parts on this sheet '],['本板成品','Parts on this sheet'],['板面積','sheet area'],['刀序','cut order'],['回放驗證：通過','replay check: passed'],['回放驗證：未通過','replay check: failed'],['回放驗證','replay check'],['通過','passed'],['未通過','failed'],['顏色尺寸圖例','color and size legend'],['分出長條','Rip strip'],['長條待截餘料','strip offcut to crosscut'],['待截件長條料','strip to crosscut'],['待分條原板餘料','sheet offcut to rip'],['從長條','From the strip'],['長條料','strip stock'],['長條','strip'],['原板餘料','sheet offcut'],['待分條','to rip'],['待截件','to crosscut'],['庫存原板 #','stock sheet #'],['回放驗證：','Replay check: '],['截出','cut out'],['排料微調','layout controls'],['微調','adjustments'],['請至少新增一件有效部件','Add at least one valid part'],['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical'],['單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。','Rotating one part succeeded. The layout was re-planned and passed geometry and cut-by-cut replay checks.'],['｜單件旋轉後重排',' | one-part rotation and re-plan']);
   dict.push(
-    ['試用新排版算法（MaxRects）','Try new layout algorithm (MaxRects)'],
-    ['試用貫通多策略排料（OpenCutList 同類方法）','Try multi-strategy guillotine packing (same method family as OpenCutList)'],
+    ['MaxRects','MaxRects'],
+    ['Guillotine','Guillotine'],
     ['預設關閉。獨立實作貫通切割、多種排序與切分策略，並非 OpenCutList 原碼或完整複刻。開啟後加入候選，不取代原有／MaxRects 方案；只比較逐刀驗證後的完整餘板，不保證更省料。切換後請按「計算」。','Off by default. An independent implementation of guillotine cuts with multiple sorting and splitting strategies, not OpenCutList code or a full replica. Adds candidates alongside existing/MaxRects layouts; compares intact remnants after cut replay, without guaranteeing savings. Press Calculate after switching.'],
     ['已開啟獨立貫通多策略候選；按「計算」與其他已啟用算法比較。','Independent guillotine candidates enabled. Press Calculate to compare with other enabled algorithms.'],
     ['已關閉貫通多策略；原有及 MaxRects 設定不變，按「計算」重新比較。','Guillotine candidates disabled. Original and MaxRects settings are unchanged; press Calculate again.'],

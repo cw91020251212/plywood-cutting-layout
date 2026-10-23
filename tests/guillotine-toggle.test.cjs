@@ -12,10 +12,22 @@ const section=(a,b)=>js.slice(js.indexOf(a),js.indexOf(b,js.indexOf(a)));
 test('independent guillotine switch starts off while original defaults remain untouched',()=>{
   const input=html.match(/<input\b(?=[^>]*\bid="enableGuillotine")([^>]*)>/);
   assert.ok(input);assert.doesNotMatch(input[1],/\bchecked\b/);
-  assert.match(input[1],/aria-describedby="guillotineNote"/);
   assert.match(html,/<input\b[^>]*id="enableMaxRects"[^>]*\bchecked\b/);
   assert.match(html,/<option value="auto" selected>/);
-  assert.match(html,/並非 OpenCutList 原碼或完整複刻/);
+});
+
+test('algorithm switches show only their short names without explanatory paragraphs or dangling descriptions',()=>{
+  for(const [id,title] of [
+    ['enableMaxRects','MaxRects'],
+    ['enableGuillotine','Guillotine']
+  ]){
+    const label=html.match(new RegExp('<label\\b[^>]*for="'+id+'"[^>]*>([\\s\\S]*?)<\\/label>'));
+    assert.ok(label);
+    assert.ok(label[1].includes('<strong>'+title+'</strong>'));
+    assert.match(label[1],new RegExp('<input\\b[^>]*id="'+id+'"'));
+    assert.doesNotMatch(label[1],/<small\b|<p\b|aria-describedby=/);
+  }
+  assert.doesNotMatch(html,/id="(?:maxRectsNote|guillotineNote)"/);
 });
 
 test('readSettings accepts only an actual checked boolean and leaves MaxRects independent',()=>{

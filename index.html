@@ -741,6 +741,13 @@ select,
 .switch-control input:checked + .switch-slider::after{transform:translateX(26px)}
 .switch-control input:focus-visible + .switch-slider{outline:3px solid rgba(35,129,255,.35);outline-offset:2px}
 @media(max-width:600px){.setting-switch-row{min-height:78px;padding:12px 10px}.setting-switch-copy small{font-size:.78em}.switch-control{width:54px}.switch-slider{width:54px}.switch-control input:checked + .switch-slider::after{transform:translateX(22px)}}
+.algorithm-options{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.algorithm-options>.algorithm-setting{flex:1 1 104px;min-width:0;margin:0;padding:0}
+.algorithm-options .setting-switch-row{min-height:44px;gap:4px;padding:4px}
+.algorithm-options .setting-switch-copy strong{font-size:14px;line-height:1.3;white-space:nowrap}
+.algorithm-options .switch-control,.algorithm-options .switch-slider{width:30px;height:20px}
+.algorithm-options .switch-slider::after{top:3px;left:3px;width:14px;height:14px}
+.algorithm-options .switch-control input:checked + .switch-slider::after{transform:translateX(10px)}
 </style>
 
 <style id="mobile-input-balance">
@@ -1168,6 +1175,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
     </select>
     <p class="input-hint strategy-hint" id="modeNote">自動會比較兩種工序，只顯示通過幾何與逐刀驗證的完整候選。</p>
   </div>
+  <div class="algorithm-options">
   <div class="setting-block algorithm-setting">
     <label class="setting-switch-row" for="enableMaxRects">
       <span class="setting-switch-copy"><strong>MaxRects</strong></span>
@@ -1179,6 +1187,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
       <span class="setting-switch-copy"><strong>Guillotine</strong></span>
       <span class="switch-control"><input type="checkbox" id="enableGuillotine"><span class="switch-slider" aria-hidden="true"></span></span>
     </label>
+  </div>
   </div>
   <div class="setting-block display-unit-setting">
     <label class="setting-switch-row" for="autoDisplayUnits">

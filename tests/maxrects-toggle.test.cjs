@@ -43,9 +43,9 @@ test('readSettings normalizes the toggle to a strict boolean',()=>{
   assert.equal(context.readSettings().enableMaxRects,false);
 });
 
-test('legacy project config loads with strict false and toggle changes invalidate candidates',()=>{
-  assert.match(js,/enableMaxRects\s*:\s*[^,}]*\?\?\s*false|enableMaxRects\s*:\s*[^,}]*===\s*true/,
-    'loadProject must normalize absent/legacy values to false and reject truthy non-booleans');
+test('project preferences use the shared loader and toggle changes invalidate candidates',()=>{
+  assert.match(js,/function loadCuttingPreferences\(config,legacyMode\)/,
+    'project settings are applied by the shared preferences loader');
   assert.match(js,/enableMaxRects[^\n]*(?:change|_trialCandidates|clearCandidatePool)|(?:change|_trialCandidates|clearCandidatePool)[^\n]*enableMaxRects/i,
     'toggle change must clear or invalidate candidate state');
 });

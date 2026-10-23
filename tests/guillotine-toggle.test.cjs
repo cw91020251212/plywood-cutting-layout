@@ -42,13 +42,17 @@ test('readSettings accepts only an actual checked boolean and leaves MaxRects in
 test('project loading round-trips strict guillotine settings and older files default off',()=>{
   const fields=new Map();
   const $=id=>{if(!fields.has(id))fields.set(id,{value:'',checked:false,style:{}});return fields.get(id);};
+  for(const id of ['cuttingStrategy','enableMaxRects','enableGuillotine'])$(id).addEventListener=()=>{};
   $('unitSystem').value='metric';
   const calculator={parts:[],boards:[],updatePartsTable(){},updateBoardsTable(){},updateUnitSystem(){}};
   let fileInput;
   class FileReader{readAsText(file){this.result=file;this.onload();}}
-  const ctx={$ ,FileReader,window:{calculator},document:{createElement(){return fileInput={setAttribute(){},click(){}};}},setObjective(){},updateObjectiveHelp(){},normalizeUnitSystem:x=>x,readUnitSystemPreference:()=>null,clearCandidatePool(){},clearMessages(){}};
-  vm.runInNewContext(section('function loadProject(){','  function resetResults(){')+';globalThis.load=loadProject',ctx);
+  const storage={getItem(){return null},setItem(){}};
+  const prefs=js.slice(js.indexOf('  const CUTTING_PREFERENCES_KEY='),js.indexOf('  function readSettings(modeOverride){'));
+  const ctx={$ ,FileReader,window:{calculator,localStorage:storage,addEventListener(){}},document:{createElement(){return fileInput={setAttribute(){},click(){}};}},setObjective(){},updateObjectiveHelp(){},showModeDescription(){},normalizeUnitSystem:x=>x,readUnitSystemPreference:()=>null,clearCandidatePool(){},clearMessages(){}};
+  vm.runInNewContext(prefs+section('function loadProject(){','  function resetResults(){')+';globalThis.load=loadProject',ctx);
   for(const value of [true,false,'true',1,undefined]){
+    $('enableMaxRects').checked=false;$('enableGuillotine').checked=false;$('cuttingStrategy').value='auto';
     ctx.load();
     const trialConfig={enableMaxRects:true};if(value!==undefined)trialConfig.enableGuillotine=value;
     fileInput.onchange({target:{files:[JSON.stringify({parts:[],boards:[],trialConfig})]}});

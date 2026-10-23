@@ -3,7 +3,7 @@
  * The version is intentionally changed whenever the application bundle changes so
  * installed PWA clients do not keep an old index.html after a release.
  */
-const APP_VERSION = '2026-10-23-maxrects-mobile-no-step-nav-2-scheme-info-1-guillotine-1';
+const APP_VERSION = '2026-10-23-maxrects-mobile-no-step-nav-2-scheme-info-1-guillotine-1-cutting-preferences-1';
 const CACHE_NAME = `cutting-optimizer-${APP_VERSION}`;
 const CORE_ASSETS = [
   './',

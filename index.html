@@ -7962,6 +7962,41 @@ window.addEventListener('DOMContentLoaded', () => {
       ?'候選先比較刀數，再比較工序換向及刀路長度。'
       :'有限候選先比較用板數及原板總面積，同等用料優先保留最大完整長方形餘料（同面積比短邊），再比較鋸縫、餘料塊數及刀數；不合併 L 形空位。';
   }
+  const CUTTING_PREFERENCES_KEY='plywood-layout-cutting-preferences-v1';
+  const CUTTING_DEFAULTS=Object.freeze({mode:'auto',enableMaxRects:true,enableGuillotine:false});
+  function normalizeCuttingPreferences(value,fallback=CUTTING_DEFAULTS){
+    const c=value&&typeof value==='object'?value:{};
+    return {
+      mode:['auto','ripThenCrosscut','partFirstTree'].includes(c.mode)?c.mode:fallback.mode,
+      enableMaxRects:typeof c.enableMaxRects==='boolean'?c.enableMaxRects:fallback.enableMaxRects,
+      enableGuillotine:typeof c.enableGuillotine==='boolean'?c.enableGuillotine:fallback.enableGuillotine
+    };
+  }
+  let cuttingPreferences={...CUTTING_DEFAULTS};
+  try{cuttingPreferences=normalizeCuttingPreferences(JSON.parse(window.localStorage.getItem(CUTTING_PREFERENCES_KEY)));}catch(_){}
+  function applyCuttingPreferences(){
+    $('cuttingStrategy').value=cuttingPreferences.mode;
+    $('enableMaxRects').checked=cuttingPreferences.enableMaxRects;
+    $('enableGuillotine').checked=cuttingPreferences.enableGuillotine;
+  }
+  function persistCuttingPreferences(){
+    cuttingPreferences=normalizeCuttingPreferences({mode:$('cuttingStrategy').value,
+      enableMaxRects:$('enableMaxRects').checked,enableGuillotine:$('enableGuillotine').checked},cuttingPreferences);
+    try{window.localStorage.setItem(CUTTING_PREFERENCES_KEY,JSON.stringify(cuttingPreferences));}catch(_){}
+  }
+  function loadCuttingPreferences(config,legacyMode){
+    const c=config&&typeof config==='object'?config:{};
+    // Missing/invalid fields in old projects are not instructions to switch algorithms off.
+    cuttingPreferences=normalizeCuttingPreferences({...c,mode:['auto','ripThenCrosscut','partFirstTree'].includes(c.mode)?c.mode:legacyMode},cuttingPreferences);
+    applyCuttingPreferences();persistCuttingPreferences();showModeDescription();
+  }
+  applyCuttingPreferences();
+  ['cuttingStrategy','enableMaxRects','enableGuillotine'].forEach(id=>{
+    $(id).autocomplete='off';
+    $(id).addEventListener('change',persistCuttingPreferences);
+  });
+  // pageshow runs after native form restoration, including back/forward-cache returns.
+  window.addEventListener('pageshow',()=>{applyCuttingPreferences();showModeDescription();});
   function readSettings(modeOverride){
     return {mode:modeOverride||$('cuttingStrategy').value,kerf:parseKerf($('sawBladeThickness').value),
       enableMaxRects:$('enableMaxRects').checked===true,
@@ -8614,9 +8649,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.setAttribute('data-trial-json-loader','');input.onchange=e=>{const file=e.target.files&&e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{
       const d=JSON.parse(reader.result);if(!d||typeof d!=='object')throw new Error('JSON 根資料不是物件');
       window.calculator.parts=Array.isArray(d.parts)?d.parts:[];window.calculator.boards=Array.isArray(d.boards)?d.boards.map(b=>({...b,length:Number(b.length??b.height)})):[];
-      const c=d.trialConfig||{};setObjective(d.optimizationObjective,true);updateObjectiveHelp();$('cuttingStrategy').value=(c.mode==='ripThenCrosscut'||c.mode==='partFirstTree'||c.mode==='auto')?c.mode:'auto';
-      $('enableMaxRects').checked=c.enableMaxRects===true;
-      $('enableGuillotine').checked=c.enableGuillotine===true;
+      const c=d.trialConfig||{};setObjective(d.optimizationObjective,true);updateObjectiveHelp();loadCuttingPreferences(c,d.cuttingStrategy);
       $('trialTrimLeft').value=c.trims?.left??0;$('trialTrimRight').value=c.trims?.right??0;$('trialTrimTop').value=c.trims?.top??0;$('trialTrimBottom').value=c.trims?.bottom??0;
       $('trialEdgeLeft').checked=c.edges?.left!==false;$('trialEdgeRight').checked=c.edges?.right!==false;$('trialEdgeTop').checked=c.edges?.top!==false;$('trialEdgeBottom').checked=c.edges?.bottom!==false;$('trialMinSupport').value=c.minSupportWidth??'';
       const k=c.kerf??d.sawBladeThickness??3;$('sawBladeThickness').value=`${k}mm`;$('edgeTolerance').value=Number(d.edgeTolerance||0.1);

@@ -26,6 +26,8 @@ test('updated dynamic result and support-width strings translate in both directi
   const context = {};
   vm.runInNewContext(`${html.slice(start, end)};globalThis.translate=translateText;`, context);
   for (const [zh, en] of [
+    ['長、闊各一次', 'Length and width once'],
+    ['R 編號', 'R labels'],
     ['排版已通過幾何與逐刀驗證。', 'Layout passed geometry and cut-by-cut checks.'],
     ['幾何與逐刀回放已通過程式驗證。', 'Geometry and cut-by-cut replay checks passed.'],
     ['支撐寬度未設定', 'Support width not set'],

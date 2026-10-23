@@ -74,8 +74,8 @@ test('dimension controls are bilingual, accessible, and connected to parts plus 
   assert.match(html, /R\$\{remnantIndex\+1\}/);
   assert.match(html, /dimensionDisplay\.visibleParts/);
   assert.match(html, /dimensionDisplay\.edgeDimensions\(part\)/);
-  assert.match(html, /<label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸<\/span><input id="showRemnantDimensions" type="checkbox" checked><span>長、闊各一次<\/span><\/label>/);
-  assert.match(html, /<label class="part-appearance-control" for="showRemnantLabels"><span>餘料編號<\/span><input id="showRemnantLabels" type="checkbox" checked><span>R 編號<\/span><\/label>/);
+  assert.match(html, /<label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸<\/span><input id="showRemnantDimensions" type="checkbox" checked><\/label>/);
+  assert.match(html, /<label class="part-appearance-control" for="showRemnantLabels"><span>餘料編號<\/span><input id="showRemnantLabels" type="checkbox" checked><\/label>/);
   assert.doesNotMatch(html, /partDimensionHint|Click mode shows one part|Leftovers show length and width once in the diagram to avoid overlap|完整四邊見清單|完整四邊看清單|完整四邊尺寸在下方清單/);
   assert.doesNotMatch(html, /Selected\/all modes label all four edges/);
   assert.match(html, /上邊|Top/);

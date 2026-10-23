@@ -327,6 +327,11 @@ th{background:#C0C0C0;color:#2F2F2F}
 .part-appearance-control>label{margin:0;font-weight:700}
 .part-appearance-toolbar select{width:100%;min-width:0;min-height:42px}
 .part-appearance-hint{grid-column:1/-1;margin:0;color:#52616a;font-size:.88em;line-height:1.4}
+.remnant-display-options{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}
+.remnant-display-options>label.part-appearance-control{display:grid;grid-template-columns:20px minmax(0,1fr);align-content:center;align-items:center;gap:8px;width:auto;min-height:44px;margin:0;cursor:pointer;line-height:1.35}
+.remnant-display-options>label>span{grid-column:2;min-width:0;overflow-wrap:anywhere}
+.remnant-display-options input[type="checkbox"]{grid-column:1;grid-row:1;align-self:center;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;margin:0!important;padding:0!important}
+.remnant-display-options input[type="checkbox"]:focus-visible{outline:2px solid #075a9b;outline-offset:3px}
 @media(max-width:600px){.part-appearance-toolbar{grid-template-columns:1fr;gap:8px}.part-appearance-hint{grid-column:1}}
 .part-dimension-selection{margin:5px 0;padding:8px 10px;border-left:4px solid #e78321;border-radius:4px;background:#fff4df;color:#51360f;font-weight:700;line-height:1.4}
 .part-dimension-all-list{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px;padding:6px 2px;max-height:160px;overflow:auto}
@@ -1288,7 +1293,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel partDimensionLabel">
   <div class="part-appearance-control" role="group" aria-labelledby="partAppearanceLabel">
     <label id="partAppearanceLabel" for="partAppearanceStyle">部件顏色風格</label>
-    <select id="partAppearanceStyle" aria-describedby="partAppearanceHint">
+    <select id="partAppearanceStyle">
       <option value="glossy" selected>立體漸層</option>
       <option value="metallic">金屬光澤</option>
       <option value="flat">原色平面</option>
@@ -1302,9 +1307,10 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
       <option value="all">全部部件及餘料顯示尺寸</option>
     </select>
   </div>
-  <label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸</span><input id="showRemnantDimensions" type="checkbox" checked><span>長、闊各一次</span></label>
-  <label class="part-appearance-control" for="showRemnantLabels"><span>餘料編號</span><input id="showRemnantLabels" type="checkbox" checked><span>R 編號</span></label>
-  <p class="part-appearance-hint" id="partAppearanceHint">保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。</p>
+  <div class="remnant-display-options">
+  <label class="part-appearance-control" for="showRemnantDimensions"><span>餘料尺寸</span><input id="showRemnantDimensions" type="checkbox" checked></label>
+  <label class="part-appearance-control" for="showRemnantLabels"><span>餘料編號</span><input id="showRemnantLabels" type="checkbox" checked></label>
+  </div>
 </div>
 <div id="schemeSelector" class="scheme-selector" style="display: none;">
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>

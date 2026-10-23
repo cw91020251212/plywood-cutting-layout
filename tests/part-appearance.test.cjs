@@ -98,7 +98,9 @@ test('style selector is bilingual, defaults to 3D, and renders the current plan 
   assert.match(html, /\['金屬光澤','Metallic sheen'\]/);
   assert.match(html, /window\.PlywoodTrialUI\.render\(plan,label\)/);
   assert.match(html, /plywood-layout-part-appearance-v1/);
-  assert.match(html, /保留各尺寸的識別色；只改排版圖外觀，不會改切割方案。/);
+  assert.doesNotMatch(html, /(?:id|aria-describedby)="partAppearanceHint"/);
+  const toolbar = html.slice(html.indexOf('<div class="part-appearance-toolbar'), html.indexOf('<div id="schemeSelector"'));
+  assert.doesNotMatch(toolbar, /保留各尺寸的識別色|Keeps each size|<p\b/);
 });
 
 test('size legend swatches receive the selected finish as well as the part canvases', () => {

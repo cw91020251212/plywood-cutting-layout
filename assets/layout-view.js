@@ -81,7 +81,7 @@
         let info=$('layoutResultInfo');if(!info)info=details('layoutResultInfo','方案資訊與驗證',root);
         Array.from(root.children).filter(el=>!el.classList.contains('simple-result')&&el!==info&&el.className!=='compact-safety').forEach(el=>info.appendChild(el));
         const path=info.querySelector('.cut-path-toggle-row');if(path){displaySettings.querySelectorAll('.cut-path-toggle-row').forEach(old=>{if(old!==path)old.remove();});displaySettings.appendChild(path);}
-        if(!root.querySelector('.compact-safety')) { const note=d.createElement('p');note.className='compact-safety';note.textContent='候選排法；開料前請師傅核對。';root.querySelector('.simple-result').after(note); }
+        if(!root.querySelector('.compact-safety')) { const note=d.createElement('p');note.className='compact-safety';note.textContent='排版已通過幾何與逐刀驗證。';root.querySelector('.simple-result').after(note); }
       }
       const groups=Array.from(d.querySelectorAll('#canvasContainer .board-display-group'));
       groups.forEach((group,index)=>{

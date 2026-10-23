@@ -87,13 +87,13 @@
       const winners=(list)=>list.length===items.length?t('全部相同','All tied'):ids(list);
       lines.push(t(`用板最少：${winners(leastBoards)}（${minBoards} 塊）；開料原板總面積最少：${winners(leastArea)}（${fmt(minArea/1e6)} m²）。`,
         `Fewest sheets: ${winners(leastBoards)} (${minBoards}); least stock area used: ${winners(leastArea)} (${fmt(minArea/1e6)} m²).`));
-      lines.push(t(`切刀最少：${winners(fewestCuts)}（${minCuts} 刀）；只比較刀數，不等同最快或最安全。`,
-        `Fewest cuts: ${winners(fewestCuts)} (${minCuts}); cut count alone does not establish speed or safety.`));
+      lines.push(t(`切刀最少：${winners(fewestCuts)}（${minCuts} 刀）。`,
+        `Fewest cuts: ${winners(fewestCuts)} (${minCuts}).`));
       if(broadest.length)lines.push(t(`完整餘板短邊最闊：${winners(broadest)}（${fmt(maxShort)} mm）；請同時核對長邊及下次所需尺寸。`,
         `Widest intact-remnant short side: ${winners(broadest)} (${fmt(maxShort)} mm); also check its long side against the next job.`));
     }
-    lines.push(t('如何看省料：少開原板與保留可重用的大塊餘板是兩回事；不同原板尺寸須同時看開料總面積。狹長條、碎料不當作省料，不能只憑剩餘面積、利用率或餘料塊數判定。未提供下次所需尺寸，暫不宣稱哪個方案「最省料」或餘板一定可用。',
-      'Material saving: using less stock and retaining useful intact boards are different goals; compare stock area as well when sheet sizes differ. Narrow strips and fragments are not material savings. Leftover area, yield or remnant count alone cannot decide. Without dimensions for the next job, no scheme is declared “most material-saving” and reuse is not guaranteed.'));
+    lines.push(t('如何看省料：少開原板與保留可重用的大塊餘板是兩回事；不同原板尺寸須同時看開料總面積。狹長條、碎料不當作省料，不能只憑剩餘面積、利用率或餘料塊數判定。比較餘板長、短邊與下次所需尺寸，可挑選合適的餘板。',
+      'Material saving: using less stock and retaining useful intact boards are different goals; compare stock area as well when sheet sizes differ. Narrow strips and fragments are not material savings. Leftover area, yield or remnant count alone cannot decide. Compare remnant length and width with the next job’s dimensions to choose suitable pieces.'));
     for(const item of items){
       const v=item.m,rem=v.remnants;
       const process=item.plan.mode==='ripThenCrosscut'?t('先分條再截件','Rip then crosscut'):t('按成品安排','Part-first cutting tree');
@@ -108,8 +108,8 @@
           t('沒有完整餘板。','No intact remnants.'))+
         (v.widest&&v.widest!==v.largest?'\n'+t('另有短邊更闊的完整餘板：','Another intact remnant has a wider short side: ')+shape(v.widest)+t('，來源板 ', ', sheet ')+v.widest.boardId:''));
     }
-    lines.push(t('以上只用切序完成後的獨立矩形餘板；排除修邊廢料及鋸縫，不拼接相鄰碎料。只比較目前找到的方案，不保證全局最優；實際用途、機台及夾持安全仍須師傅核對。',
-      'Only separate rectangular remnants after completed cut replay are included; trim waste and kerf are excluded, and adjacent scraps are not merged. This compares found candidates, not a global optimum. A person must check reuse, machine and clamping safety.'));
+    lines.push(t('以上只用切序完成後的獨立矩形餘板；排除修邊廢料及鋸縫，不拼接相鄰碎料。比較範圍為目前找到的方案。',
+      'Only separate rectangular remnants after completed cut replay are included; trim waste and kerf are excluded, and adjacent scraps are not merged. The comparison covers the schemes found in this search.'));
     return {compact,full:lines.join('\n\n')};
   }
   return {metrics,build};

@@ -72,7 +72,7 @@ test('switch change invalidates existing candidates without auto-calculating or 
 test('production and offline shell load the independent module, and both languages explain its scope',()=>{
   assert.match(html,/<script src="assets\/guillotine-candidate\.js\?v=1"><\/script>/);
   assert.match(fs.readFileSync(path.join(root,'sw.js'),'utf8'),/\.\/assets\/guillotine-candidate\.js\?v=1/);
-  assert.match(html,/not OpenCutList code or a full replica/);
+  assert.match(html,/An independent implementation of guillotine cuts with multiple sorting and splitting strategies/);
   assert.match(section('function calculate(){','  function saveProject(){'),/uiSettings\.enableGuillotine===true/);
 });
 

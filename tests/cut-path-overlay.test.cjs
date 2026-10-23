@@ -177,7 +177,8 @@ test('new user-facing copy exists in both languages and the phone toggle has com
   assert.equal(overlay.copy('remnantSize', 'zh'), '長 × 闊');
   assert.equal(overlay.copy('remnantSize', 'en'), 'length × width');
   assert.match(overlay.copy('fitsCurrent', 'en'), /^Geometrically fits/);
-  assert.match(overlay.copy('remnantCaveat', 'zh'), /不保證未來用途或安全認證/);
+  assert.match(overlay.copy('remnantCaveat', 'zh'), /按本次輸入的部件尺寸比對剩料/);
+  assert.doesNotMatch(overlay.copy('remnantCaveat', 'en'), /guarantee|approval/);
   assert.match(html, /cutOverlay\.formatRemnantMeasurements\(remnant,fmtDim,fmtArea,value=>fmtDim\(value,source,'length'\),value=>fmtDim\(value,source,'width'\)\)/);
   assert.match(html, /cutOverlay\.leftoverPieces\(board\)/);
   assert.match(html, /data-remnant-kind/);

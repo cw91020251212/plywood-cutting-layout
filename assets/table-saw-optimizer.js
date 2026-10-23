@@ -10,7 +10,7 @@
   const metricsCache = new WeakMap();
 
   function searchLimit() {
-    const error = new RangeError('同闊組合搜尋達到上限，保留貪婪候選；不代表全局最優');
+    const error = new RangeError('同闊組合搜尋達到上限，保留貪婪候選');
     error.code = 'STRIP_SEARCH_LIMIT';
     return error;
   }

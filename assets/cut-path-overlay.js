@@ -147,8 +147,8 @@
   const COPY = {
     showPaths: ['顯示逐刀切線', 'Show cut-path overlay'],
     pathHint: [
-      '藍色虛線與刀號依每板 cuts 順序；序號包含修邊刀。僅供參考，不是機械導引。',
-      'Blue dashed lines and numbers follow each sheet’s cuts order, including edge-trim cuts. Reference only—not machine guidance.'
+      '藍色虛線與刀號依每板 cuts 順序；序號包含修邊刀。',
+      'Blue dashed lines and numbers follow each sheet’s cuts order, including edge-trim cuts.'
     ],
     remnantHeading: ['剩料尺寸（含修邊料）', 'Leftover sizes (including edge-trim offcuts)'],
     remnantIntro: [
@@ -163,8 +163,8 @@
     noCurrentFit: ['未找到幾何上可容納本次輸入部件規格的尺寸。', 'No current input part specification fits geometrically.'],
     noSpecs: ['沒有可供比對的本次輸入部件規格；只列尺寸與面積，不判斷用途。', 'No current part specifications are available to compare; dimensions and area only, no use estimate.'],
     remnantCaveat: [
-      '用途比對只涵蓋本次輸入尺寸，不保證未來用途或安全認證；修邊料能否再用須由師傅核對。',
-      'Fit comparison only covers dimensions entered this time; it is not a future-use guarantee or safety approval. A woodworker must verify whether an offcut can be reused.'
+      '按本次輸入的部件尺寸比對剩料，清單列出可容納的規格。',
+      'Leftovers are compared with the part dimensions entered for this job; the list shows which specifications fit.'
     ],
     noRemnants: ['沒有剩餘板料或修邊料。', 'No unused sheet material or edge-trim offcuts remain.']
   };

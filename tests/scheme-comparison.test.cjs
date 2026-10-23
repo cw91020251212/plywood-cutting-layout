@@ -27,7 +27,7 @@ test('equal area narrow strip is not declared more reusable or most material-sav
   assert.match(result.full,/2,000 × 20 mm（短邊 20 mm）/);
   assert.match(result.full,/200 × 200 mm（短邊 200 mm）/);
   assert.match(result.full,/狹長條、碎料不當作省料/);
-  assert.match(result.full,/暫不宣稱哪個方案「最省料」/);
+  assert.match(result.full,/比較餘板長、短邊與下次所需尺寸/);
   assert.doesNotMatch(result.compact,/最省料|更省料/);
 });
 test('largest-by-area strip does not hide another broader intact rectangle',()=>{
@@ -54,7 +54,7 @@ test('mixed sheet sizes separate fewest sheets, stock area and cut-count trade-o
   const result=compare.build(app([big,small]));
   assert.match(result.full,/用板最少：方案 1（1 塊）；開料原板總面積最少：方案 2（2 m²）/);
   assert.match(result.full,/切刀最少：方案 2（4 刀）/);
-  assert.match(result.full,/不等同最快或最安全/);
+  assert.doesNotMatch(result.full,/不等同最快或最安全/);
 });
 test('current index follows actual plan identity after pool resort; detached plan ignores stale pool',()=>{
   const one=plan([[200,200]]),two=plan([[400,400]]),a=app([two,one],1);

@@ -356,7 +356,7 @@ test('intact-remnant guidance, displayed length/width and provenance are bilingu
   assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));
   assert.ok(html.includes('fmtDim(r.rect.length,boardInputFor(')&&html.includes('fmtDim(r.rect.width,boardInputFor(')&&html.includes('esc(r.boardId)'));
   assert.ok(html.includes('Largest intact remnant:')&&html.includes('Separate remnants:'));
-  assert.ok(html.includes('edge-trim offcuts excluded; geometry only, no reuse guarantee'));
+  assert.ok(html.includes('pieces (edge-trim offcuts excluded).'));
 });
 
 

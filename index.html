@@ -965,6 +965,10 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item{background:#293139
 body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]{background:#36352f}
 </style>
 <link rel="stylesheet" href="assets/layout-view.css?v=4">
+<style id="chinese-copy-cleanup">
+/* Keep the existing English copy; omit only the selected Chinese notes. */
+html:not([lang="en"]) [data-english-only] { display: none !important; }
+</style>
 </head>
 <body>
 <div class="container">
@@ -1144,7 +1148,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <div class="section" id="section-results">
 <div class="section-title"><span class="section-heading-label"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M4 10h16M10 4.5V10M15 10v9.5M4 15h11"/><path d="m6.5 17.2 1.7 1.7 3-3.2"/></svg><span>切割結果</span></span><span class="step-number">4/4</span></div>
 <p class="section-intro">不確定如何設定時，保留預設選項即可開始計算。</p>
-<p id="tableSawWorkflowHint" class="input-hint strategy-hint table-saw-workflow-hint">鋸枱提示：預設「自動（比較兩種工序）」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。</p>
+<p id="tableSawWorkflowHint" data-english-only class="input-hint strategy-hint table-saw-workflow-hint">鋸枱提示：預設「自動（比較兩種工序）」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。</p>
 <div class="board-added-notification" id="boardAddedNotification"></div>
 <div class="feature-panel">
 <label>鋸路方向:</label>
@@ -1288,7 +1292,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 </div>
 </div>
 </div>
-<div class="output-heading"><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
+<div class="output-heading" data-english-only><div><h2>排版結果</h2><p>查看各塊板的排料圖。</p></div></div>
 <details class="search-help"><summary>搜尋方法小提示</summary><p>系統會比較大件優先及不同部件次序的候選；這不代表第一刀一定切大件。每個可選排法都會逐刀回放驗證。</p></details>
 <div class="part-appearance-toolbar no-print" role="group" aria-labelledby="partAppearanceLabel partDimensionLabel">
   <div class="part-appearance-control" role="group" aria-labelledby="partAppearanceLabel">
@@ -1316,7 +1320,7 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
 <button class="scheme-button active" onclick="calculator.selectScheme(0)">Guillotine切割方案</button>
 </div>
 <div id="colorLegend" class="color-legend" style="display: none;"></div>
-<div id="trialResults" aria-live="polite"><p class="trial-empty">加入部件和板材，再按「計算」。</p></div>
+<div id="trialResults" aria-live="polite"><p class="trial-empty" data-english-only>加入部件和板材，再按「計算」。</p></div>
 <div id="canvasContainer"></div>
 <details id="cutDetails" class="cut-details"><summary>切割詳情（展開查看刀序與材料數值）</summary><div id="cutDetailsContent"><p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p></div></details>
 <div id="utilizationStats" class="utilization"></div>
@@ -8621,7 +8625,7 @@ window.addEventListener('DOMContentLoaded', () => {
       $('trialResults').innerHTML='<p class="trial-empty">JSON 已載入。舊方案不會視作已驗證切序；按「計算」重新排料及驗證。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';clearMessages();
     }catch(err){$('errorMessage').textContent=`JSON 載入失敗：${err.message}`;}};reader.readAsText(file);};input.click();
   }
-  function resetResults(){clearCandidatePool();window.calculator.trialPlan=null;window.calculator.schemes=[];$('trialResults').innerHTML='<p class="trial-empty">加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
+  function resetResults(){clearCandidatePool();window.calculator.trialPlan=null;window.calculator.schemes=[];$('trialResults').innerHTML='<p class="trial-empty" data-english-only>加入部件和板材，再按「計算」。</p>';$('canvasContainer').innerHTML='';$('cutDetails').style.display='block';$('cutDetails').open=false;$('cutDetailsContent').innerHTML='<p class="trial-empty">計算後可查看逐刀位置、材料帳和修邊資料。</p>';clearMessages();}
   function showModeDescription(){const m=$('cuttingStrategy').value;const texts={auto:'我會比較兩種工序，只採用通過幾何與逐刀驗證的候選。',ripThenCrosscut:'先集中同闊分條，再用長短組合逐條截件；每刀切穿當前工件。固定方向仍會遵守；請核對板材木紋方向。',partFirstTree:'按成品逐刀安排，每刀只切當時可用的材料。'};$('modeNote').textContent=texts[m]||texts.auto;}
   window.calculator.calculateCutting=calculate;window.calculator.saveProject=saveProject;window.calculator.loadProject=loadProject;window.calculator.resetResults=resetResults;
   window.calculator.redrawCurrentScheme=function(){};window.calculator.displayScheme=function(){if(this.trialPlan)render(this.trialPlan,`按已選工序「${this.trialMode}」`);};window.calculator.selectScheme=window.calculator.displayScheme;

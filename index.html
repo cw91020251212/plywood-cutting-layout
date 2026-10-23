@@ -1170,8 +1170,14 @@ body.wood-dark-mode #canvasContainer .part-dimension-all-item[data-remnant-kind]
   </div>
   <div class="setting-block algorithm-setting">
     <label class="setting-switch-row" for="enableMaxRects">
-      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後只用原有排版算法。切換後請按「計算」重新比較。</small></span>
+      <span class="setting-switch-copy"><strong>試用新排版算法（MaxRects）</strong><small id="maxRectsNote">預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後不加入 MaxRects 候選，其他算法開關不變。切換後請按「計算」重新比較。</small></span>
       <span class="switch-control"><input type="checkbox" id="enableMaxRects" aria-describedby="maxRectsNote" checked><span class="switch-slider" aria-hidden="true"></span></span>
+    </label>
+  </div>
+  <div class="setting-block algorithm-setting">
+    <label class="setting-switch-row" for="enableGuillotine">
+      <span class="setting-switch-copy"><strong>試用貫通多策略排料（OpenCutList 同類方法）</strong><small id="guillotineNote">預設關閉。獨立實作貫通切割、多種排序與切分策略，並非 OpenCutList 原碼或完整複刻。開啟後加入候選，不取代原有／MaxRects 方案；只比較逐刀驗證後的完整餘板，不保證更省料。切換後請按「計算」。</small></span>
+      <span class="switch-control"><input type="checkbox" id="enableGuillotine" aria-describedby="guillotineNote"><span class="switch-slider" aria-hidden="true"></span></span>
     </label>
   </div>
   <div class="setting-block display-unit-setting">
@@ -7200,6 +7206,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="assets/table-saw-optimizer.js?v=2"></script>
 <script src="assets/maxrects-candidate.js?v=1"></script>
+<script src="assets/guillotine-candidate.js?v=1"></script>
 <script>
 (function(global){
   'use strict';
@@ -7255,7 +7262,8 @@ window.addEventListener('DOMContentLoaded', () => {
     return {
       kerf: k, trims: t, edges: e, minSupport,
       stripSelection: settings.stripSelection === 'greedy' ? 'greedy' : 'subset',
-      packingStrategy: settings.packingStrategy === 'maxrects' ? 'maxrects' : 'legacy',
+      packingStrategy: ['maxrects','guillotine'].includes(settings.packingStrategy) ? settings.packingStrategy : 'legacy',
+      guillotineProfile: settings.guillotineProfile ? {...settings.guillotineProfile} : null,
       searchProfile: settings.searchProfile && settings.searchProfile.active ? settings.searchProfile : null
     };
   }
@@ -7592,6 +7600,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function packRipOrTree(b, tokens, s, mode) {
     if (s.packingStrategy === 'maxrects') return packMaxRectsBoard(b, tokens, s, mode);
+    if (s.packingStrategy === 'guillotine') return packGuillotineBoard(b, tokens, s, mode);
     return mode === 'ripThenCrosscut' ? packRipBoard(b, tokens, s) : packTreeBoard(b, tokens, s);
   }
 
@@ -7612,28 +7621,50 @@ window.addEventListener('DOMContentLoaded', () => {
       const error = new Error(`MaxRects 座標無法轉為所選工序的完整貫通切割樹：${replay.reason || '無可行刀序'}`);
       error.code = 'MAXRECTS_NOT_SAWABLE'; throw error;
     }
+    return emitPackedBoard(b,tokens,s,mode,active,packed,replay,'MaxRects','maxrects-bssf');
+  }
+
+  // Independent constructive guillotine packer: the physical cut tree is built
+  // with each placement, not inferred from area or merged search rectangles.
+  function packGuillotineBoard(b, tokens, s, mode) {
+    const api=global.PlywoodGuillotine;
+    if(!api||typeof api.pack!=='function'){
+      const error=new Error('獨立貫通多策略模組未載入；保留其他排料候選');
+      error.code='GUILLOTINE_UNAVAILABLE';throw error;
+    }
+    const active=trimBoard(b,s);
+    const packed=api.pack(tokens.map(t=>({id:t.id,width:t.width,length:t.length,
+      orientations:orientations(t)})),active.rect,s.kerf,
+      {mode,profile:s.guillotineProfile||undefined,minSupport:s.minSupport});
+    if(!packed.tree){const error=new Error('貫通多策略未產生完整切割樹');error.code='GUILLOTINE_NOT_SAWABLE';throw error;}
+    return emitPackedBoard(b,tokens,s,mode,active,packed,{tree:packed.tree},'貫通多策略','independent-guillotine');
+  }
+
+  // Shared serialization only. All algorithms still pass verifyBoard and the
+  // complete-demand checks below; this helper does not certify their output.
+  function emitPackedBoard(b,tokens,s,mode,active,packed,replay,name,source) {
     const byToken = new Map(tokens.map(t => [t.id,t]));
     const byPlacement = new Map(packed.placements.map(p => [p.id,p]));
     const entries = [];
     function emitFinished(partId, r, id, direct) {
       const token = byToken.get(partId), p = byPlacement.get(partId);
-      if (!token || !p) throw new Error('MaxRects 切割樹包含未需求部件');
+      if (!token || !p) throw new Error(`${name} 切割樹包含未需求部件`);
       emitPart(b, {...token,rotated:p.rotated}, r, id, direct);
     }
     function prepare(node, material) {
       if (node.kind === 'empty') {
-        b.residuals.push({materialId:material.id,...cloneRect(node.rect),purpose:'MaxRects 已分離完整餘料'});
+        b.residuals.push({materialId:material.id,...cloneRect(node.rect),purpose:`${name} 已分離完整餘料`});
       } else if (node.kind === 'part') {
         emitFinished(node.partId,node.rect,material.id,true);
       } else if (node.kind === 'cut') {
         const outputs = node.children.map(child => ({id:materialId(b,child.kind==='part'?'PART':'MXFREE'),
           kind:child.kind==='part'?'part':'material',partId:child.partId || null,
-          purpose:child.kind==='part'?'成品':'MaxRects 待切／完整餘料',rect:cloneRect(child.rect)}));
+          purpose:child.kind==='part'?'成品':`${name} 待切／完整餘料`,rect:cloneRect(child.rect)}));
         entries.push({node,material,outputs});
         node.children.forEach((child,i) => {
           if (child.kind !== 'part') prepare(child,{id:outputs[i].id,rect:cloneRect(child.rect)});
         });
-      } else throw new Error('MaxRects 切割樹節點無效');
+      } else throw new Error(`${name} 切割樹節點無效`);
     }
     prepare(replay.tree,active);
     // Rip-mode trees forbid X below Y. Stable phase sorting therefore keeps
@@ -7642,16 +7673,17 @@ window.addEventListener('DOMContentLoaded', () => {
     for (const {node,material,outputs} of entries) {
       const phase = mode==='ripThenCrosscut'?(node.axis==='x'?'rip':'crosscut'):'part-tree';
       const position = node.axis==='x'?node.band.x+s.kerf/2:node.band.y+s.kerf/2;
-      makeStep(b,material,node.axis,position,node.band,outputs,'MaxRects 完整貫通切割',null,phase);
+      makeStep(b,material,node.axis,position,node.band,outputs,`${name} 完整貫通切割`,null,phase);
       outputs.filter(o=>o.kind==='part').forEach(o=>emitFinished(o.partId,o.rect,o.id,false));
     }
     const placed = new Set(b.results.map(p=>p.id));
     const remaining = tokens.filter(t=>!placed.has(t.id));
     if (placed.size !== packed.placements.length ||
         remaining.length !== packed.remainingIds.length ||
-        remaining.some(t=>!packed.remainingIds.includes(t.id))) throw new Error('MaxRects 部件帳不一致');
-    b.packingSource = 'maxrects-bssf';
-    b.maxRects = {placements:placed.size,treeVisits:replay.visits,limited:!!replay.limited};
+        remaining.some(t=>!packed.remainingIds.includes(t.id))) throw new Error(`${name} 部件帳不一致`);
+    b.packingSource = source;
+    if(source==='maxrects-bssf')b.maxRects = {placements:placed.size,treeVisits:replay.visits,limited:!!replay.limited};
+    else b.guillotine = {...packed.diagnostics,profile:s.guillotineProfile?{...s.guillotineProfile}:null};
     b._unplacedOnBoard = remaining;
     return remaining;
   }
@@ -7824,7 +7856,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const stripSearch=plans.reduce((sum,b)=>{const stats=b.stripSearch||{};sum.combined+=stats.combined||0;sum.limited+=stats.limited||0;sum.unavailable+=stats.unavailable||0;return sum;},{combined:0,limited:0,unavailable:0});
     const summary={requestedParts:demand.length,placedParts:placedIds.length,unplacedParts:unplaced.length,usedBoardCount:plans.length,boardsAdded:addedCount,partsArea:partArea,kerfArea,wasteArea:plans.reduce((n,b)=>n+b.validation.offcutArea,0),boardArea,netYield:boardArea?partArea/boardArea*100:0,largestRemnant,largestRemnantArea:largestRemnant?largestRemnant.area:0,largestRemnantShortSide:largestRemnant?largestRemnant.shortSide:0,retainedRemnantCount:retainedRemnants.length};
-    return {version:VERSION,packingStrategy:s.packingStrategy,searchProfile:s.searchProfile?{...s.searchProfile}:null,stripSelection:s.stripSelection,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:s.packingStrategy==='maxrects'?'MaxRects 按最長邊、面積遞減貼合；切割樹另按真實完整餘料擇優，並非全局最優保證':s.searchProfile&&s.searchProfile.seed?'多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證':'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
+    return {version:VERSION,packingStrategy:s.packingStrategy,searchProfile:s.searchProfile?{...s.searchProfile}:null,stripSelection:s.stripSelection,stripSearch,mode,status:complete?'candidate':'incomplete',label:complete?'幾何與切序均通過程式驗證的候選草排':'不完整／不可切候選（不得視為可執行）',kerf:s.kerf,minSupportWidth:s.minSupport,safetyStatus:s.minSupport==null?'安全支撐寬度未驗證，僅候選草排':'已套用使用者輸入的支撐寬度篩選；仍非機台或夾持安全認證',trimSettings:{...s.trims},edgeUse:{...s.edges},searchPriority:s.packingStrategy==='guillotine'?'獨立貫通多策略：比較有限排序、貼合與切分候選；完整餘板只取自逐刀回放，不保證用途或全局最優':s.packingStrategy==='maxrects'?'MaxRects 按最長邊、面積遞減貼合；切割樹另按真實完整餘料擇優，並非全局最優保證':s.searchProfile&&s.searchProfile.seed?'多樣化候選按固定種子嘗試部件及方向次序；實際刀序仍逐刀驗證':'搜尋時依成品面積大至小；此優先權不等同完整逐刀作業次序',cutOrderNote:mode==='ripThenCrosscut'?'逐刀作業順序：各板修邊（如有）→該板全部分條刀→逐條截件刀。':'逐刀作業順序：由確定性切割樹逐刀展開；每刀只切當時尚存的矩形。',boards:plans,unplaced,validation:{ok:complete,missingIds:missing,countIssues,boardIssues},summary};
   }
 
   global.PlywoodTrialEngine={version:VERSION,plan,verifyBoard,orientations};
@@ -7915,6 +7947,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function readSettings(modeOverride){
     return {mode:modeOverride||$('cuttingStrategy').value,kerf:parseKerf($('sawBladeThickness').value),
       enableMaxRects:$('enableMaxRects').checked===true,
+      enableGuillotine:$('enableGuillotine')?.checked===true,
       trims:{left:Number($('trialTrimLeft').value||0),right:Number($('trialTrimRight').value||0),top:Number($('trialTrimTop').value||0),bottom:Number($('trialTrimBottom').value||0)},
       edges:{left:$('trialEdgeLeft').checked,right:$('trialEdgeRight').checked,top:$('trialEdgeTop').checked,bottom:$('trialEdgeBottom').checked},
       minSupportWidth:$('trialMinSupport').value.trim()};
@@ -8416,6 +8449,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function getBoards(){return (window.calculator.boards||[]).map(b=>({width:Number(b.width),length:Number(b.length??b.height),disabled:!!b.disabled}));}
   function clearMessages(){['errorMessage','suggestionMessage','progressMessage','status'].forEach(id=>{if($(id))$(id).textContent='';});}
   function totalCutCount(plan){return (plan.boards||[]).reduce((n,b)=>n+(b.cuts||[]).length,0);}
+  function guillotineProfiles(){try{const list=window.PlywoodGuillotine?.profiles?.();return Array.isArray(list)?list.slice(0,18):[];}catch(_){return [];}}
   function rankPlan(a,b,objective=selectedObjective()){
     if(window.PlywoodTableSaw)return window.PlywoodTableSaw.comparePlans(a,b,objective);
     if(objective==='convenience'&&totalCutCount(a)!==totalCutCount(b))return totalCutCount(a)-totalCutCount(b);
@@ -8459,6 +8493,14 @@ window.addEventListener('DOMContentLoaded', () => {
             packingStrategy:'maxrects',fixedOrientationOverrides:overrides,
             searchProfile:{active:true,stockOrder}}),labelForMode(mode)+' · MaxRects BSSF');}
           catch(_){/* 非貫通／工序不符／搜尋限額：只淘汰新候選，保留原有算法 */}
+        }
+      }
+      if(baseSettings.enableGuillotine===true&&!existing.length&&window.PlywoodGuillotine){
+        for(const profile of guillotineProfiles()){
+          try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,
+            packingStrategy:'guillotine',guillotineProfile:profile,fixedOrientationOverrides:overrides,
+            searchProfile:null}),labelForMode(mode)+' · 貫通多策略（獨立實作）');}
+          catch(_){/* 新候選失敗不能移除原有／MaxRects 已驗證方案 */}
         }
       }
       if(mode==='ripThenCrosscut'&&!existing.length){try{add(window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...baseSettings,mode,stripSelection:'greedy',searchProfile:null}),labelForMode(mode));}catch(_){} }
@@ -8528,6 +8570,7 @@ window.addEventListener('DOMContentLoaded', () => {
       for(const mode of modes){try{attempts.push({plan:window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...readSettings(mode),fixedOrientationOverrides:overrides}),mode});}catch(e){errors.push(`${mode==='ripThenCrosscut'?'先分條再截件':'按成品安排'}：${e.message||String(e)}`);}}
       const valid=attempts.filter(x=>strictlyValidCandidate(x.plan,overrides));
       if(uiSettings.enableMaxRects===true&&!valid.length&&window.PlywoodMaxRects){for(const mode of modes){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,packingStrategy:'maxrects',fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides))valid.push({plan:p,mode});}catch(_){}}}
+      if(uiSettings.enableGuillotine===true&&!valid.length&&window.PlywoodGuillotine){for(const mode of modes)for(const profile of guillotineProfiles()){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,packingStrategy:'guillotine',guillotineProfile:profile,fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides)){valid.push({plan:p,mode});break;}}catch(_){}}}
       // 預設初排未完整時亦須試有限 profiles；不能提前擋住可行搜尋。
       if(!valid.length){for(const mode of modes)for(const profile of searchProfiles()){try{const p=window.PlywoodTrialEngine.plan(getParts(),getBoards(),{...uiSettings,mode,searchProfile:profile,fixedOrientationOverrides:overrides});if(strictlyValidCandidate(p,overrides)){valid.push({plan:p,mode});break;}}catch(_){}}}
       if(!valid.length){window.calculator.trialPlan=null;window.calculator.schemes=[];window.calculator._trialFixedOrientationOverrides=overrides;clearCandidatePool();$('canvasContainer').innerHTML='';$('cutDetails').style.display='none';const msg=errors.length?errors.join('；'):'兩種工序都沒有產生通過幾何與逐刀回放驗證的完整候選。';$('trialResults').innerHTML=`<div class="validation-failed"><strong>沒有可顯示的已驗證排法。</strong><br>${esc(msg)}<br>請核對部件、原板尺寸及進階設定；不完整部件不會當作完整排法。</div>`;$('errorMessage').textContent=msg;return null;}
@@ -8556,6 +8599,7 @@ window.addEventListener('DOMContentLoaded', () => {
       window.calculator.parts=Array.isArray(d.parts)?d.parts:[];window.calculator.boards=Array.isArray(d.boards)?d.boards.map(b=>({...b,length:Number(b.length??b.height)})):[];
       const c=d.trialConfig||{};setObjective(d.optimizationObjective,true);updateObjectiveHelp();$('cuttingStrategy').value=(c.mode==='ripThenCrosscut'||c.mode==='partFirstTree'||c.mode==='auto')?c.mode:'auto';
       $('enableMaxRects').checked=c.enableMaxRects===true;
+      $('enableGuillotine').checked=c.enableGuillotine===true;
       $('trialTrimLeft').value=c.trims?.left??0;$('trialTrimRight').value=c.trims?.right??0;$('trialTrimTop').value=c.trims?.top??0;$('trialTrimBottom').value=c.trims?.bottom??0;
       $('trialEdgeLeft').checked=c.edges?.left!==false;$('trialEdgeRight').checked=c.edges?.right!==false;$('trialEdgeTop').checked=c.edges?.top!==false;$('trialEdgeBottom').checked=c.edges?.bottom!==false;$('trialMinSupport').value=c.minSupportWidth??'';
       const k=c.kerf??d.sawBladeThickness??3;$('sawBladeThickness').value=`${k}mm`;$('edgeTolerance').value=Number(d.edgeTolerance||0.1);
@@ -8582,7 +8626,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('candidateChooser').addEventListener('change',event=>commitCandidate((window.calculator._trialCandidates||[]).findIndex(item=>String(item.key)===event.target.value)));
   $('moreLayoutsButton').addEventListener('click',()=>searchMoreCandidates().catch(error=>{$('errorMessage').textContent=error.message||String(error);}));
   ['cuttingStrategy','sawBladeThickness','trialTrimLeft','trialTrimRight','trialTrimTop','trialTrimBottom','trialEdgeLeft','trialEdgeRight','trialEdgeTop','trialEdgeBottom','trialMinSupport'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{showModeDescription();if(window.calculator.trialPlan)resetResults();});});
-  $('enableMaxRects').addEventListener('change',()=>{resetResults();$('status').textContent=$('enableMaxRects').checked?'已開啟新算法候選；按「計算」與原有方案一同比較。':'已關閉新算法；按「計算」只用原有排版算法。';});
+  $('enableMaxRects').addEventListener('change',()=>{resetResults();$('status').textContent=$('enableMaxRects').checked?'已開啟新算法候選；按「計算」與原有方案一同比較。':'已關閉 MaxRects；其他算法設定不變，按「計算」重新比較。';});
+  $('enableGuillotine').addEventListener('change',()=>{resetResults();$('status').textContent=$('enableGuillotine').checked?'已開啟獨立貫通多策略候選；按「計算」與其他已啟用算法比較。':'已關閉貫通多策略；原有及 MaxRects 設定不變，按「計算」重新比較。';});
   $('cuttingStrategy').addEventListener('change',showModeDescription);
   document.querySelectorAll('input[name="optimizationObjective"]').forEach(el=>el.addEventListener('change',()=>{setObjective(el.value,true);updateObjectiveHelp();if(window.calculator.trialPlan)resetResults();else clearCandidatePool();}));
   updateObjectiveHelp();showModeDescription();
@@ -9439,9 +9484,14 @@ window.addEventListener('DOMContentLoaded', () => {
   dict.push(['庫存原板','stock sheet'],['原板實際尺寸：','Real sheet size: '],['原板實際尺寸','Real sheet size'],['原板 ','Sheet '],['本板成品 ','Parts on this sheet '],['本板成品','Parts on this sheet'],['板面積','sheet area'],['刀序','cut order'],['回放驗證：通過','replay check: passed'],['回放驗證：未通過','replay check: failed'],['回放驗證','replay check'],['通過','passed'],['未通過','failed'],['顏色尺寸圖例','color and size legend'],['分出長條','Rip strip'],['長條待截餘料','strip offcut to crosscut'],['待截件長條料','strip to crosscut'],['待分條原板餘料','sheet offcut to rip'],['從長條','From the strip'],['長條料','strip stock'],['長條','strip'],['原板餘料','sheet offcut'],['待分條','to rip'],['待截件','to crosscut'],['庫存原板 #','stock sheet #'],['回放驗證：','Replay check: '],['截出','cut out'],['排料微調','layout controls'],['微調','adjustments'],['請至少新增一件有效部件','Add at least one valid part'],['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical'],['單件旋轉成功；整體重新排料及幾何／逐刀回放驗證均已通過。','Rotating one part succeeded. The layout was re-planned and passed geometry and cut-by-cut replay checks.'],['｜單件旋轉後重排',' | one-part rotation and re-plan']);
   dict.push(
     ['試用新排版算法（MaxRects）','Try new layout algorithm (MaxRects)'],
-    ['預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後只用原有排版算法。切換後請按「計算」重新比較。','On by default: add new-algorithm candidates alongside the original layouts; the new algorithm may not win. All layouts still pass the existing checks. When disabled, use only the original algorithm. After switching, press Calculate to compare again.'],
+    ['試用貫通多策略排料（OpenCutList 同類方法）','Try multi-strategy guillotine packing (same method family as OpenCutList)'],
+    ['預設關閉。獨立實作貫通切割、多種排序與切分策略，並非 OpenCutList 原碼或完整複刻。開啟後加入候選，不取代原有／MaxRects 方案；只比較逐刀驗證後的完整餘板，不保證更省料。切換後請按「計算」。','Off by default. An independent implementation of guillotine cuts with multiple sorting and splitting strategies, not OpenCutList code or a full replica. Adds candidates alongside existing/MaxRects layouts; compares intact remnants after cut replay, without guaranteeing savings. Press Calculate after switching.'],
+    ['已開啟獨立貫通多策略候選；按「計算」與其他已啟用算法比較。','Independent guillotine candidates enabled. Press Calculate to compare with other enabled algorithms.'],
+    ['已關閉貫通多策略；原有及 MaxRects 設定不變，按「計算」重新比較。','Guillotine candidates disabled. Original and MaxRects settings are unchanged; press Calculate again.'],
+    ['貫通多策略（獨立實作）','Multi-strategy guillotine (independent)'],
+    ['預設開啟，加入新算法候選，與原有方案一同比較，未必選中新算法；所有方案仍須通過原有驗證。關閉後不加入 MaxRects 候選，其他算法開關不變。切換後請按「計算」重新比較。','On by default: add new-algorithm candidates alongside the original layouts; the new algorithm may not win. All layouts still pass the existing checks. When disabled, no MaxRects candidates are added; other algorithm switches are unchanged. After switching, press Calculate to compare again.'],
     ['已開啟新算法候選；按「計算」與原有方案一同比較。','New-algorithm candidates enabled. Press Calculate to compare with the original layouts.'],
-    ['已關閉新算法；按「計算」只用原有排版算法。','New algorithm disabled. Press Calculate to use only the original algorithm.'],
+    ['已關閉 MaxRects；其他算法設定不變，按「計算」重新比較。','MaxRects disabled. Other algorithm settings are unchanged; press Calculate again.'],
     ['鋸枱提示：預設「自動（比較兩種工序）」；每刀切穿當前工件。切割流程可在「更多設定」更改。英制仍可用尺／寸／分逐格輸入。','Table-saw note: defaults to auto (compare both processes); every cut goes through the current workpiece. Change the process under More settings. Imperial input still supports separate feet, inches and eighths of an inch.'],
     ['今次採用工序：','Process used:'],
     ['查看逐刀刀序與餘料','Review cut order and offcuts'],
@@ -9475,7 +9525,7 @@ window.addEventListener('DOMContentLoaded', () => {
       out=out.replace(/原板\s*([^；]+)；成品\s*(\d+)\s*件；刀序\s*(\d+)\s*刀；回放驗證：(通過|未通過)[。]?/g,(_,size,parts,cuts,status)=>`Sheet ${size}; ${parts} parts; ${cuts} cuts; replay check ${status==='通過'?'passed':'failed'}.`);
     }
     const directionPairs=[['橫向優先','Horizontal preferred'],['直向優先','Vertical preferred'],['固定橫向','Fixed horizontal'],['固定直向','Fixed vertical']];for(const [zh,en] of directionPairs){const from=lang==='en'?zh:en,to=lang==='en'?en:zh;if(from&&out.includes(from))out=out.split(from).join(to);}
-    for(const [zh,en] of order){const from=lang==='en'?zh:en,to=lang==='en'?en:zh;if(from&&out.includes(from))out=out.split(from).join(to);}
+    for(const [zh,en] of order){const from=lang==='en'?zh:en,to=lang==='en'?en:zh;if(from&&out.includes(from))out=from==='Open'?out.replace(/\bOpen\b/g,to):out.split(from).join(to);}
     if(lang==='en'){out=out.replace(/[；]/g,'; ').replace(/[，]/g,', ').replace(/[。]/g,'.').replace(/[：]/g,': ').replace(/[（]/g,'(').replace(/[）]/g,')').replace(/[｜]/g,' | ').replace(/[、]/g,', ').replace(/[／]/g,' / ');out=out.replace(/(^|[\s/;,:().])可(?=$|[\s/;,:().])/g,'$1Yes').replace(/(^|[\s/;,:().])否(?=$|[\s/;,:().])/g,'$1No');}
     return out;
   }
@@ -9706,7 +9756,7 @@ body.wood-dark-mode {
 <div id="wood-info-bar" role="status" aria-live="polite"><div id="wood-info-message"><span aria-hidden="true">ℹ️</span><span id="wood-status-text">系統已就緒，可輸入部件及板材尺寸。</span></div></div>
 <div id="wood-info-overlay" aria-hidden="true"><div id="wood-info-modal" role="dialog" aria-modal="true" aria-label="最新資訊"><h3 id="wood-info-title">最新資訊</h3><p id="wood-info-full"></p><div id="wood-info-close">（點擊背景關閉）</div></div></div>
 <div id="wood-scroll-nav" aria-label="頁面快速導航"><button id="wood-to-top" type="button" aria-label="返回頂部">▲</button><button id="wood-to-bottom" type="button" aria-label="前往底部">▼</button></div>
-<script src="assets/scheme-comparison.js?v=1"></script>
+<script src="assets/scheme-comparison.js?v=2"></script>
 <script id="wood-reference-tools-script">
 (function(){
   const $=id=>document.getElementById(id), body=document.body, panel=$('wood-settings-panel'), lang=$('languageSwitchButton');

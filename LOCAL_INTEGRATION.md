@@ -52,3 +52,25 @@ node scripts/compare-maxrects-local.cjs
 ## 原有改动及授权边界
 
 整合前已存在的页面、离线缓存、旧测试及木纹图片改动均保留。整合前工作副本备份在 `/workspace/plywood-integration-backup/before-integration.tar.gz`。本次没有访问远端仓库、提交代码、推送或部署；线上应用保持不变。
+
+## 新增：獨立貫通多策略選項（只在本機）
+
+在「排料設定 → 更多設定」新增「試用貫通多策略排料（OpenCutList 同類方法）」開關，預設關閉。原有算法不變，MaxRects 及「自動（比較兩種工序）」繼續預設開啟。開關只增加候選，並不保證選中新算法或節省材料；切換後須按「計算」。設定隨 JSON 儲存／載入，沒有此欄位的舊 JSON 將此選項視為關閉。
+
+### 參考的是方法，不是移植 GPL 程式
+
+[OpenCutList 官方說明](https://docs.opencutlist.org/features/parts/parts-list/cutting-diagrams)指明它採用二維裝箱、貫通切割、可受限制的 90 度轉向及確定性結果，也考慮大塊餘料、刀路等指標。檢查其固定版本 `1ef3e14c896171eed8cd77ede440c7f5563e943e` 的 [策略定義](https://github.com/lairdubois/lairdubois-opencutlist-sketchup-extension/blob/1ef3e14c896171eed8cd77ede440c7f5563e943e/src/ladb_opencutlist/ruby/lib/bin_packing_2d/packing2d.rb)及 [搜尋引擎](https://github.com/lairdubois/lairdubois-opencutlist-sketchup-extension/blob/1ef3e14c896171eed8cd77ede440c7f5563e943e/src/ladb_opencutlist/ruby/lib/bin_packing_2d/packengine.rb)，可見其組合多種部件預排序、放置評分、矩形切分策略，並保留多個局部方案繼續搜尋；另有同尺寸方向的部件分組等處理。它不是 MaxRects，也不是保證最優解的單一公式。
+
+上游程式為 GPLv3；本專案現有 LICENSE 為 Apache-2.0。這次沒有複製、翻譯、打包或連結執行 OpenCutList 程式，亦沒有修改 LICENSE 或既有第三方授權。實作者只收到通用幾何規格，未讀取上游程式碼；研究用上游檔案不納入專案。新模組 `assets/guillotine-candidate.js` 是本專案獨立原創實作，不是 OpenCutList 分支或其完整算法重製，不宣稱與其結果一致。若日後改成移植 GPL 原碼或整合其核心，須另行審視發佈及授權義務，不能沿用本次獨立實作的處理方式。
+
+### 這個版本實際做甚麼
+
+18 組有上限的策略，嘗試不同部件排序、貼合評分及切分方向；每次從一塊獨立矩形材料的角落放件，最多兩刀完整貫通，同時建立真實切割樹。這不是上游完整的跨板多分支搜尋、分組疊件或邊界重整功能。按現有兩種工序分別加入候選；「先分條再截件」不容許橫切後再縱切同一子材料。
+
+所有新增候選仍交由既有部件帳、方向、幾何、鋸縫、四邊修邊、安全支撐寬度篩選及逐刀回放驗證。不完整或不合法的候選不進方案池。模組未載入或失效時保留其他已驗證方案；關閉它不改變 MaxRects 的選擇。
+
+省料比較仍使用切樹完成後的獨立矩形餘板及其長、闊，不把鋸縫、修邊、重疊空位或拼接碎料當成可重用餘板。既有排名順序沒有改動；方案資訊面板仍同時列出板材、刀數和餘板尺寸，不只用面積或板數宣稱「最省料」。沒有下次用途尺寸時，不保證任何餘板實際可用。
+
+本次修改未提交 Git、未推送、未部署。新增單元／整合／開關測試可連同既有測試以 `node --test tests/*.test.cjs` 執行；語法檢查為 `node scripts/check-inline-scripts.cjs`。
+
+最終本機驗證：138 項測試全部通過（修改前基線 109 項），12 段內嵌腳本及 9 個生產腳本語法檢查通過，`git diff --check` 通過。新增 `node scripts/compare-guillotine-local.cjs` 可直接比較開關前後的完整候選與餘板，並驗證舊方案全部保留。固定方向櫃體測例由 27 個候選增至 35 個，最佳方案仍為 MaxRects：14 件完整、4 塊板、23 刀、最大完整餘板 1473 × 637 mm；這個案例沒有取得更大的最佳餘板，不能宣稱新算法一定更省料。四件同板測例則確實維持一塊板，不會因未再用餘料而錯加板材。瀏覽器也實際測過開關清除舊結果、重新計算、候選切換及比較面板的獨立來源標籤，無 JavaScript 錯誤。

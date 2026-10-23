@@ -97,7 +97,7 @@
     for(const item of items){
       const v=item.m,rem=v.remnants;
       const process=item.plan.mode==='ripThenCrosscut'?t('先分條再截件','Rip then crosscut'):t('按成品安排','Part-first cutting tree');
-      const source=item.plan.boards.some(b=>b.packingSource==='maxrects-bssf')?'MaxRects BSSF':t('原有排版算法','Original layout algorithm');
+      const source=item.plan.boards.some(b=>b.packingSource==='independent-guillotine')?t('貫通多策略（獨立實作）','Multi-strategy guillotine (independent)'):item.plan.boards.some(b=>b.packingSource==='maxrects-bssf')?'MaxRects BSSF':t('原有排版算法','Original layout algorithm');
       lines.push(`${name(item)}${item===selected?t('（目前）',' (current)'):''} — ${process} · ${source}\n`+
         t(`用板 ${v.boards} 塊；開料總面積 ${fmt(v.boardArea/1e6)} m²；${v.cuts} 刀。`,
           `${v.boards} sheets; ${fmt(v.boardArea/1e6)} m² stock area used; ${v.cuts} cuts.`)+

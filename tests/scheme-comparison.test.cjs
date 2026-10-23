@@ -74,8 +74,8 @@ test('comparison is read-only and rotation-invariant for remnant dimensions',()=
   assert.equal(JSON.stringify(a),before);assert.match(result.full,/尺寸相同/);
 });
 test('browser wiring keeps details fresh during switching, searching and language changes',()=>{
-  assert.match(html,/assets\/scheme-comparison\.js\?v=1/);
-  assert.match(fs.readFileSync(require('node:path').join(__dirname,'../sw.js'),'utf8'),/assets\/scheme-comparison\.js\?v=1/);
+  assert.match(html,/assets\/scheme-comparison\.js\?v=2/);
+  assert.match(fs.readFileSync(require('node:path').join(__dirname,'../sw.js'),'utf8'),/assets\/scheme-comparison\.js\?v=2/);
   assert.match(html,/'trialResults','variationStatus'/);
   assert.match(html,/if\(\$\('wood-info-overlay'\)\.dataset\.open==='true'\)\$\('wood-info-full'\)\.textContent=buildFullInfo\(\)/);
   assert.match(html,/max-height:calc\(100dvh[^;]+;overflow-y:auto/);

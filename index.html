@@ -9950,7 +9950,7 @@ body.wood-dark-mode {
   <div class="wood-setting-row"><button id="wood-font-increase" type="button">字體 A+</button><button id="wood-font-decrease" type="button">字體 A−</button></div>
   <div class="wood-setting-row"><button id="wood-theme-toggle" type="button">深色模式</button></div>
   <div class="wood-setting-row"><button id="wood-settings-reset" type="button">還原預設設定</button></div>
-  <p class="wood-setting-note" id="wood-settings-reset-note">重設語言、字級、主題及工具透明度；不會清除工程資料或排料結果。</p>
+  <p class="wood-setting-note" id="wood-settings-reset-note">重設語言、字級、主題及工具透明度，並關閉已開啟視窗和展開區塊；不會清除工程資料或排料結果。</p>
   <output id="wood-settings-reset-status" class="wood-settings-reset-status" aria-live="polite"></output>
   <div class="wood-opacity-setting">
     <label id="wood-opacity-label" for="wood-opacity-level-3">上下箭咀透明度</label>
@@ -10039,16 +10039,25 @@ body.wood-dark-mode {
   document.addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');});
   $('wood-help-open').addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');if(window.calculator&&typeof calculator.showHelp==='function')calculator.showHelp();});
   function changeFont(delta){const current=parseFloat(getComputedStyle(body).fontSize)||18;const n=Math.max(14,Math.min(24,current+delta));body.style.fontSize=n+'px';woodStore.set('wood-font-size',n);refreshInfo();}
+  function closeAllOpenPanels(){
+    document.querySelectorAll('details[open]').forEach(section=>{section.open=false;});
+    document.querySelectorAll('dialog[open]').forEach(dialog=>{if(typeof dialog.close==='function')dialog.close();else{dialog.open=false;dialog.removeAttribute('open');}});
+    ['printModal','helpModal','moveDialog'].forEach(id=>{const modal=$(id);if(modal)modal.style.display='none';});
+    panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');
+    const infoOverlay=$('wood-info-overlay');if(infoOverlay){infoOverlay.dataset.open='false';infoOverlay.setAttribute('aria-hidden','true');}
+    const layoutRemote=$('layoutRemote');if(layoutRemote)layoutRemote.hidden=true;
+  }
   function restoreSettings(){
-    const message=text('將還原語言、字級、主題及工具透明度預設值；部件、板材、餘料和排料結果會保留。繼續？','Restore the default language, font, theme and tool opacity? Parts, sheets, remnants and layout results will be kept. Continue?');
+    const message=text('將還原語言、字級、主題及工具透明度預設值，並關閉所有已開啟視窗和展開區塊；部件、板材、餘料和排料結果會保留。繼續？','Restore the default language, font, theme and tool opacity, and close all open dialogs and expanded sections? Parts, sheets, remnants and layout results will be kept. Continue?');
     if(typeof window.confirm==='function'&&!window.confirm(message))return;
-    ['plywood-layout-language-v1','wood-font-size','wood-theme','wood-scroll-opacity','wood-floating-opacity','wood-layout-remote-opacity'].forEach(key=>{try{window.localStorage.removeItem(key);}catch(_){}});
+    ['plywood-layout-language-v1','wood-font-size','wood-theme','wood-scroll-opacity','wood-floating-opacity','wood-layout-remote-opacity','plywood-layout-compact-view-v1'].forEach(key=>{try{window.localStorage.removeItem(key);}catch(_){}});
     body.style.removeProperty('font-size');
     body.classList.remove('wood-dark-mode');
     opacityTarget='scroll';
     document.documentElement.style.setProperty('--wood-floating-opacity',opacityValues[3]);
     document.documentElement.style.setProperty('--wood-layout-remote-opacity',opacityValues[3]);
     setScrollOpacity(3,false);
+    closeAllOpenPanels();
     const app=window.calculator;
     if(app&&typeof app._translatePageTo==='function')app._translatePageTo('zh',true,false);
     else if(app)app.currentLanguage='zh';
@@ -10148,7 +10157,7 @@ body.wood-dark-mode {
     const en=isEnglish();
     $('wood-settings-title').textContent=en?'Settings':'設定';$('wood-help-open').textContent=en?'Help':'使用說明';
     $('wood-settings-reset').textContent=en?'Restore defaults':'還原預設設定';
-    $('wood-settings-reset-note').textContent=en?'Resets language, font, theme and tool opacity; project data and layouts are kept.':'重設語言、字級、主題及工具透明度；不會清除工程資料或排料結果。';
+    $('wood-settings-reset-note').textContent=en?'Resets language, font, theme and tool opacity; closes all open dialogs and expanded sections. Project data and layout results are kept.':'重設語言、字級、主題及工具透明度，並關閉已開啟視窗和展開區塊；不會清除工程資料或排料結果。';
     $('wood-settings-reset-status').textContent=resetNotice?(en?'Defaults restored; project data and layout results were kept.':'已恢復預設設定；工程資料及排料結果已保留。'):'';
     $('wood-font-increase').textContent=en?'Font A+':'字體 A+';$('wood-font-decrease').textContent=en?'Font A−':'字體 A−';
     const opacityOption=opacityOptions[opacityTarget]||opacityOptions.scroll;

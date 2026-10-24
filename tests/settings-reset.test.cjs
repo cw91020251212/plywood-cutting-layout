@@ -31,11 +31,13 @@ class FakeElement {
   constructor(id = '') {
     this.id = id; this.style = new FakeStyle(); this.classList = new FakeClassList();
     this.dataset = {}; this.attributes = {}; this.listeners = {}; this.textContent = '';
-    this.value = ''; this.scrollY = 0;
+    this.value = ''; this.scrollY = 0; this.open = false; this.hidden = false;
   }
   addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); }
   setAttribute(key, value) { this.attributes[key] = String(value); }
   getAttribute(key) { return this.attributes[key] ?? null; }
+  removeAttribute(key) { delete this.attributes[key]; }
+  close() { this.open = false; this.closed = true; }
   querySelectorAll() { return []; }
   getClientRects() { return []; }
   click(type = 'click') { for (const callback of this.listeners[type] || []) callback({ target: this, stopPropagation() {}, preventDefault() {} }); }
@@ -49,6 +51,7 @@ function makeHarness({ confirmResult = true } = {}) {
     ['wood-scroll-opacity', '1'],
     ['wood-floating-opacity', '2'],
     ['wood-layout-remote-opacity', '5'],
+    ['plywood-layout-compact-view-v1', '{"expanded":["layoutInputSettings","layoutDisplaySettings"]}'],
     ['plywood-layout-project-data', '{"parts":["keep"]}']
   ]);
   const storage = {
@@ -63,6 +66,13 @@ function makeHarness({ confirmResult = true } = {}) {
   };
   const levels = [1, 2, 3, 4, 5].map(n => { const e = element(`wood-opacity-level-${n}`); e.dataset.opacityLevel = String(n); return e; });
   const targets = ['scroll', 'floating', 'layout'].map(name => { const e = element(`wood-opacity-target-${name}`); e.dataset.opacityTarget = name; return e; });
+  const openDetails = ['layoutInputSettings', 'layoutDisplaySettings', 'layoutDiagnostics'].map(id => { const e = element(id); e.open = true; return e; });
+  const openDialogs = [element('remnantComparisonDialog')]; openDialogs[0].open = true;
+  const settingsPanel = element('wood-settings-panel'); settingsPanel.dataset.open = 'true'; settingsPanel.setAttribute('aria-hidden', 'false');
+  const infoOverlay = element('wood-info-overlay'); infoOverlay.dataset.open = 'true'; infoOverlay.setAttribute('aria-hidden', 'false');
+  for (const id of ['printModal', 'helpModal', 'moveDialog']) element(id).style.display = 'flex';
+  const layoutRemote = element('layoutRemote'); layoutRemote.hidden = false;
+  const settingsButton = element('wood-settings-button'); settingsButton.setAttribute('aria-expanded', 'true');
   const body = element('body');
   const documentElement = element('documentElement');
   const document = {
@@ -71,6 +81,8 @@ function makeHarness({ confirmResult = true } = {}) {
     querySelectorAll(selector) {
       if (selector === '.wood-opacity-level') return levels;
       if (selector === '.wood-opacity-target') return targets;
+      if (selector === 'details[open]') return openDetails.filter(node => node.open);
+      if (selector === 'dialog[open]') return openDialogs.filter(node => node.open);
       return [];
     },
     querySelector(selector) { return selector === 'head title' ? element('pageTitle') : null; },
@@ -93,7 +105,7 @@ function makeHarness({ confirmResult = true } = {}) {
     setTimeout() { return 1; }, clearTimeout() {}
   };
   vm.runInNewContext(script, context, { filename: 'index.html#wood-reference-tools-script' });
-  return { values, elements, levels, targets, body, documentElement, calculator, parts, boards, trialPlan };
+  return { values, elements, levels, targets, openDetails, openDialogs, body, documentElement, calculator, parts, boards, trialPlan };
 }
 
 test('restore defaults resets settings-panel preferences and keeps project data and layout', () => {
@@ -102,7 +114,7 @@ test('restore defaults resets settings-panel preferences and keeps project data 
   assert.equal(h.body.classList.contains('wood-dark-mode'), true);
   h.elements.get('wood-settings-reset').click();
 
-  for (const key of ['plywood-layout-language-v1', 'wood-font-size', 'wood-theme', 'wood-scroll-opacity', 'wood-floating-opacity', 'wood-layout-remote-opacity']) {
+  for (const key of ['plywood-layout-language-v1', 'wood-font-size', 'wood-theme', 'wood-scroll-opacity', 'wood-floating-opacity', 'wood-layout-remote-opacity', 'plywood-layout-compact-view-v1']) {
     assert.equal(h.values.has(key), false, `${key} is cleared so the default is used on the next visit`);
   }
   assert.equal(h.values.get('plywood-layout-project-data'), '{"parts":["keep"]}');
@@ -117,6 +129,16 @@ test('restore defaults resets settings-panel preferences and keeps project data 
   assert.equal(h.parts[0].id, 'part-1');
   assert.equal(h.boards[0].id, 'board-1');
   assert.equal(h.calculator.trialPlan, h.trialPlan);
+  assert.ok(h.openDetails.every(section => section.open === false));
+  assert.equal(h.openDialogs[0].open, false);
+  assert.equal(h.openDialogs[0].closed, true);
+  for (const id of ['printModal', 'helpModal', 'moveDialog']) assert.equal(h.elements.get(id).style.display, 'none');
+  assert.equal(h.elements.get('wood-settings-panel').dataset.open, 'false');
+  assert.equal(h.elements.get('wood-settings-panel').attributes['aria-hidden'], 'true');
+  assert.equal(h.elements.get('wood-settings-button').attributes['aria-expanded'], 'false');
+  assert.equal(h.elements.get('wood-info-overlay').dataset.open, 'false');
+  assert.equal(h.elements.get('wood-info-overlay').attributes['aria-hidden'], 'true');
+  assert.equal(h.elements.get('layoutRemote').hidden, true);
   assert.match(h.elements.get('wood-settings-reset-status').textContent, /已恢復預設設定/);
 });
 
@@ -129,11 +151,14 @@ test('canceling restore leaves existing settings unchanged', () => {
   assert.equal(h.body.style.fontSize, '22px');
   assert.equal(h.body.classList.contains('wood-dark-mode'), true);
   assert.equal(h.calculator.currentLanguage, 'en');
+  assert.ok(h.openDetails.every(section => section.open === true));
+  assert.equal(h.openDialogs[0].open, true);
+  assert.equal(h.elements.get('helpModal').style.display, 'flex');
 });
 
 test('settings copy explains scope and explicitly preserves project data', () => {
   assert.match(html, /id="wood-settings-reset"[^>]*>還原預設設定<\/button>/);
-  assert.match(html, /id="wood-settings-reset-note"[^>]*>重設語言、字級、主題及工具透明度；不會清除工程資料或排料結果。/);
+  assert.match(html, /id="wood-settings-reset-note"[^>]*>重設語言、字級、主題及工具透明度，並關閉已開啟視窗和展開區塊；不會清除工程資料或排料結果。/);
   assert.match(script, /部件、板材、餘料和排料結果會保留/);
   assert.doesNotMatch(script, /localStorage\.clear\(/);
 });

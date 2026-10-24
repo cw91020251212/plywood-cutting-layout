@@ -10,6 +10,18 @@ const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
+test('main app loads remnant cores before their UI entry points', () => {
+  const stockCore = html.indexOf('assets/reusable-remnant-stock.js?v=3');
+  const compareCore = html.indexOf('assets/remnant-comparison.js?v=2');
+  const compareUi = html.indexOf('assets/remnant-comparison-ui.js?v=2');
+  const stockUi = html.indexOf('assets/reusable-remnant-stock-ui.js?v=2');
+  assert.ok(stockCore >= 0, 'load the reusable-stock core in the main app');
+  assert.ok(compareCore >= 0, 'load the remnant-comparison core in the main app');
+  assert.ok(compareUi > compareCore, 'load comparison UI after its core');
+  assert.ok(stockUi > stockCore, 'load stock UI after its core');
+  assert.match(html, /href="assets\/remnant-comparison\.css\?v=3"/);
+});
+
 function loadEngine() {
   const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
   const source = scripts.find(script => script.includes('global.PlywoodTrialEngine={version:VERSION,plan,verifyBoard,orientations}'));

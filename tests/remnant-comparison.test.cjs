@@ -284,7 +284,7 @@ test('HTML and offline cache wire the updated comparison assets', () => {
   assert.ok(introMarkup && standalone.includes(introMarkup), 'standalone shell shares the initial two-line comparison intro');
   assert.match(html,/id="remnantComparisonAction" class="remnant-comparison-action" hidden/);
   assert.match(html,/id="remnantComparisonAvailability"/);
-  assert.match(html,/href="assets\/remnant-comparison\.css\?v=13"/);
+  assert.match(html,/href="assets\/remnant-comparison\.css\?v=14"/);
   assert.match(html,/assets\/remnant-comparison-ui\.js\?v=15/);
   assert.match(html,/assets\/remnant-comparison\.js\?v=8/);
   assert.match(html,/id="partsTable"/);
@@ -294,8 +294,8 @@ test('HTML and offline cache wire the updated comparison assets', () => {
   assert.ok(actionMarkup && standalone.includes(actionMarkup), 'standalone action starts hidden like the source page');
   assert.ok(dialogMarkup && standalone.includes(dialogMarkup), 'standalone dialog has the same compact, right-aligned close header');
   assert.ok(dialogMarkup.indexOf('remnant-comparison-header-copy') < dialogMarkup.indexOf('id="closeRemnantComparison"'));
-  for (const file of ['remnant-comparison.js?v=8','remnant-comparison-ui.js?v=15','remnant-comparison.css?v=13','reusable-remnant-stock-ui.js?v=6']) assert.ok(sw.includes(`./assets/${file}`));
-  assert.match(sw,/2026-10-25-remnant-compare-mobile-1/);
+  for (const file of ['remnant-comparison.js?v=8','remnant-comparison-ui.js?v=15','remnant-comparison.css?v=14','reusable-remnant-stock-ui.js?v=6']) assert.ok(sw.includes(`./assets/${file}`));
+  assert.match(sw,/2026-10-25-remnant-compare-triangle-1/);
   assert.match(html,/remnant-comparison-header-copy/);
   assert.match(componentCss,/\.remnant-comparison-header\s*\{[^}]*padding:\s*0 10px/);
   assert.match(componentCss,/\.remnant-comparison-intro\s*\{[^}]*white-space:\s*nowrap/);
@@ -327,6 +327,11 @@ test('comparison and stock controls preserve scoped styling and compact checkbox
   assert.match(componentCss,/^#remnantComparisonAction\[hidden\]\s*\{[^}]*display:\s*none !important/m);
   assert.match(componentCss, /#remnantComparisonDialog \.remnant-comparison-heading\s*\{[^}]*display:\s*block\s*!important/);
   assert.match(componentCss, /\.reusable-remnant-offer:not\(\[open\]\) > :not\(summary\)\s*\{[^}]*display:\s*none\s*!important/);
+  const offerArrow = componentCss.match(/\.reusable-remnant-offer > summary::before\s*\{([^}]*)\}/)?.[1] || '';
+  const offerArrowOpen = componentCss.match(/\.reusable-remnant-offer\[open\] > summary::before\s*\{([^}]*)\}/)?.[1] || '';
+  assert.match(offerArrow,/content:\s*"▶"/);
+  assert.match(offerArrowOpen,/transform:\s*rotate\(90deg\)/);
+  assert.doesNotMatch(offerArrow,/content:\s*["']＋["']/);
   assert.match(componentCss, /#remnantComparisonDialog \.remnant-comparison-close\s*\{[^}]*width:\s*auto\s*!important/);
   assert.match(componentCss, /#remnantComparisonDialog \.remnant-comparison-scheme-button\s*\{[^}]*height:\s*auto\s*!important/);
   assert.match(componentCss, /#openRemnantComparison\s*\{[^}]*text-shadow:\s*none\s*!important/);

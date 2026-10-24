@@ -335,15 +335,18 @@
 }
 
 .reusable-remnant-offer > summary::before {
-  content: "＋";
+  content: "▶";
   flex: none;
   margin-right: 7px;
   color: #355c4e;
   font-size: 1rem;
+  line-height: 1;
+  transform-origin: center;
+  transition: transform .15s ease;
 }
 
 .reusable-remnant-offer[open] > summary::before {
-  content: "−";
+  transform: rotate(90deg);
 }
 
 .reusable-remnant-offer > summary:focus-visible {

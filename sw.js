@@ -3,7 +3,7 @@
  * The version is intentionally changed whenever the application bundle changes so
  * installed PWA clients do not keep an old index.html after a release.
  */
-const APP_VERSION = '2026-10-25-remnant-compare-mobile-1';
+const APP_VERSION = '2026-10-25-remnant-compare-triangle-1';
 const CACHE_NAME = `cutting-optimizer-${APP_VERSION}`;
 const CORE_ASSETS = [
   './',
@@ -23,7 +23,7 @@ const CORE_ASSETS = [
   './assets/scheme-comparison.js?v=2',
   './assets/remnant-comparison.js?v=8',
   './assets/remnant-comparison-ui.js?v=15',
-  './assets/remnant-comparison.css?v=13',
+  './assets/remnant-comparison.css?v=14',
   './assets/reusable-remnant-stock-ui.js?v=6',
   './assets/manifest.webmanifest',
   './assets/favicon.ico',

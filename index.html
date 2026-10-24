@@ -11668,7 +11668,9 @@ body.wood-dark-mode {
   #wood-settings-panel #wood-help-open,#wood-settings-panel #wood-share-button{grid-column:1/-1}
   #wood-settings-panel #wood-help-open{background:linear-gradient(135deg,#ffa500,#cc8400)!important}
   #wood-settings-panel #wood-share-button{background:linear-gradient(135deg,#28a745,#1e7e34)!important}
+  #wood-settings-panel #wood-settings-reset{grid-column:1/-1;background:linear-gradient(135deg,#edf4ef,#c5d9cb)!important;color:#244634!important}
   #wood-settings-panel .wood-setting-note{margin:8px 0 0;font-size:.82em;line-height:1.35;color:#53636a}
+  #wood-settings-panel .wood-settings-reset-status{display:block;min-height:1.2em;margin-top:5px;color:#244634;font-size:.78em;line-height:1.3}
   #wood-font-current{display:block;margin:9px 0 0;padding:7px 9px;border-radius:7px;background:rgba(35,72,50,.08);font-size:.9em;font-weight:700;line-height:1.4;color:#234832}
   body.wood-dark-mode #wood-font-current{background:rgba(255,255,255,.09);color:#edf2f7}
   #wood-info-bar{position:fixed;left:0;right:0;bottom:0;z-index:5999;display:flex;align-items:center;padding:6px 18px calc(6px + env(safe-area-inset-bottom));background:rgba(32,32,32,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer}
@@ -11691,6 +11693,7 @@ body.wood-dark-mode {
   body.wood-dark-mode input,body.wood-dark-mode select,body.wood-dark-mode .contenteditable-number-editor{background:#f7fafc;color:#111}
   body.wood-dark-mode #wood-settings-panel{background:#262c33;color:#edf2f7;border-color:#77838d}
   body.wood-dark-mode #wood-settings-panel h3,body.wood-dark-mode #wood-settings-panel .wood-setting-note{color:#edf2f7}
+  body.wood-dark-mode #wood-settings-panel .wood-settings-reset-status{color:#dbe5ec}
   @media(max-width:600px){#wood-floating-tools{top:calc(16px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));gap:7px}#wood-floating-tools button,#wood-scroll-nav button{width:38px;height:38px;min-height:38px;font-size:17px}#wood-language-button{font-size:.86rem!important}#wood-settings-panel{top:calc(64px + env(safe-area-inset-top));right:calc(50px + env(safe-area-inset-right));width:min(240px,calc(100vw - 72px))}#wood-info-bar{padding-left:12px;padding-right:12px}}
 </style>
 <div id="wood-floating-tools" aria-label="頁面工具">
@@ -11704,6 +11707,9 @@ body.wood-dark-mode {
   <button id="wood-share-button" type="button">分享連結</button>
   <div class="wood-setting-row"><button id="wood-font-increase" type="button">字體 A+</button><button id="wood-font-decrease" type="button">字體 A−</button></div>
   <div class="wood-setting-row"><button id="wood-theme-toggle" type="button">深色模式</button></div>
+  <div class="wood-setting-row"><button id="wood-settings-reset" type="button">還原預設設定</button></div>
+  <p class="wood-setting-note" id="wood-settings-reset-note">重設語言、字級、主題及工具透明度，並關閉已開啟視窗和展開區塊；不會清除工程資料或排料結果。</p>
+  <output id="wood-settings-reset-status" class="wood-settings-reset-status" aria-live="polite"></output>
   <div class="wood-opacity-setting">
     <label id="wood-opacity-label" for="wood-opacity-level-3">上下箭咀透明度</label>
     <div class="wood-opacity-targets" role="group" aria-label="選擇要調整的工具">
@@ -12926,6 +12932,7 @@ body.wood-dark-mode {
   const status=$('wood-status-text'), fontReadout=$('wood-font-current'), opacityReadout=$('wood-opacity-current');
   const opacityValues={1:0.24,2:0.40,3:0.56,4:0.72,5:0.88};
   let opacityTarget='scroll';
+  let resetNotice=false;
   const opacityOptions={scroll:{key:'wood-scroll-opacity',css:'--wood-scroll-opacity',zh:'上下箭咀透明度',en:'Arrow opacity',zhName:'上下箭咀',enName:'Up/down arrows'},floating:{key:'wood-floating-opacity',css:'--wood-floating-opacity',zh:'EN／設定按鈕透明度',en:'EN / Settings button opacity',zhName:'EN／設定',enName:'EN / Settings'},layout:{key:'wood-layout-remote-opacity',css:'--wood-layout-remote-opacity',zh:'方案遙控器透明度',en:'Layout remote opacity',zhName:'方案遙控器',enName:'Layout remote'}};
   function setScrollOpacity(level,save=true){
     const n=Math.max(1,Math.min(5,Number(level)||3)), value=opacityValues[n];
@@ -12980,6 +12987,35 @@ body.wood-dark-mode {
   document.addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');});
   $('wood-help-open').addEventListener('click',()=>{panel.dataset.open='false';panel.setAttribute('aria-hidden','true');if(window.calculator&&typeof calculator.showHelp==='function')calculator.showHelp();});
   function changeFont(delta){const current=parseFloat(getComputedStyle(body).fontSize)||18;const n=Math.max(14,Math.min(24,current+delta));body.style.fontSize=n+'px';woodStore.set('wood-font-size',n);refreshInfo();}
+  function closeAllOpenPanels(){
+    document.querySelectorAll('details[open]').forEach(section=>{section.open=false;});
+    document.querySelectorAll('dialog[open]').forEach(dialog=>{if(typeof dialog.close==='function')dialog.close();else{dialog.open=false;dialog.removeAttribute('open');}});
+    ['printModal','helpModal','moveDialog'].forEach(id=>{const modal=$(id);if(modal)modal.style.display='none';});
+    panel.dataset.open='false';panel.setAttribute('aria-hidden','true');$('wood-settings-button').setAttribute('aria-expanded','false');
+    const infoOverlay=$('wood-info-overlay');if(infoOverlay){infoOverlay.dataset.open='false';infoOverlay.setAttribute('aria-hidden','true');}
+    const layoutRemote=$('layoutRemote');if(layoutRemote)layoutRemote.hidden=true;
+  }
+  function restoreSettings(){
+    const message=text('將還原語言、字級、主題及工具透明度預設值，並關閉所有已開啟視窗和展開區塊；部件、板材、餘料和排料結果會保留。繼續？','Restore the default language, font, theme and tool opacity, and close all open dialogs and expanded sections? Parts, sheets, remnants and layout results will be kept. Continue?');
+    if(typeof window.confirm==='function'&&!window.confirm(message))return;
+    ['plywood-layout-language-v1','wood-font-size','wood-theme','wood-scroll-opacity','wood-floating-opacity','wood-layout-remote-opacity','plywood-layout-compact-view-v1'].forEach(key=>{try{window.localStorage.removeItem(key);}catch(_){}});
+    body.style.removeProperty('font-size');
+    body.classList.remove('wood-dark-mode');
+    opacityTarget='scroll';
+    document.documentElement.style.setProperty('--wood-floating-opacity',opacityValues[3]);
+    document.documentElement.style.setProperty('--wood-layout-remote-opacity',opacityValues[3]);
+    setScrollOpacity(3,false);
+    closeAllOpenPanels();
+    const app=window.calculator;
+    if(app&&typeof app._translatePageTo==='function')app._translatePageTo('zh',true,false);
+    else if(app)app.currentLanguage='zh';
+    resetNotice=true;
+    updateToolLanguage();
+    const notice=$('wood-settings-reset-status');
+    if(notice)notice.textContent=text('已恢復預設設定；工程資料及排料結果已保留。','Defaults restored; project data and layout results were kept.');
+    refreshInfo();
+  }
+  $('wood-settings-reset').addEventListener('click',restoreSettings);
   $('wood-font-increase').addEventListener('click',()=>changeFont(1));
   $('wood-font-decrease').addEventListener('click',()=>changeFont(-1));
   $('wood-theme-toggle').addEventListener('click',()=>{body.classList.toggle('wood-dark-mode');woodStore.set('wood-theme',body.classList.contains('wood-dark-mode')?'dark':'light');refreshInfo();});
@@ -13068,6 +13104,9 @@ body.wood-dark-mode {
   function updateToolLanguage(){
     const en=isEnglish();
     $('wood-settings-title').textContent=en?'Settings':'設定';$('wood-help-open').textContent=en?'Help':'使用說明';
+    $('wood-settings-reset').textContent=en?'Restore defaults':'還原預設設定';
+    $('wood-settings-reset-note').textContent=en?'Resets language, font, theme and tool opacity, and closes all open dialogs and expanded sections. Project data and layout results are kept.':'重設語言、字級、主題及工具透明度，並關閉已開啟視窗和展開區塊；不會清除工程資料或排料結果。';
+    $('wood-settings-reset-status').textContent=resetNotice?(en?'Defaults restored; project data and layout results were kept.':'已恢復預設設定；工程資料及排料結果已保留。'):'';
     $('wood-font-increase').textContent=en?'Font A+':'字體 A+';$('wood-font-decrease').textContent=en?'Font A−':'字體 A−';
     const opacityOption=opacityOptions[opacityTarget]||opacityOptions.scroll;
     $('wood-opacity-label').textContent=en?opacityOption.en:opacityOption.zh;

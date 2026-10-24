@@ -3,14 +3,15 @@
  * The version is intentionally changed whenever the application bundle changes so
  * installed PWA clients do not keep an old index.html after a release.
  */
-const APP_VERSION = '2026-10-23-maxrects-mobile-no-step-nav-2-scheme-info-1-guillotine-1-cutting-preferences-1';
+const APP_VERSION = '2026-10-24-reusable-remnant-stock-5';
 const CACHE_NAME = `cutting-optimizer-${APP_VERSION}`;
 const CORE_ASSETS = [
   './',
   './index.html',
   './assets/title-wood-grain.jpg',
   './assets/cut-path-overlay.js?v=5',
-  './assets/table-saw-optimizer.js?v=2',
+  './assets/table-saw-optimizer.js?v=3',
+  './assets/reusable-remnant-stock.js?v=3',
   './assets/maxrects-candidate.js?v=1',
   './assets/guillotine-candidate.js?v=1',
   './assets/part-appearance.js?v=3',
@@ -20,6 +21,10 @@ const CORE_ASSETS = [
   './assets/mobile-view.js?v=2',
   './assets/mobile-view.css?v=2',
   './assets/scheme-comparison.js?v=2',
+  './assets/remnant-comparison.js?v=2',
+  './assets/remnant-comparison-ui.js?v=2',
+  './assets/remnant-comparison.css?v=3',
+  './assets/reusable-remnant-stock-ui.js?v=2',
   './assets/manifest.webmanifest',
   './assets/favicon.ico',
   './assets/cutting-wood-192.png',

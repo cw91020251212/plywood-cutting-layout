@@ -33,8 +33,8 @@ test('readSettings normalizes the toggle to a strict boolean',()=>{
   const fields={cuttingStrategy:{value:'ripThenCrosscut'},sawBladeThickness:{value:'3'},
     trialTrimLeft:{value:'0'},trialTrimRight:{value:'0'},trialTrimTop:{value:'0'},trialTrimBottom:{value:'0'},
     trialEdgeLeft:{checked:false},trialEdgeRight:{checked:false},trialEdgeTop:{checked:false},trialEdgeBottom:{checked:false},
-    trialMinSupport:{value:''},enableMaxRects:{checked:true}};
-  const context={$:id=>fields[id],parseKerf:value=>Number(value)};
+    trialMinSupport:{value:''},enableMaxRects:{checked:true},remnantMinShortSide:{value:'100',addEventListener:()=>{}},remnantMinLongSide:{value:'100',addEventListener:()=>{}}};
+  const context={$:id=>fields[id],parseKerf:value=>Number(value),window:{PlywoodRemnantStock:require('../assets/reusable-remnant-stock.js')}};
   vm.runInNewContext(`${read};globalThis.readSettings=readSettings`,context);
   assert.equal(context.readSettings().enableMaxRects,true);
   fields.enableMaxRects.checked='true';

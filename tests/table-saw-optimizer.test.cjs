@@ -205,14 +205,15 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   const {engine}=loadEngine();
   assert.throws(()=>engine.plan([{width:10,length:10,count:Infinity}],boards,settings),/數量無效/);
   assert.match(html,/<option value="auto" selected>/);
-  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=2"><\/script>/);
+  assert.match(html,/<script src="assets\/table-saw-optimizer\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-appearance\.js\?v=3"><\/script>/);
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-23-maxrects-mobile-no-step-nav-2'));
+  assert.ok(sw.includes('2026-10-24-reusable-remnant-stock-5'));
   assert.ok(sw.includes('./assets/title-wood-grain.jpg'));
-  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=2'));
+  assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=3'));
+  assert.ok(sw.includes('./assets/reusable-remnant-stock.js?v=3'));
   assert.ok(sw.includes('./assets/cut-path-overlay.js?v=5'));
   assert.ok(sw.includes('./assets/part-appearance.js?v=3'));
   assert.ok(sw.includes('./assets/part-dimension-display.js?v=2'));
@@ -308,6 +309,25 @@ test('saving keeps sheet count/area first, then intact rectangle; kerf precedes 
   assert.equal(JSON.stringify(base),snapshot);
 });
 
+test('saving prioritizes saved R stock after sheet count, then area and threshold-qualified intact leaves',()=>{
+  const make=(overrides={})=>({summary:{usedBoardCount:1,savedRemnantBoardsUsed:0,boardArea:100,kerfArea:100,largestRemnantArea:50,largestRemnantShortSide:10,largestQualifiedRemnantArea:0,largestQualifiedRemnantShortSide:0,reusableRemnantThresholdActive:true,retainedRemnantCount:1,...overrides},boards:[{cuts:[]}]});
+  const remnant=make({savedRemnantBoardsUsed:1,boardArea:200,largestQualifiedRemnantArea:200});
+  const fresh=make({savedRemnantBoardsUsed:0,boardArea:100,largestQualifiedRemnantArea:900});
+  assert.ok(saw.comparePlans(remnant,fresh,'saving')<0,'use an available saved remnant before comparing sheet area');
+  assert.ok(saw.comparePlans(make({usedBoardCount:2,savedRemnantBoardsUsed:2}),remnant,'saving')>0,'one sheet remains the first priority');
+  const lessArea=make({boardArea:90,largestQualifiedRemnantArea:10});
+  const moreArea=make({boardArea:100,largestQualifiedRemnantArea:900});
+  assert.ok(saw.comparePlans(lessArea,moreArea,'saving')<0,'sheet area precedes remnant size');
+  const betterLeaf=make({largestQualifiedRemnantArea:300,largestQualifiedRemnantShortSide:100,largestRemnantArea:300,kerfArea:900});
+  const worseLeaf=make({largestQualifiedRemnantArea:200,largestQualifiedRemnantShortSide:100,largestRemnantArea:9999,kerfArea:10});
+  assert.ok(saw.comparePlans(betterLeaf,worseLeaf,'saving')<0,'the largest qualifying leaf precedes kerf; nonqualifying area does not override it');
+  const inactiveA=make({reusableRemnantThresholdActive:false,largestRemnantArea:500});
+  const inactiveB=make({reusableRemnantThresholdActive:false,largestRemnantArea:400});
+  assert.ok(saw.comparePlans(inactiveA,inactiveB,'saving')<0,'when thresholds are off, legacy intact-remnant ranking remains');
+  const convenienceA=make({savedRemnantBoardsUsed:1}),convenienceB=make({savedRemnantBoardsUsed:0});
+  assert.equal(saw.comparePlans(convenienceA,convenienceB,'convenience'),0,'the convenience goal is unchanged');
+});
+
 test('integrity summary uses individual final leaves, not L-shaped unions, trims, kerf or exact-fit parts',()=>{
   const {engine}=loadEngine();
   const fixtures=[
@@ -347,10 +367,10 @@ test('missing helper still computes physical remnant metrics and saving fallback
 });
 
 test('intact-remnant guidance, displayed length/width and provenance are bilingual and versioned',()=>{
-  assert.equal(saw.version,'table-saw-1.1.0');
-  assert.equal(loadEngine().engine.version,'plywood-trial-1.4.0');
-  assert.ok(html.includes('同等用料優先保留最大完整長方形餘料'));
-  assert.equal(html.split('先少用板，同等用料下保留最大完整長方形餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
+  assert.equal(saw.version,'table-saw-1.2.0');
+  assert.equal(loadEngine().engine.version,'plywood-trial-1.5.0');
+  assert.ok(html.includes('再偏好重用 R 餘料'));
+  assert.equal(html.split('先少用板；板數相同先用 R 餘料，再比板面積；門檻啟用時保留最大合格完整餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
   assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
   assert.ok(html.includes('L-shaped blanks are never merged'));
   assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));

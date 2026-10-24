@@ -138,3 +138,10 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 
 - `node --test tests/*.test.cjs`：92 項通過，0 項失敗。
 - `scripts/check-mobile-view.py`：未能執行瀏覽器測試；附件腳本指定 `/opt/google/chrome/chrome`，目前執行環境未安裝該路徑的 Chrome。
+
+## 2026-10-24 — Review ZIP 全量整合
+
+- 已將 review ZIP 中所有程式交付項目整合到最新主分支：餘料比較、可重用餘料庫、排料與介面更新、相關測試、檢查腳本及 mockups。
+- 依項目比對的整合度為 100%；未以 ZIP 覆蓋主分支額外保有的文件與功能。
+- 驗證：162 項 Node 測試通過；內嵌腳本檢查通過（12 個 inline scripts、10 個 production JavaScript assets）。
+- 兩個附件瀏覽器檢查腳本預設輸出至不可用的 `/workspace/...`，因此未完成該兩項瀏覽器檢查。完整範圍與限制見 `INTEGRATION_REVIEW_REPORT.md`。

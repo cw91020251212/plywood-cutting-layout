@@ -31,9 +31,9 @@ test('algorithm switches show only their short names without explanatory paragra
 });
 
 test('readSettings accepts only an actual checked boolean and leaves MaxRects independent',()=>{
-  const fields={cuttingStrategy:{value:'auto'},sawBladeThickness:{value:'3'},enableGuillotine:{checked:true},enableMaxRects:{checked:true},trialMinSupport:{value:''}};
+  const fields={cuttingStrategy:{value:'auto'},sawBladeThickness:{value:'3'},enableGuillotine:{checked:true},enableMaxRects:{checked:true},trialMinSupport:{value:''},remnantMinShortSide:{value:'100'},remnantMinLongSide:{value:'100'}};
   for(const side of ['Left','Right','Top','Bottom']){fields['trialTrim'+side]={value:'0'};fields['trialEdge'+side]={checked:true};}
-  const ctx={$:id=>fields[id],parseKerf:Number};
+  const ctx={$:id=>fields[id],parseKerf:Number,window:{PlywoodRemnantStock:require('../assets/reusable-remnant-stock.js')}};
   vm.runInNewContext(section('function readSettings(modeOverride){','  function rectText(')+';globalThis.read=readSettings',ctx);
   assert.equal(ctx.read().enableGuillotine,true);
   for(const value of [false,'true',1,undefined]){fields.enableGuillotine.checked=value;assert.equal(ctx.read().enableGuillotine,false);assert.equal(ctx.read().enableMaxRects,true);}
@@ -49,7 +49,7 @@ test('project loading round-trips strict guillotine settings and older files def
   class FileReader{readAsText(file){this.result=file;this.onload();}}
   const storage={getItem(){return null},setItem(){}};
   const prefs=js.slice(js.indexOf('  const CUTTING_PREFERENCES_KEY='),js.indexOf('  function readSettings(modeOverride){'));
-  const ctx={$ ,FileReader,window:{calculator,localStorage:storage,addEventListener(){}},document:{createElement(){return fileInput={setAttribute(){},click(){}};}},setObjective(){},updateObjectiveHelp(){},showModeDescription(){},normalizeUnitSystem:x=>x,readUnitSystemPreference:()=>null,clearCandidatePool(){},clearMessages(){}};
+  const ctx={$ ,FileReader,window:{calculator,localStorage:storage,addEventListener(){},PlywoodRemnantStock:require('../assets/reusable-remnant-stock.js')},document:{createElement(){return fileInput={setAttribute(){},click(){}};}},setObjective(){},updateObjectiveHelp(){},showModeDescription(){},normalizeUnitSystem:x=>x,readUnitSystemPreference:()=>null,clearCandidatePool(){},clearMessages(){}};
   vm.runInNewContext(prefs+section('function loadProject(){','  function resetResults(){')+';globalThis.load=loadProject',ctx);
   for(const value of [true,false,'true',1,undefined]){
     $('enableMaxRects').checked=false;$('enableGuillotine').checked=false;$('cuttingStrategy').value='auto';

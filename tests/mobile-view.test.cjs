@@ -33,7 +33,7 @@ test('phone resources load last and are included in versioned offline cache',()=
     assert.ok(sw.includes(`./assets/${file}?v=2`));
   }
   assert.ok(html.indexOf('assets/mobile-view.css')>html.indexOf('wood-opacity-outline-style'));
-  assert.ok(sw.includes('2026-10-23-maxrects-mobile-no-step-nav-2'));
+  assert.ok(sw.includes('2026-10-24-reusable-remnant-stock-5'));
   new vm.Script(js);
 });
 test('four-step bottom navigation and its reserved space are removed',()=>{

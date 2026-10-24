@@ -55,6 +55,7 @@ test('runtime comparison and cut-path copy retain factual dimensions without cav
 
 test('copyright and license notices remain available', () => {
   assert.match(html, /© 2026 木材切割排版/);
+  assert.match(html, /作者：Wong wai/);
   assert.match(fs.readFileSync(path.join(root, 'LICENSE'), 'utf8'), /Apache License/);
   assert.match(fs.readFileSync(path.join(root, 'licenses/WoodworkingShop-MIT.txt'), 'utf8'), /Copyright \(c\) 2026 Ryair/);
   assert.match(fs.readFileSync(path.join(root, 'assets/maxrects-candidate.js'), 'utf8'), /MIT License/);

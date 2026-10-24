@@ -295,7 +295,7 @@ test('HTML and offline cache wire the updated comparison assets', () => {
   assert.ok(dialogMarkup && standalone.includes(dialogMarkup), 'standalone dialog has the same compact, right-aligned close header');
   assert.ok(dialogMarkup.indexOf('remnant-comparison-header-copy') < dialogMarkup.indexOf('id="closeRemnantComparison"'));
   for (const file of ['remnant-comparison.js?v=8','remnant-comparison-ui.js?v=15','remnant-comparison.css?v=14','reusable-remnant-stock-ui.js?v=6']) assert.ok(sw.includes(`./assets/${file}`));
-  assert.match(sw,/2026-10-25-settings-reset-1/);
+  assert.match(sw,/2026-10-25-footer-author-1/);
   assert.match(html,/remnant-comparison-header-copy/);
   assert.match(componentCss,/\.remnant-comparison-header\s*\{[^}]*padding:\s*0 10px/);
   assert.match(componentCss,/\.remnant-comparison-intro\s*\{[^}]*white-space:\s*nowrap/);

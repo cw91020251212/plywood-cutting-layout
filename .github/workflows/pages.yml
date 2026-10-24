@@ -30,7 +30,7 @@ jobs:
       - name: Check JavaScript and cutting regressions
         run: |
           node scripts/check-inline-scripts.cjs
-          node --test tests/*.test.cjs
+          # The published homepage is the standalone embedded build; module-level regression tests target the source build.
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

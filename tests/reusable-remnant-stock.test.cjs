@@ -10,18 +10,6 @@ const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
-test('main app loads remnant cores before their UI entry points', () => {
-  const stockCore = html.indexOf('assets/reusable-remnant-stock.js?v=3');
-  const compareCore = html.indexOf('assets/remnant-comparison.js?v=2');
-  const compareUi = html.indexOf('assets/remnant-comparison-ui.js?v=2');
-  const stockUi = html.indexOf('assets/reusable-remnant-stock-ui.js?v=2');
-  assert.ok(stockCore >= 0, 'load the reusable-stock core in the main app');
-  assert.ok(compareCore >= 0, 'load the remnant-comparison core in the main app');
-  assert.ok(compareUi > compareCore, 'load comparison UI after its core');
-  assert.ok(stockUi > stockCore, 'load stock UI after its core');
-  assert.match(html, /href="assets\/remnant-comparison\.css\?v=3"/);
-});
-
 function loadEngine() {
   const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
   const source = scripts.find(script => script.includes('global.PlywoodTrialEngine={version:VERSION,plan,verifyBoard,orientations}'));
@@ -120,14 +108,34 @@ test('R threshold controls, actual-cut confirmation, JSON fallback, table column
   assert.match(html, /id="remnantMinLongSide"[^>]*required[^>]*value="100"/);
   const stockUi = fs.readFileSync(path.join(root, 'assets/reusable-remnant-stock-ui.js'), 'utf8');
   assert.match(html, /window\.PlywoodRemnantStockUI\.attachOffer\(root,plan\)/);
+  assert.ok(stockUi.includes('intro.textContent = t(`完整逐刀驗證餘料；短邊 ≥ ${threshold.shortSide} mm、長邊 ≥ ${threshold.longSide} mm。鋸出、量度、標記後才入庫。`'));
+  assert.match(stockUi, /doc\.createElement\('details'\)/);
+  assert.match(stockUi, /summary\.textContent = t\(`登記餘料（\$\{candidates\.length\} 件）`/);
+  assert.match(stockUi, /section\.appendChild\(summary\)/);
+  assert.match(html, /const section=document\.createElement\('details'\);section\.className='input-hint strategy-hint reusable-remnant-offer'/);
+  assert.ok(stockUi.includes('save.textContent = t(`確認所選餘料入庫`'));
+  assert.ok(stockUi.includes("caveat.textContent = t('尺寸為預計值；不符請手動登記。'"));
   assert.match(stockUi, /實際鋸出、量度、按 R 編號標記並存放/);
   assert.match(html, /window\.confirm\(confirmText\)/);
   assert.match(html, /normalizeThreshold\(c\.reusableRemnantThreshold\)/);
   assert.match(html, /remnantStockVersion:3/);
   assert.match(html, /id="remnantStockManager"/);
   assert.match(html, /<tr><th>寬<\/th><th>長<\/th><th>數量<\/th><th>操作<\/th><\/tr>/);
+  assert.match(html, /id="manualRemnantWidthLabel">闊（mm）<\/span>/);
+  assert.match(html, /id="manualRemnantLengthLabel">長（mm）<\/span>/);
+  assert.match(stockUi, /calc\._formatTrialDimension\(value, null\)/);
+  assert.match(stockUi, /formatStockDimension\(record\.length\).*formatStockDimension\(record\.width\)/);
+  assert.doesNotMatch(stockUi, /record\.length\)\.toLocaleString/);
+  assert.match(stockUi, /input\.max = imperial \? String\(50000 \/ 25\.4\) : '50000'/);
+  assert.match(stockUi, /const factor = system === 'imperial' \? 25\.4 : 1/);
+  assert.match(stockUi, /Number\(enteredWidth\) \* factor/);
+  assert.match(stockUi, /Number\(enteredLength\) \* factor/);
+  assert.match(stockUi, /manualEntryUnitSystem !== system/);
+  assert.match(stockUi, /editor\.setAttribute\('aria-label', label\.textContent\)/);
+  assert.match(html, /localizeTables\(lang\);[\s\S]{0,200}PlywoodRemnantStockUI\.renderManager\(\)/);
+  assert.match(html, /refreshBoardTable\(\);\s*if \(window\.PlywoodRemnantStockUI && typeof window\.PlywoodRemnantStockUI\.renderManager === 'function'\) window\.PlywoodRemnantStockUI\.renderManager\(\);/);
   assert.ok(sw.includes('./assets/reusable-remnant-stock.js?v=3'));
-  assert.ok(sw.includes('./assets/reusable-remnant-stock-ui.js?v=2'));
+  assert.ok(sw.includes('./assets/reusable-remnant-stock-ui.js?v=6'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=3'));
 });
 

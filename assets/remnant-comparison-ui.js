@@ -4,18 +4,11 @@
   const doc = root.document;
   const NS = 'http://www.w3.org/2000/svg';
   const $ = id => doc.getElementById(id);
-  const escText = value => String(value == null ? '' : value);
-  const format = value => `${Number(value).toLocaleString('zh-HK', { maximumFractionDigits: 1 })} mm`;
   const t = (zh, en) => root.calculator && root.calculator.currentLanguage === 'en' ? en : zh;
+  const DISPLAY_GAP = 48;
+  const DISPLAY_PADDING = 68;
   let lastFocus = null;
-
-  function sourceLabel(remnant, candidateNumber) {
-    const board = remnant.sourceBoard || {};
-    if (board.reusableRemnant === true) return t(`來源板 ${remnant.boardIndex + 1}｜R 餘料 ${board.reusableRemnantId || ''}`, `Source sheet ${remnant.boardIndex + 1} | R remnant ${board.reusableRemnantId || ''}`);
-    if (board.added === true) return t(`來源板 ${remnant.boardIndex + 1}｜新增原板`, `Source sheet ${remnant.boardIndex + 1} | new full sheet`);
-    const stock = Number.isInteger(board.stockIndex) ? ` #${board.stockIndex + 1}` : '';
-    return t(`來源板 ${remnant.boardIndex + 1}${stock}`, `Source sheet ${remnant.boardIndex + 1}${stock}`);
-  }
+  let measureCanvas = null;
 
   function validatedCandidates() {
     const api = root.PlywoodRemnantComparison, overlay = root.PlywoodCutOverlay;
@@ -31,9 +24,9 @@
     if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
   }
 
-  function returnToSource(candidate, remnant) {
+  function returnToCandidate(candidate) {
     const app = root.calculator, ui = root.PlywoodTrialUI;
-    if (!app || !ui || !remnant) return;
+    if (!app || !ui || !candidate || !candidate.plan) return;
     if (candidate.plan !== app.trialPlan) {
       const pool = Array.isArray(app._trialCandidates) ? app._trialCandidates : [];
       const index = pool.findIndex(item => item && item.plan === candidate.plan);
@@ -41,8 +34,9 @@
     }
     closeDialog();
     root.requestAnimationFrame(() => {
-      const selector = `#canvasContainer .canvas-container[data-board-index="${Number(remnant.boardIndex)}"]`;
-      const card = doc.querySelector(selector);
+      const boardIndex = candidate.plan.boards && candidate.plan.boards.length ? 0 : null;
+      if (boardIndex === null) return;
+      const card = doc.querySelector(`#canvasContainer .canvas-container[data-board-index="${boardIndex}"]`);
       if (!card) return;
       card.style.outline = '3px solid #3d895c';
       card.style.outlineOffset = '3px';
@@ -53,65 +47,308 @@
 
   function svgElement(name, attrs = {}) {
     const element = doc.createElementNS(NS, name);
-    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+    Object.entries(attrs).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) element.setAttribute(key, String(value));
+    });
     return element;
   }
 
-  function createPieceMap(candidate, candidateNumber, placements, canvasIndex, model) {
-    const card = doc.createElement('div');
-    card.className = 'remnant-comparison-canvas-card';
-    const caption = doc.createElement('p');
-    caption.className = 'remnant-comparison-canvas-label';
-    caption.textContent = t(`展示畫布 ${canvasIndex + 1}｜同一比例`, `Display canvas ${canvasIndex + 1} | same scale`);
-    card.appendChild(caption);
+  function sourceBoardFor(candidate, remnant) {
+    const planBoard = remnant.sourceBoard || (candidate.plan.boards || []).find(board => board && board.boardId === remnant.boardId) || {};
+    const inputs = root.calculator && Array.isArray(root.calculator.boards) ? root.calculator.boards : [];
+    if (planBoard.stockIndex != null && inputs[planBoard.stockIndex]) return inputs[planBoard.stockIndex];
+    return inputs.find(item => item && !item.disabled &&
+      Math.abs(Number(item.width) - Number(planBoard.width)) < 1e-7 &&
+      Math.abs(Number(item.length ?? item.height) - Number(planBoard.length ?? planBoard.height)) < 1e-7) || planBoard;
+  }
+
+  function formatDimension(amount, source) {
+    const app = root.calculator;
+    const format = app && app._formatTrialDimension;
+    const selector = $('unitSystem');
+    const unitSystem = (selector && selector.value) || (app && app.unitSystem) || source.displayUnitSystem || 'metric';
+    const formattingSource = { ...source, displayUnitSystem: unitSystem, unitSystem };
+    const formatOne = amount => {
+      if (typeof format === 'function') {
+        try { return format.call(app, Number(amount), formattingSource); } catch (_) { /* use the same selected system below */ }
+      }
+      if (root.PlywoodLayoutView && typeof root.PlywoodLayoutView.formatLength === 'function') {
+        return root.PlywoodLayoutView.formatLength(Number(amount), {
+          system: unitSystem,
+          preserve: false,
+          english: app && app.currentLanguage === 'en'
+        });
+      }
+      return unitSystem === 'imperial'
+        ? `${(Number(amount) / 25.4).toFixed(2)}${app && app.currentLanguage === 'en' ? ' in' : '寸'}`
+        : `${Number(amount).toFixed(1)} mm`;
+    };
+    return formatOne(Number(amount));
+  }
+
+  function formatRemnantDimensions(candidate, remnant) {
+    const source = sourceBoardFor(candidate, remnant);
+    const value = remnant.rect || {};
+    // Match the main diagram's width × length convention.
+    const width = formatDimension(value.width, source), length = formatDimension(value.length, source);
+    return `${width} × ${length}`;
+  }
+
+  function line(svg, x1, y1, x2, y2, className) {
+    svg.appendChild(svgElement('line', { class: className, x1, y1, x2, y2, 'aria-hidden': 'true' }));
+  }
+
+  function appendOverallDimensionTag(svg, centerX, centerY, labelText, fontPx, unitsPerPixel, rotation, axis) {
+    if (!measureCanvas) measureCanvas = doc.createElement('canvas');
+    const context = measureCanvas.getContext('2d');
+    context.font = `600 ${fontPx}px Arial, sans-serif`;
+    const labelWidth = (context.measureText(labelText).width + 8) * unitsPerPixel;
+    const labelHeight = (fontPx * 1.35 + 4) * unitsPerPixel;
+    const group = svgElement('g', {
+      class: 'remnant-comparison-overall-dimension-tag',
+      'data-overall-dimension': axis,
+      'aria-label': labelText,
+      transform: rotation ? `rotate(${rotation} ${centerX} ${centerY})` : undefined
+    });
+    group.appendChild(svgElement('rect', {
+      class: 'remnant-comparison-dimension-label-bg',
+      x: centerX - labelWidth / 2,
+      y: centerY - labelHeight / 2,
+      width: labelWidth,
+      height: labelHeight
+    }));
+    const text = svgElement('text', {
+      class: 'remnant-comparison-dimension-label-text',
+      x: centerX,
+      y: centerY,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+      'font-size': fontPx * unitsPerPixel
+    });
+    text.textContent = labelText;
+    group.appendChild(text);
+    svg.appendChild(group);
+  }
+
+  function boxOverlaps(a, b) {
+    return a.x < b.x + b.width - 1e-7 && a.x + a.width > b.x + 1e-7 &&
+      a.y < b.y + b.height - 1e-7 && a.y + a.height > b.y + 1e-7;
+  }
+
+  function labelBoxAt(cx, cy, width, height, rotation) {
+    const rotated = Math.abs(rotation) % 180 === 90;
+    const boxWidth = rotated ? height : width;
+    const boxHeight = rotated ? width : height;
+    return { x: cx - boxWidth / 2, y: cy - boxHeight / 2, width: boxWidth, height: boxHeight, cx, cy, rotation };
+  }
+
+  function dimensionLabelPlacement(piece, pieces, priorLabels, labelWidth, labelHeight, gap, boardWidth, boardHeight) {
+    const horizontal = piece.width >= piece.height;
+    const rotation = horizontal ? 0 : -90;
+    const margin = Math.max(1, gap * 0.08);
+    const inside = labelBoxAt(piece.x + piece.width / 2, piece.y + piece.height / 2, labelWidth, labelHeight, rotation);
+    if (inside.width <= piece.width - margin * 2 && inside.height <= piece.height - margin * 2) {
+      return { ...inside, outside: false };
+    }
+    const longStart = horizontal ? piece.x : piece.y;
+    const longSize = horizontal ? piece.width : piece.height;
+    const longCenters = [0.5, 0.33, 0.67, 0.2, 0.8, 0.1, 0.9, 0.4, 0.6]
+      .map(fraction => longStart + longSize * fraction);
+    const offset = Math.max(gap / 2, labelHeight / 2 + margin);
+    const sides = horizontal
+      ? [
+          { cx: piece.x + piece.width / 2, cy: piece.y - offset },
+          { cx: piece.x + piece.width / 2, cy: piece.y + piece.height + offset },
+          ...longCenters.slice(1).flatMap(cx => [{ cx, cy: piece.y - offset }, { cx, cy: piece.y + piece.height + offset }])
+        ]
+      : [
+          { cx: piece.x - offset, cy: piece.y + piece.height / 2 },
+          { cx: piece.x + piece.width + offset, cy: piece.y + piece.height / 2 },
+          ...longCenters.slice(1).flatMap(cy => [{ cx: piece.x - offset, cy }, { cx: piece.x + piece.width + offset, cy }])
+        ];
+
+    for (const point of sides) {
+      const box = labelBoxAt(point.cx, point.cy, labelWidth, labelHeight, rotation);
+      if (box.x < 1 || box.y < 1 || box.x + box.width > boardWidth - 1 || box.y + box.height > boardHeight - 1) continue;
+      if (boxOverlaps(box, piece)) continue;
+      if (pieces.some(other => other !== piece && boxOverlaps(box, other))) continue;
+      if (priorLabels.some(other => boxOverlaps(box, other))) continue;
+      return { ...box, outside: true };
+    }
+    // Dense layouts still retain the dimension on the source remnant instead of routing a long crossing leader.
+    return { ...inside, outside: true, fallback: true };
+  }
+
+  function appendDimensionTag(svg, piece, allPieces, priorLabels, labelText, fontPx, unitsPerPixel, gap, boardWidth, boardHeight) {
+    if (!measureCanvas) measureCanvas = doc.createElement('canvas');
+    const context = measureCanvas.getContext('2d');
+    context.font = `600 ${fontPx}px Arial, sans-serif`;
+    const measuredPx = context.measureText(labelText).width;
+    const labelWidth = (measuredPx + 5.2) * unitsPerPixel;
+    const labelHeight = (fontPx * 1.22 + 2) * unitsPerPixel;
+    const placement = dimensionLabelPlacement(piece, allPieces, priorLabels, labelWidth, labelHeight, gap, boardWidth, boardHeight);
+    const nearestOnPiece = {
+      x: Math.max(piece.x, Math.min(placement.cx, piece.x + piece.width)),
+      y: Math.max(piece.y, Math.min(placement.cy, piece.y + piece.height))
+    };
+    if (placement.outside && !placement.fallback) {
+      const nearestOnTag = {
+        x: Math.max(placement.x, Math.min(nearestOnPiece.x, placement.x + placement.width)),
+        y: Math.max(placement.y, Math.min(nearestOnPiece.y, placement.y + placement.height))
+      };
+      line(svg, nearestOnTag.x, nearestOnTag.y, nearestOnPiece.x, nearestOnPiece.y, 'remnant-comparison-dimension-leader');
+    }
+
+  const group = svgElement('g', {
+      class: 'remnant-comparison-dimension-tag',
+      'data-dimension-label': 'true',
+      'data-placement': placement.fallback ? 'fallback' : placement.outside ? 'leader' : 'inside',
+      'aria-label': labelText,
+      transform: placement.rotation ? `rotate(${placement.rotation} ${placement.cx} ${placement.cy})` : undefined
+    });
+    group.appendChild(svgElement('rect', {
+      class: 'remnant-comparison-dimension-label-bg',
+      x: placement.cx - labelWidth / 2,
+      y: placement.cy - labelHeight / 2,
+      width: labelWidth,
+      height: labelHeight
+    }));
+    const text = svgElement('text', {
+      class: 'remnant-comparison-dimension-label-text',
+      x: placement.cx,
+      y: placement.cy,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+      'font-size': fontPx * unitsPerPixel
+    });
+    text.textContent = labelText;
+    group.appendChild(text);
+    svg.appendChild(group);
+    priorLabels.push({ x: placement.x, y: placement.y, width: placement.width, height: placement.height });
+  }
+
+  function createDisplayBoardGraphic(candidate, candidateNumber, panel, model) {
     const svg = svgElement('svg', {
-      class: 'remnant-comparison-canvas',
-      viewBox: `0 0 ${model.canvasWidth} ${model.canvasHeight}`,
+      class: 'remnant-comparison-board-graphic',
+      viewBox: `0 0 ${model.panelWidth} ${model.panelHeight}`,
       role: 'img',
-      'aria-label': t(`方案 ${candidateNumber} 的餘板展示畫布 ${canvasIndex + 1}`, `Scheme ${candidateNumber} remnant display canvas ${canvasIndex + 1}`),
+      'aria-label': t(`方案 ${candidateNumber} 虛擬展示板 ${panel.displayBoardIndex + 1}；每件標示 R 編號及闊乘長尺寸`, `Scheme ${candidateNumber}, virtual display board ${panel.displayBoardIndex + 1}; each remnant is numbered and dimensioned width by length`),
       preserveAspectRatio: 'xMidYMid meet'
     });
-    svg.appendChild(svgElement('rect', { class: 'remnant-comparison-board', x: 0, y: 0, width: model.canvasWidth, height: model.canvasHeight, rx: 2 }));
-    placements.forEach(remnant => {
-      const group = svgElement('g', { tabindex: 0, role: 'button', 'aria-label': `${format(remnant.rect.length)} × ${format(remnant.rect.width)}; ${sourceLabel(remnant, candidateNumber)}` });
+    const viewportWidth = Number(root.innerWidth) || 320;
+    const compactSingleColumn = viewportWidth <= 420;
+    const targetPanelWidthPx = Math.min(425, Math.max(110,
+      (viewportWidth - (compactSingleColumn ? 36 : 72)) / (compactSingleColumn ? 1 : 2)));
+    const unitsPerPixel = model.panelWidth / targetPanelWidthPx;
+    const fontPx = Math.max(6.4, Math.min(7.8, 6.4 + (viewportWidth - 320) * 0.0012));
+    const boardX = model.padding, boardY = model.padding;
+    const boardWidth = Math.min(panel.boardLength, panel.boardWidth);
+    const boardHeight = Math.max(panel.boardLength, panel.boardWidth);
+    const sourceBoard = candidate.plan.boards[0] || {};
+    const overallWidth = formatDimension(boardWidth, sourceBoard);
+    const overallHeight = formatDimension(boardHeight, sourceBoard);
+    const widthLabel = t(`闊 ${overallWidth}`, `W ${overallWidth}`);
+    const heightLabel = t(`高 ${overallHeight}`, `H ${overallHeight}`);
+    svg.setAttribute('aria-label', t(
+      `方案 ${candidateNumber} 虛擬展示板 ${panel.displayBoardIndex + 1}，整體闊 ${overallWidth}、高 ${overallHeight}；每件餘料標示 R 編號及闊乘長尺寸`,
+      `Scheme ${candidateNumber}, virtual display board ${panel.displayBoardIndex + 1}, overall width ${overallWidth} and height ${overallHeight}; each remnant is numbered and dimensioned width by length`
+    ));
+    svg.appendChild(svgElement('rect', {
+      class: 'remnant-comparison-board',
+      x: boardX,
+      y: boardY,
+      width: boardWidth,
+      height: boardHeight
+    }));
+    appendOverallDimensionTag(svg, boardX + boardWidth / 2, boardY - model.gap / 2,
+      widthLabel, fontPx, unitsPerPixel, 0, 'width');
+    appendOverallDimensionTag(svg, boardX - model.gap / 2, boardY + boardHeight / 2,
+      heightLabel, fontPx, unitsPerPixel, -90, 'height');
+
+    // Draw the exact remnant shapes at their virtual packed positions; these are not source-sheet locations.
+    const pieces = panel.remnants.map(remnant => {
       const shape = remnant.display;
-      const rect = svgElement('rect', { class: 'remnant-comparison-piece', x: shape.x, y: shape.y, width: shape.width, height: shape.height, rx: Math.min(8, shape.height / 12) });
-      group.appendChild(rect);
-      if (shape.width >= 180 && shape.height >= 150) {
-        const label = svgElement('text', { class: 'remnant-comparison-number', x: shape.x + shape.width / 2, y: shape.y + shape.height / 2 });
-        label.textContent = String(remnant.remnantIndex);
-        group.appendChild(label);
-      }
-      const activate = () => returnToSource(candidate, remnant);
-      group.addEventListener('click', activate);
-      group.addEventListener('keydown', event => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
-      });
-      svg.appendChild(group);
+      const portraitShape = root.PlywoodRemnantComparison.portraitRect(shape, panel.boardLength, panel.boardWidth);
+      const piece = {
+        remnant,
+        x: boardX + portraitShape.x,
+        y: boardY + portraitShape.y,
+        width: portraitShape.width,
+        height: portraitShape.height
+      };
+      svg.appendChild(svgElement('rect', {
+        class: 'remnant-comparison-piece',
+        x: piece.x,
+        y: piece.y,
+        width: piece.width,
+        height: piece.height,
+        'data-remnant-id': remnant.materialId == null ? '' : remnant.materialId,
+        'data-remnant-label': remnant.displayId || '',
+        'data-original-source-board-index': remnant.sourceBoardIndex,
+        'data-width': remnant.rect.width,
+        'data-length': remnant.rect.length
+      }));
+      return piece;
     });
-    card.appendChild(svg);
-    return card;
+    const labelBoxes = [];
+    pieces.forEach(piece => {
+      appendDimensionTag(
+        svg,
+        piece,
+        pieces,
+        labelBoxes,
+        `${piece.remnant.displayId || ''} · ${formatRemnantDimensions(candidate, piece.remnant)}`,
+        fontPx,
+        unitsPerPixel,
+        model.gap,
+        model.panelWidth,
+        model.panelHeight
+      );
+    });
+    return svg;
+  }
+
+  function createSchemeGraphic(candidate, candidateNumber, model) {
+    const graphic = doc.createElement('span');
+    graphic.className = 'remnant-comparison-graphic';
+    graphic.dataset.sourceBoardCount = String(candidate.sourceBoardCount);
+    graphic.dataset.displayBoardCount = String(candidate.displayBoardCount);
+    candidate.panels.forEach(panel => {
+      const panelElement = doc.createElement('span');
+      panelElement.className = 'remnant-comparison-display-board-panel';
+      panelElement.dataset.displayBoardIndex = String(panel.displayBoardIndex);
+      const title = doc.createElement('span');
+      title.className = 'remnant-comparison-display-board-title';
+      title.textContent = t(`虛擬展示板 ${panel.displayBoardIndex + 1}`, `Virtual display board ${panel.displayBoardIndex + 1}`);
+      panelElement.append(title, createDisplayBoardGraphic(candidate, candidateNumber, panel, model));
+      graphic.appendChild(panelElement);
+    });
+    return graphic;
   }
 
   function render() {
-    const button = $('openRemnantComparison'), action = $('remnantComparisonAction'), dialog = $('remnantComparisonDialog'), content = $('remnantComparisonContent');
+    const button = $('openRemnantComparison'), action = $('remnantComparisonAction'), availability = $('remnantComparisonAvailability'), dialog = $('remnantComparisonDialog'), content = $('remnantComparisonContent');
     if (!button || !dialog || !content || !root.PlywoodRemnantComparison) return;
     const app = root.calculator;
-    const candidates = validatedCandidates().map(candidate => ({
-      ...candidate,
-      remnants: candidate.remnants.map((item, index) => ({ ...item, remnantIndex: index + 1 }))
-    }));
-    const model = root.PlywoodRemnantComparison.layout(candidates);
+    const allCandidates = validatedCandidates();
+    const candidates = root.PlywoodRemnantComparison.minimumSourceSheetCandidates(allCandidates);
+    const model = root.PlywoodRemnantComparison.layout(candidates, { gap: DISPLAY_GAP, padding: DISPLAY_PADDING });
     const count = candidates.length;
+    const minimumSheetCount = count ? candidates[0].plan.boards.length : 0;
     button.disabled = count === 0;
     if (action) action.hidden = count === 0;
-    button.textContent = t(`比較所有方案的完整餘板（${count} 個）`, `Compare intact remnants (${count} scheme${count === 1 ? '' : 's'})`);
+    button.textContent = count
+      ? t(`比較最少用板餘料圖（${count}）`, `Compare fewest-sheet remnants (${count})`)
+      : t('比較所有方案餘料圖', 'Compare all remnant layouts');
     button.setAttribute('aria-label', button.textContent);
+    if (availability) availability.textContent = count
+      ? t(`共 ${allCandidates.length} 個有效方案；只比較最少用板的 ${count} 個（每個實際用 ${minimumSheetCount} 張原板）。`, `${allCandidates.length} verified schemes; comparing only the ${count} using the fewest sheets (${minimumSheetCount} actual source sheet${minimumSheetCount === 1 ? '' : 's'} each).`)
+      : t('載入 JSON 後按「計算」，再按此鈕比較餘料圖。', 'Load JSON, press “Calculate”, then tap here to compare remnants.');
     content.replaceChildren();
     const intro = $('remnantComparisonIntro');
     if (intro) intro.textContent = t(
-      '只顯示逐刀回放驗證後的完整終局餘板；每件按真實長×闊尺寸同尺度展示，並標明來源板。圖面只為集中比較而重新擺放，不是原板位置，也不代表可以拼接。點選餘板或下方尺寸可回到該方案原板。',
-      'Only complete final remnants from cut-replay-validated schemes are shown. Each is drawn to its real length × width at one shared scale and identifies its source sheet. Pieces are rearranged only for comparison; this is not their original position and they are not joined. Tap a piece or its size below to return to that scheme and sheet.'
+      '按比例排餘料；只比最少用板，點圖看切割圖。',
+      'Pack to scale; fewest-sheet schemes only. Tap a card for cuts.'
     );
     if (!count) {
       const empty = doc.createElement('p');
@@ -120,59 +357,44 @@
       content.appendChild(empty);
       return;
     }
-    if (model.canvasCount > 2) {
-      const note = doc.createElement('p');
-      note.className = 'remnant-comparison-empty';
-      note.textContent = t(`為保留全部實際尺寸及同一比例，需用 ${model.canvasCount} 張相同展示畫布；沒有省略或縮放餘板。`, `${model.canvasCount} identical display canvases are needed to preserve every true size at the same scale; no remnants were omitted or resized.`);
-      content.appendChild(note);
-    }
+
     model.candidates.forEach((candidate, index) => {
       const candidateNumber = index + 1;
-      const scheme = doc.createElement('section');
-      scheme.className = 'remnant-comparison-scheme';
-      const heading = doc.createElement('h3');
-      heading.textContent = candidate.plan === app.trialPlan
-        ? t(`方案 ${candidateNumber}｜目前切割方案`, `Scheme ${candidateNumber} | current cutting plan`)
-        : t(`方案 ${candidateNumber}`, `Scheme ${candidateNumber}`);
-      scheme.appendChild(heading);
-      const countLine = doc.createElement('p');
-      countLine.className = 'remnant-comparison-count';
-      countLine.textContent = t(`完整餘板 ${candidate.remnants.length} 件`, `${candidate.remnants.length} intact remnant${candidate.remnants.length === 1 ? '' : 's'}`);
-      scheme.appendChild(countLine);
+      const schemeButton = doc.createElement('button');
+      schemeButton.type = 'button';
+      schemeButton.className = 'remnant-comparison-scheme-button';
+      schemeButton.dataset.schemeIndex = String(candidate.candidateIndex);
+      schemeButton.dataset.current = String(candidate.plan === app.trialPlan);
+      const remnantCountLabel = t(`${candidate.remnants.length} 件餘料`, `${candidate.remnants.length} remnant${candidate.remnants.length === 1 ? '' : 's'}`);
+      const boardCountLabel = t(`實際用 ${candidate.sourceBoardCount} 張原板`, `${candidate.sourceBoardCount} original sheet${candidate.sourceBoardCount === 1 ? '' : 's'} actually used`);
+      schemeButton.setAttribute('aria-label', t(`返回方案 ${candidateNumber} 彩色切割圖；${boardCountLabel}；${remnantCountLabel}`, `Return to scheme ${candidateNumber} colored cutting diagram; ${boardCountLabel}; ${remnantCountLabel}`));
+
+      const heading = doc.createElement('span');
+      heading.className = 'remnant-comparison-scheme-heading';
+      const title = doc.createElement('span');
+      title.className = 'remnant-comparison-scheme-title';
+      title.textContent = t(`方案 ${candidateNumber}`, `Scheme ${candidateNumber}`);
+      const countText = doc.createElement('span');
+      countText.className = 'remnant-comparison-scheme-count';
+      countText.textContent = boardCountLabel;
+      heading.append(title, countText);
+      schemeButton.appendChild(heading);
+
+      const graphic = createSchemeGraphic(candidate, candidateNumber, model);
       if (!candidate.remnants.length) {
-        const empty = doc.createElement('p');
-        empty.className = 'remnant-comparison-empty';
-        empty.textContent = t('此方案沒有完整終局餘板。', 'This scheme has no complete final remnants.');
-        scheme.appendChild(empty);
-      } else {
-        const canvasWrap = doc.createElement('div');
-        canvasWrap.className = 'remnant-comparison-canvas-wrap';
-        canvasWrap.dataset.canvasCount = String(model.canvasCount);
-        candidate.canvases.forEach((placements, canvasIndex) => canvasWrap.appendChild(createPieceMap(candidate, candidateNumber, placements, canvasIndex, model)));
-        scheme.appendChild(canvasWrap);
-        const list = doc.createElement('ol');
-        list.className = 'remnant-comparison-piece-list';
-        candidate.remnants.forEach(remnant => {
-          const item = doc.createElement('li');
-          const itemButton = doc.createElement('button');
-          itemButton.type = 'button';
-          itemButton.className = 'remnant-comparison-piece-button';
-          const dimensions = `${format(remnant.rect.length)} × ${format(remnant.rect.width)}`;
-          const source = sourceLabel(remnant, candidateNumber);
-          const strong = doc.createElement('strong');
-          strong.textContent = `${remnant.remnantIndex}. ${dimensions}`;
-          itemButton.append(strong, doc.createElement('br'), doc.createTextNode(source));
-          itemButton.addEventListener('click', () => returnToSource(candidate, remnant));
-          item.appendChild(itemButton);
-          list.appendChild(item);
-        });
-        scheme.appendChild(list);
+        const empty = doc.createElement('span');
+        empty.className = 'remnant-comparison-no-remnants';
+        empty.textContent = t('沒有完整餘料', 'No intact remnants');
+        graphic.appendChild(empty);
       }
-      content.appendChild(scheme);
+      schemeButton.appendChild(graphic);
+      schemeButton.addEventListener('click', () => returnToCandidate(candidate));
+      content.appendChild(schemeButton);
     });
+
     const footnote = doc.createElement('p');
     footnote.className = 'remnant-comparison-footnote';
-    footnote.textContent = t('方案餘料是候選結果，不會自動加入實物庫存；只有實際鋸出並確認後，才可在切割圖的餘料清單加入庫存。', 'Candidate remnants are not added to physical stock automatically. Add them from the cutting view only after they have actually been cut and confirmed.');
+    footnote.textContent = t('虛擬展示板上的擺位不是原板實際位置；尺寸標籤只供識別，不會加上切割線或改變餘料形狀。方案餘料不會自動加入實物庫存。', 'Placements on virtual display boards are not the remnants’ actual source-sheet locations. Dimension labels are annotations only; no cut-like guide lines are added and remnant shapes are unchanged. Candidate remnants are not added to physical stock automatically.');
     content.appendChild(footnote);
   }
 

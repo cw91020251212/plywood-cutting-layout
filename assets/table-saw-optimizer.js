@@ -119,8 +119,9 @@
                 [b.summary.largestQualifiedRemnantShortSide ?? 0, a.summary.largestQualifiedRemnantShortSide ?? 0]]
             : [[b.summary.largestRemnantArea ?? 0, a.summary.largestRemnantArea ?? 0],
                 [b.summary.largestRemnantShortSide ?? 0, a.summary.largestRemnantShortSide ?? 0]]),
+          [thresholdActive ? a.summary.qualifyingRemnantCount ?? 0 : a.summary.retainedRemnantCount ?? 0,
+            thresholdActive ? b.summary.qualifyingRemnantCount ?? 0 : b.summary.retainedRemnantCount ?? 0],
           [a.summary.kerfArea, b.summary.kerfArea],
-          [a.summary.retainedRemnantCount ?? 0, b.summary.retainedRemnantCount ?? 0],
           [ma.cuts, mb.cuts],
           [ma.axisChanges, mb.axisChanges], [ma.cutLength, mb.cutLength]];
     for (const [left, right] of fields) {

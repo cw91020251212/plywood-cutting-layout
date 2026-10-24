@@ -151,3 +151,10 @@ Replaced the placeholder brown square and diagonal bar with a polished plywood l
 - 依使用者回饋重新追蹤餘料庫及方案比較功能在 `index.html` 的入口、核心／UI 載入順序、資料 JSON 匯入匯出、Service Worker 快取與主要事件流程。
 - 獨立唯讀程式審查確認功能已有接入主程式；新增測試守護核心載入及 UI 載入順序，避免日後只留下功能檔案卻未接入頁面。
 - 瀏覽器端到端操作仍未實測；詳見 `INTEGRATION_REVIEW_REPORT.md`。
+
+
+## 2026-10-25 — 合併最新 plywood-cutting-layout-review.zip
+
+已依新附件更新主程式、餘料比較與庫存 UI/CSS、排料排序、Service Worker、測試、手機檢查工具、操作說明及獨立預覽 HTML；ZIP 未包含的既有文件與資產予以保留。
+
+以使用者提供 JSON 重算：16 件部件、2 塊板、22 刀。方案 1 的五個餘料候選勾選框均為 20×20px，展開後每列文字欄寬 269px。`node --test tests/*.test.cjs`：176 項通過、0 項失敗；內嵌腳本檢查通過；手機 Chromium 八種視窗尺寸 smoke test 全數通過。

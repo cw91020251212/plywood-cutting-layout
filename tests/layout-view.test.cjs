@@ -62,14 +62,27 @@ test('compact preferences reject malformed storage and retain only folded-sectio
   const good={getItem:()=>JSON.stringify({remoteOpen:true,position:{x:6,y:-2},expanded:['layoutDisplaySettings',7]})};
   assert.deepEqual(view.readPreferences(good),{expanded:['layoutDisplaySettings']});
 });
-test('input unit policy migrates auto conversion off once, then remembers explicit user choices',()=>{
-  const store=new Map([['plywood-layout-auto-display-units-v1','true']]);
-  const context={window:{localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))}}};
+test('auto unit conversion defaults on for first use and preserves explicit saved choices',()=>{
   const start=html.indexOf("const UNIT_SYSTEM_STORAGE_KEY = 'plywood-layout-unit-system-v1';"),end=html.indexOf('function readLanguagePreference',start);
-  vm.runInNewContext(`${html.slice(start,end)};globalThis.read=readAutoDisplayUnitsPreference;globalThis.save=saveAutoDisplayUnitsPreference;`,context);
-  assert.equal(context.read(),false);
-  context.save(true);assert.equal(context.read(),true);
-  context.save(false);assert.equal(context.read(),false);
+  function boot(entries={},unavailable=false){
+    const store=new Map(Object.entries(entries));
+    const localStorage=unavailable?{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}}:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))};
+    const context={window:{localStorage}};
+    vm.runInNewContext(`${html.slice(start,end)};globalThis.read=readAutoDisplayUnitsPreference;globalThis.save=saveAutoDisplayUnitsPreference;`,context);
+    return {context,store};
+  }
+  const fresh=boot();
+  assert.equal(fresh.context.read(),true);
+  assert.equal(fresh.store.get('plywood-layout-auto-display-units-v1'),'true');
+  assert.equal(fresh.store.get('plywood-layout-input-unit-policy-v2'),'applied');
+  for(const value of ['true','false']){
+    const saved=boot({'plywood-layout-auto-display-units-v1':value});
+    assert.equal(saved.context.read(),value==='true','saved values survive old migration state');
+    saved.context.save(value!=='true');
+    assert.equal(saved.context.read(),value!=='true','later explicit changes persist');
+  }
+  assert.equal(boot({'plywood-layout-auto-display-units-v1':'false','plywood-layout-input-unit-policy-v2':'applied'}).context.read(),false);
+  assert.equal(boot({},true).context.read(),true,'storage errors fall back to the screenshot default');
 });
 test('leftover dimension and R-label switches are persistent and do not hide geometric material shapes',()=>{
   const start=html.indexOf('  function drawRemnantLabels'),end=html.indexOf('\n  function drawBoard',start);

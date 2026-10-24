@@ -9,7 +9,31 @@ const overlay = require('../assets/cut-path-overlay.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(repoRoot, 'index.html'), 'utf8');
+const standalone = fs.readFileSync(path.join(repoRoot, 'plywood-cutting-layout-standalone.html'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(repoRoot, 'sw.js'), 'utf8');
+
+test('cut-path overlay defaults on, preserves saved choices, and matches the offline shell', () => {
+  const startMarker = '  const CUT_PATH_STORAGE_KEY=';
+  const endMarker = '  let activeVerifiedPlan=null;';
+  function extract(source) {
+    const start = source.indexOf(startMarker), end = source.indexOf(endMarker, start);
+    assert.ok(start >= 0 && end > start, 'cut-path preference block exists');
+    return source.slice(start, end);
+  }
+  const block = extract(html);
+  assert.equal(extract(standalone), block, 'the standalone shell receives the same preference defaults');
+  function read(saved, unavailable = false) {
+    const store = new Map(saved === undefined ? [] : [['plywood-layout-cut-path-overlay-v1', saved]]);
+    const localStorage = unavailable ? { getItem() { throw Error('blocked'); }, setItem() {} } : { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, String(value)) };
+    const context = { window: { localStorage } };
+    vm.runInNewContext(`${block};globalThis.preference=readCutPathPreference;globalThis.value=showCutPaths;`, context);
+    return { preference: context.preference(), value: context.value };
+  }
+  assert.deepEqual(read(), { preference: true, value: true });
+  assert.deepEqual(read('false'), { preference: false, value: false });
+  assert.deepEqual(read('true'), { preference: true, value: true });
+  assert.deepEqual(read(undefined, true), { preference: true, value: true });
+});
 
 function loadEngine() {
   const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]);

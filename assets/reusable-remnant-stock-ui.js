@@ -6,8 +6,50 @@
   const positive = value => Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) <= 50000;
   const t = (zh, en) => root.calculator && root.calculator.currentLanguage === 'en' ? en : zh;
   const stockApi = root.PlywoodRemnantStock;
+  let manualEntryUnitSystem = null;
 
   function app() { return root.calculator || null; }
+  function selectedUnitSystem() {
+    const selector = $('unitSystem'), calc = app();
+    return (selector && selector.value) || (calc && calc.unitSystem) || 'metric';
+  }
+  function updateManualEntryUnits() {
+    const system = selectedUnitSystem(), imperial = system === 'imperial';
+    if (manualEntryUnitSystem && manualEntryUnitSystem !== system) {
+      const oldFactor = manualEntryUnitSystem === 'imperial' ? 25.4 : 1;
+      const newFactor = imperial ? 25.4 : 1;
+      for (const inputId of ['manualRemnantWidth', 'manualRemnantLength']) {
+        const input = $(inputId), value = input && Number(input.value);
+        if (input && input.value.trim() && Number.isFinite(value)) {
+          input.value = String(Number((value * oldFactor / newFactor).toFixed(4)));
+        }
+      }
+    }
+    manualEntryUnitSystem = system;
+    for (const [labelId, inputId, zh, en] of [
+      ['manualRemnantWidthLabel', 'manualRemnantWidth', '闊', 'Width'],
+      ['manualRemnantLengthLabel', 'manualRemnantLength', '長', 'Length']
+    ]) {
+      const label = $(labelId), input = $(inputId);
+      if (label) {
+        label.textContent = t(`${zh}（${imperial ? '寸' : 'mm'}）`, `${en} (${imperial ? 'in' : 'mm'})`);
+        const editor = $(`${inputId}__editor`);
+        if (editor) editor.setAttribute('aria-label', label.textContent);
+      }
+      if (input) {
+        input.min = imperial ? '0.01' : '0.1';
+        input.max = imperial ? String(50000 / 25.4) : '50000';
+        input.step = imperial ? '0.01' : '0.1';
+      }
+    }
+  }
+  function formatStockDimension(value) {
+    const calc = app();
+    if (calc && typeof calc._formatTrialDimension === 'function') {
+      return calc._formatTrialDimension(value, null);
+    }
+    return `${Number(value).toLocaleString('zh-HK', { maximumFractionDigits: 1 })} mm`;
+  }
   function records() {
     const calc = app();
     if (!calc) return [];
@@ -69,6 +111,7 @@
 
   function renderManager() {
     const list = $('remnantStockList'), summary = $('remnantStockManagerSummary'), guidance = $('remnantStockGuidance');
+    updateManualEntryUnits();
     if (!list || !summary) return;
     const inventory = records();
     const available = inventory.filter(item => item.status === 'available').length;
@@ -109,7 +152,7 @@
       const main = doc.createElement('div');
       main.className = 'remnant-stock-row-main';
       const title = doc.createElement('strong');
-      title.textContent = `${record.id} · ${Number(record.length).toLocaleString('zh-HK', { maximumFractionDigits: 1 })} × ${Number(record.width).toLocaleString('zh-HK', { maximumFractionDigits: 1 })} mm`;
+      title.textContent = `${record.id} · ${formatStockDimension(record.length)} × ${formatStockDimension(record.width)}`;
       main.appendChild(title);
       const status = doc.createElement('span');
       status.className = 'remnant-stock-status';
@@ -160,19 +203,27 @@
   }
 
   function addManual() {
-    const width = Number($('manualRemnantWidth') && $('manualRemnantWidth').value);
-    const length = Number($('manualRemnantLength') && $('manualRemnantLength').value);
+    const widthInput = $('manualRemnantWidth'), lengthInput = $('manualRemnantLength');
+    const enteredWidth = widthInput ? widthInput.value.trim() : '';
+    const enteredLength = lengthInput ? lengthInput.value.trim() : '';
+    const system = selectedUnitSystem();
+    const factor = system === 'imperial' ? 25.4 : 1;
+    const width = Number(enteredWidth) * factor;
+    const length = Number(enteredLength) * factor;
     if (!positive(width) || !positive(length)) {
-      const message = t('請輸入 0 至 50000 mm 範圍內的正數尺寸。', 'Enter positive dimensions up to 50,000 mm.');
+      const max = system === 'imperial' ? (50000 / 25.4).toLocaleString('en-US', { maximumFractionDigits: 1 }) : '50,000';
+      const unit = t(system === 'imperial' ? '寸' : 'mm', system === 'imperial' ? 'in' : 'mm');
+      const message = t(`尺寸須大於 0 且不超過 ${max} ${unit}。`, `Enter dimensions greater than 0 and no more than ${max} ${unit}.`);
       if (typeof root.alert === 'function') root.alert(message);
       return;
     }
     const record = appendRecord(width, length);
-    $('manualRemnantWidth').value = '';
-    $('manualRemnantLength').value = '';
+    widthInput.value = '';
+    lengthInput.value = '';
     renderManager();
     const status = $('status');
-    if (status) { status.textContent = t(`已新增 ${record.id}（${length} × ${width} mm）為可用庫存；請在 JSON 儲存以備份。`, `Added ${record.id} (${length} × ${width} mm) as available stock; save the project JSON to back it up.`); status.style.display = 'block'; }
+    const enteredUnit = t(system === 'imperial' ? '寸' : 'mm', system === 'imperial' ? 'in' : 'mm');
+    if (status) { status.textContent = t(`已新增 ${record.id}（${enteredLength} × ${enteredWidth} ${enteredUnit}）為可用庫存；請在 JSON 儲存以備份。`, `Added ${record.id} (${enteredLength} × ${enteredWidth} ${enteredUnit}) as available stock; save the project JSON to back it up.`); status.style.display = 'block'; }
   }
 
   function addSelectedToBoards() {
@@ -212,14 +263,18 @@
     const candidates = all.filter(leaf => !existing.has(leaf.sourceKey));
     const threshold = stockApi.normalizeThreshold({ shortSide: $('remnantMinShortSide')?.value, longSide: $('remnantMinLongSide')?.value });
     const english = calc.currentLanguage === 'en';
-    const section = doc.createElement('section');
-    section.className = 'input-hint strategy-hint reusable-remnant-offer';
-    const heading = doc.createElement('strong');
     const currentIndex = Number(calc._trialCandidateIndex || 0) + 1;
+    const section = doc.createElement('details');
+    section.className = 'input-hint strategy-hint reusable-remnant-offer';
+    const summary = doc.createElement('summary');
+    summary.textContent = t(`登記餘料（${candidates.length} 件）`, `Add remnants (${candidates.length})`);
+    section.appendChild(summary);
+    const heading = doc.createElement('strong');
+    heading.className = 'reusable-remnant-offer-heading';
     heading.textContent = t(`方案 ${currentIndex}：實際切出後可登記的完整餘料`, `Scheme ${currentIndex}: intact remnants to register after cutting`);
     section.appendChild(heading);
     const intro = doc.createElement('p');
-    intro.textContent = t(`只列完整逐刀驗證終局餘料；門檻：短邊 ≥ ${threshold.shortSide} mm、長邊 ≥ ${threshold.longSide} mm。請先實際鋸出、量度及標記，再確認入庫。`, `Only complete final remnants from cut-replay-validated layouts are listed; thresholds: short side ≥ ${threshold.shortSide} mm and long side ≥ ${threshold.longSide} mm. Physically cut, measure and label before confirming stock.`);
+    intro.textContent = t(`完整逐刀驗證餘料；短邊 ≥ ${threshold.shortSide} mm、長邊 ≥ ${threshold.longSide} mm。鋸出、量度、標記後才入庫。`, `Complete cut-verified remnants; short side ≥ ${threshold.shortSide} mm, long side ≥ ${threshold.longSide} mm. Cut, measure and label before adding to stock.`);
     section.appendChild(intro);
     if (!candidates.length) {
       const empty = doc.createElement('p');
@@ -250,7 +305,7 @@
     selectAll.addEventListener('click', () => checks.forEach(check => { check.checked = true; }));
     clear.addEventListener('click', () => checks.forEach(check => { check.checked = false; }));
     const save = doc.createElement('button'); save.type = 'button'; save.className = 'scheme-button';
-    save.textContent = t(`實際鋸出後確認登記所選餘料`, `Confirm selected remnants after physical cutting`);
+    save.textContent = t(`確認所選餘料入庫`, `Confirm selected remnants into stock`);
     save.addEventListener('click', () => {
       if (calc.trialPlan !== plan) return;
       const selected = checks.map((check, index) => check.checked ? candidates[index] : null).filter(Boolean);
@@ -278,7 +333,7 @@
     });
     section.appendChild(save);
     const caveat = doc.createElement('p'); caveat.className = 'remnant-comparison-footnote';
-    caveat.textContent = t('方案尺寸是逐刀驗證的預計尺寸；請核對實物。若量度不同，請用上方手動登記正確尺寸。', 'Plan dimensions are verified estimates; check the physical pieces. If measured sizes differ, use manual entry above.');
+    caveat.textContent = t('尺寸為預計值；不符請手動登記。', 'Dimensions are estimates; manually enter any differences.');
     section.appendChild(caveat);
     if (host) { host.hidden = false; host.appendChild(section); }
   }

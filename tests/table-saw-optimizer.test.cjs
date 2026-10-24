@@ -78,16 +78,63 @@ test('the real candidate pool retains the greedy baseline and ranks the verified
   assert.equal(new Set(pool.map(item=>item.signature)).size,pool.length);
 });
 
-test('saving no longer rewards more kerf just because fewer offcuts remain',()=>{
+test('saving prefers fewer qualifying remnants before kerf efficiency when geometry ties',()=>{
   const demand=[{width:300,length:200,count:2,orientationPreference:'auto'}], stock=[{width:1000,length:600}];
   const {engine,api}=loadPool(demand,stock);
   const initial=engine.plan(demand,stock,settings);
   const pool=api.buildCandidatePool(initial,settings,['ripThenCrosscut','partFirstTree'],x=>x,'saving');
-  assert.equal(pool[0].plan.summary.kerfArea,3600);
-  assert.equal(saw.planMetrics(pool[0].plan).cuts,3);
-  assert.ok(pool.some(item=>item.plan.summary.kerfArea===4800));
-  const expensive=pool.find(item=>item.plan.summary.kerfArea===4800).plan;
-  assert.ok(api.rankPlan(pool[0].plan,expensive,'saving')<0);
+  assert.equal(pool[0].plan.summary.qualifyingRemnantCount,1);
+  const lowerKerfMoreRemnants=pool.find(item=>item.plan.summary.kerfArea===3600);
+  assert.ok(lowerKerfMoreRemnants);
+  assert.equal(lowerKerfMoreRemnants.plan.summary.qualifyingRemnantCount,2);
+  assert.ok(pool[0].plan.summary.kerfArea>lowerKerfMoreRemnants.plan.summary.kerfArea);
+  assert.ok(api.rankPlan(pool[0].plan,lowerKerfMoreRemnants.plan,'saving')<0);
+});
+
+function savingPlan(overrides={}){
+  return {summary:{usedBoardCount:1,savedRemnantBoardsUsed:0,boardArea:1000000,
+    largestQualifiedRemnantArea:40000,largestQualifiedRemnantShortSide:200,
+    largestRemnantArea:40000,largestRemnantShortSide:200,
+    reusableRemnantThresholdActive:true,qualifyingRemnantCount:1,
+    retainedRemnantCount:1,kerfArea:1000,...overrides},boards:[]};
+}
+
+test('saving prefers fewer qualifying complete remnants when sheet, area and largest-remnant shape tie',()=>{
+  const fewerUsable=savingPlan({qualifyingRemnantCount:1,retainedRemnantCount:1});
+  const moreUsable=savingPlan({qualifyingRemnantCount:2,retainedRemnantCount:2});
+  assert.ok(saw.comparePlans(fewerUsable,moreUsable,'saving')<0);
+});
+
+test('saving counts qualifying remnants rather than tiny scraps, before kerf efficiency',()=>{
+  const oneUsefulPlusTinyScraps=savingPlan({qualifyingRemnantCount:1,retainedRemnantCount:10,kerfArea:1200});
+  const twoUseful=savingPlan({qualifyingRemnantCount:2,retainedRemnantCount:2,kerfArea:100});
+  assert.ok(saw.comparePlans(oneUsefulPlusTinyScraps,twoUseful,'saving')<0);
+});
+
+test('saving preserves larger complete-remnant geometry even against a lower remnant count',()=>{
+  const largerIntact=savingPlan({largestQualifiedRemnantArea:50000,largestQualifiedRemnantShortSide:200,
+    qualifyingRemnantCount:2,retainedRemnantCount:2,kerfArea:1200});
+  const morePiecesSmaller=savingPlan({largestQualifiedRemnantArea:40000,largestQualifiedRemnantShortSide:200,
+    qualifyingRemnantCount:1,retainedRemnantCount:1,kerfArea:100});
+  assert.ok(saw.comparePlans(largerIntact,morePiecesSmaller,'saving')<0);
+});
+
+test('saving uses all final remnants when size thresholds are disabled',()=>{
+  const fewerFinalPieces=savingPlan({reusableRemnantThresholdActive:false,
+    qualifyingRemnantCount:0,retainedRemnantCount:1,kerfArea:1200});
+  const moreFinalPieces=savingPlan({reusableRemnantThresholdActive:false,
+    qualifyingRemnantCount:9,retainedRemnantCount:2,kerfArea:100});
+  assert.ok(saw.comparePlans(fewerFinalPieces,moreFinalPieces,'saving')<0);
+});
+
+test('saving fallback uses the same remnant order when optimizer helper is unavailable',()=>{
+  const {api}=loadPool(parts,boards,null);
+  const oneUsefulPlusTinyScraps=savingPlan({qualifyingRemnantCount:1,retainedRemnantCount:10,kerfArea:1200});
+  const twoUseful=savingPlan({qualifyingRemnantCount:2,retainedRemnantCount:2,kerfArea:100});
+  assert.ok(api.rankPlan(oneUsefulPlusTinyScraps,twoUseful,'saving')<0);
+  const largerWithMorePieces=savingPlan({largestQualifiedRemnantArea:50000,qualifyingRemnantCount:2});
+  const smallerWithFewerPieces=savingPlan({largestQualifiedRemnantArea:40000,qualifyingRemnantCount:1});
+  assert.ok(api.rankPlan(largerWithMorePieces,smallerWithFewerPieces,'saving')<0);
 });
 
 test('same-cut convenience ties use axis changes before path length; metrics do not mutate cuts',()=>{
@@ -210,7 +257,7 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-24-reusable-remnant-stock-5'));
+  assert.ok(sw.includes('2026-10-25-remnant-compare-mobile-1'));
   assert.ok(sw.includes('./assets/title-wood-grain.jpg'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=3'));
   assert.ok(sw.includes('./assets/reusable-remnant-stock.js?v=3'));
@@ -296,14 +343,14 @@ test('real saving pool retains a larger intact remnant before minimizing kerf at
   assert.ok(pool.every(x=>api.rankPlan(chosen,x.plan,'saving')<=0));
 });
 
-test('saving keeps sheet count/area first, then intact rectangle; kerf precedes fragmentation and convenience is unchanged',()=>{
+test('saving keeps sheet count/area and intact rectangle first; remnant count precedes kerf and convenience is unchanged',()=>{
   const make=(overrides={},cuts=3)=>({summary:{usedBoardCount:1,boardArea:1000000,kerfArea:8000,largestRemnantArea:600000,largestRemnantShortSide:600,retainedRemnantCount:2,...overrides},boards:[{cuts:Array.from({length:cuts},()=>({axis:'x',phase:'rip',sourceRect:{width:1000,length:1000}}))}]});
   const base=make(),snapshot=JSON.stringify(base);
   assert.ok(saw.comparePlans(base,make({usedBoardCount:2,largestRemnantArea:900000}),'saving')<0);
   assert.ok(saw.comparePlans(base,make({boardArea:2000000,largestRemnantArea:900000}),'saving')<0);
   assert.ok(saw.comparePlans(base,make({largestRemnantArea:500000,kerfArea:7000}),'saving')<0);
   assert.ok(saw.comparePlans(base,make({largestRemnantShortSide:100}),'saving')<0);
-  assert.ok(saw.comparePlans(base,make({kerfArea:9000,retainedRemnantCount:1}),'saving')<0,'do not saw away a tail merely to reduce count');
+  assert.ok(saw.comparePlans(base,make({kerfArea:9000,retainedRemnantCount:1}),'saving')>0,'fewer complete remnants precede kerf efficiency');
   assert.ok(saw.comparePlans(make({retainedRemnantCount:1}),base,'saving')<0);
   assert.ok(saw.comparePlans(make({largestRemnantArea:100000},2),base,'convenience')<0);
   assert.equal(JSON.stringify(base),snapshot);
@@ -369,8 +416,8 @@ test('missing helper still computes physical remnant metrics and saving fallback
 test('intact-remnant guidance, displayed length/width and provenance are bilingual and versioned',()=>{
   assert.equal(saw.version,'table-saw-1.2.0');
   assert.equal(loadEngine().engine.version,'plywood-trial-1.5.0');
-  assert.ok(html.includes('再偏好重用 R 餘料'));
-  assert.equal(html.split('先少用板；板數相同先用 R 餘料，再比板面積；門檻啟用時保留最大合格完整餘料，再比較鋸縫及刀數。').length-1,2,'card and translation source stay synchronized');
+  assert.ok(html.includes('再優先重用 R 餘料'));
+  assert.equal(html.split('先少用原板，再用 R 餘料及較小板面；先比最大合格完整餘料，再比合格餘料數，後比鋸縫及刀數（關閉門檻則按全部完整餘料計）。').length-1,2,'card and translation source stay synchronized');
   assert.ok(!html.includes('先比較用板數、原板總面積，再比較鋸縫及刀數；不以減少餘料獎勵更多鋸耗。'));
   assert.ok(html.includes('L-shaped blanks are never merged'));
   assert.ok(html.includes("integrityLine.id='remnantIntegritySummary'"));

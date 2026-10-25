@@ -1330,15 +1330,18 @@ body.wood-dark-mode .layout-remote{background:rgba(36,48,42,.96);border-color:#9
 }
 
 .reusable-remnant-offer > summary::before {
-  content: "＋";
+  content: "▶";
   flex: none;
   margin-right: 7px;
   color: #355c4e;
   font-size: 1rem;
+  line-height: 1;
+  transform-origin: center;
+  transition: transform .15s ease;
 }
 
 .reusable-remnant-offer[open] > summary::before {
-  content: "−";
+  transform: rotate(90deg);
 }
 
 .reusable-remnant-offer > summary:focus-visible {
@@ -13536,9 +13539,9 @@ body.wood-dark-mode #wood-app-footer a{color:#ffd166!important}
   .trial-file-actions button{font-size:1em!important;margin:0!important;padding:10px 5px!important;height:auto!important;min-height:48px}
   .modal-content,.dialog-content{box-sizing:border-box;max-width:calc(100vw - 24px);max-height:85vh;max-height:85dvh;overflow-y:auto}
   #wood-settings-panel{box-sizing:border-box;max-width:calc(100vw - 16px)!important;max-height:75vh;max-height:75dvh;overflow-y:auto}
-  #wood-floating-tools{right:max(8px,env(safe-area-inset-right))!important}
+  #wood-floating-tools{right:0!important}
   #wood-floating-tools button#languageSwitchButton,#wood-floating-tools button#wood-settings-button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important}
-  #wood-scroll-nav{bottom:calc(var(--wood-info-h,0px) + 12px + env(safe-area-inset-bottom))!important;right:8px!important}
+  #wood-scroll-nav{bottom:calc(var(--wood-info-h,0px) + 12px + env(safe-area-inset-bottom))!important;right:0!important}
   #wood-scroll-nav button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important}
   .layout-remote{right:8px;max-height:calc(100dvh - 180px)}
   .layout-remote button{width:44px!important;height:44px!important;min-height:44px!important}
@@ -13549,7 +13552,6 @@ body.wood-dark-mode #wood-app-footer a{color:#ffd166!important}
 @media screen and (min-width:768px){.mobile-table-hint{display:none}}
 @media print{.mobile-table-hint{display:none!important}}
 @media screen and (max-width:767px){body.wood-dark-mode .mobile-table-hint{color:#c5d7cc}}
-
 </style>
 <script data-standalone-asset="assets/mobile-view.js">
 (function(root,factory){

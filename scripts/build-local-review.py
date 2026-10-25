@@ -11,6 +11,7 @@ EMBEDDED_ASSETS = {
     "assets/remnant-comparison.js": "script",
     "assets/remnant-comparison-ui.js": "script",
     "assets/reusable-remnant-stock-ui.js": "script",
+    "assets/mobile-view.css": "style",
 }
 INCLUDE_TOP_LEVEL = [
     "index.html",

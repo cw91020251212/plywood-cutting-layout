@@ -28,13 +28,20 @@ test('parts and stock tables retain their original presentation',()=>{
   assert.match(css,/\.table-wrapper:not\(#section-parts \.table-wrapper\):not\(#section-boards \.table-wrapper\)/);
 });
 test('phone resources load last and are included in versioned offline cache',()=>{
-  for(const file of ['mobile-view.css','mobile-view.js']){
-    assert.ok(html.includes(`assets/${file}?v=2`));
-    assert.ok(sw.includes(`./assets/${file}?v=2`));
-  }
+  assert.ok(html.includes('data-standalone-asset="assets/mobile-view.css"'));
+  assert.ok(html.includes('data-standalone-asset="assets/mobile-view.js"'));
+  assert.ok(sw.includes('./assets/mobile-view.css?v=3'));
+  assert.ok(sw.includes('./assets/mobile-view.js?v=2'));
   assert.ok(html.indexOf('assets/mobile-view.css')>html.indexOf('wood-opacity-outline-style'));
-  assert.ok(sw.includes('2026-10-25-settings-reset-close-1'));
+  assert.ok(sw.includes('2026-10-25-floating-right-edge-1'));
   new vm.Script(js);
+});
+test('floating controls touch the phone viewport right edge',()=>{
+  const embedded=html.match(/<style data-standalone-asset="assets\/mobile-view\.css">([\s\S]*?)<\/style>/)?.[1]||'';
+  assert.match(css,/#wood-floating-tools\{right:0!important\}/);
+  assert.match(css,/#wood-scroll-nav\{[^}]*right:0!important/);
+  assert.match(embedded,/#wood-floating-tools\{right:0!important\}/);
+  assert.match(embedded,/#wood-scroll-nav\{[^}]*right:0!important/);
 });
 test('four-step bottom navigation and its reserved space are removed',()=>{
   assert.doesNotMatch(js,/mobile-step-nav|createElement\('nav'\)|aria-current/);

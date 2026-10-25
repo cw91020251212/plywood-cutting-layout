@@ -150,5 +150,22 @@ test('diagram metadata is folded, the legend stays outside, and the right remote
   assert.match(html,/const scope=card.closest\('\.board-display-group'\)\|\|card/);
   assert.doesNotMatch(js,/\.plan\(|\.calculateCutting\(/,'view organization must not invoke a new solver');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  for(const asset of ['layout-view.js?v=5','layout-view.css?v=4'])assert.ok(sw.includes(asset)&&html.includes(asset));
+  for(const [asset,version] of [['layout-view.js','5'],['layout-view.css','4']]){
+    assert.ok(sw.includes(`./assets/${asset}?v=${version}`));
+    assert.ok(html.includes(`data-standalone-asset="assets/${asset}"`));
+  }
+});
+
+test('desktop sheet canvases reclaim viewport height in paired and overview layouts',()=>{
+  const start=html.indexOf('/* 電腦寬屏：左側輸入設定、右側切割結果；窄屏仍然上下排列。');
+  const firstEnd=html.indexOf('</style>',start);
+  const end=html.indexOf('</style>',firstEnd+8);
+  assert.ok(start>=0&&firstEnd>start&&end>firstEnd,'locate both desktop-only responsive layout blocks');
+  const desktop=html.slice(start,end);
+  assert.match(desktop,/@media \(min-width:1100px\)/,'the larger canvas height stays desktop-only');
+  assert.match(desktop,/@container \(min-width:760px\)/,'the two-board comparison still uses its two-column container');
+  assert.equal((desktop.match(/height:calc\(100vh - 160px\)!important/g)||[]).length,2,'both desktop views use the taller fallback viewport size');
+  assert.equal((desktop.match(/height:calc\(100dvh - 160px\)!important/g)||[]).length,2,'both desktop views use the taller dynamic viewport size');
+  assert.equal((desktop.match(/min-height:220px/g)||[]).length,2,'short desktop viewports keep a legible minimum canvas height');
+  assert.doesNotMatch(desktop,/100dvh - (?:260|280)px/,'the old large screen-height deduction is removed');
 });

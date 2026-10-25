@@ -257,7 +257,7 @@ test('non-finite counts fail before expansion; PWA loads versioned production as
   assert.match(html,/<script src="assets\/part-dimension-display\.js\?v=2"><\/script>/);
   assert.match(html,/@keyframes calculateButtonSheen/);
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(sw.includes('2026-10-25-floating-right-edge-1'));
+  assert.ok(sw.includes('2026-10-25-desktop-board-canvas-height-1'));
   assert.ok(sw.includes('./assets/title-wood-grain.jpg'));
   assert.ok(sw.includes('./assets/table-saw-optimizer.js?v=3'));
   assert.ok(sw.includes('./assets/reusable-remnant-stock.js?v=3'));

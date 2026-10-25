@@ -13512,14 +13512,14 @@ body.wood-dark-mode #wood-app-footer a{color:#ffd166!important}
   #desktop-result-pane #canvasContainer .canvas-container{min-width:0;margin:0}
   #desktop-result-pane.board-overview-active #canvasContainer{align-items:center}
   #desktop-result-pane.board-overview-active #canvasContainer .canvas-container{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:0}
-  #desktop-result-pane.board-overview-active #canvasContainer .canvas{width:auto!important;max-width:100%;height:calc(100vh - 260px)!important;height:calc(100dvh - 260px)!important;max-height:none;object-fit:contain}
+  #desktop-result-pane.board-overview-active #canvasContainer .canvas{width:auto!important;max-width:100%;height:calc(100vh - 160px)!important;height:calc(100dvh - 160px)!important;min-height:220px;max-height:none;object-fit:contain}
   @container (min-width:760px){
-    /* 電腦版恢復兩欄；板材縮小並保留明顯空位，避免兩幅圖遠看黐成一張。 */
+    /* 電腦版雙欄並列，保留板間距；板圖使用近乎整個可視高度。 */
     #desktop-result-pane #canvasContainer{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row;gap:18px 22px;align-items:start;width:100%;}
     #desktop-result-pane #canvasContainer .board-display-group{display:block;min-width:0;margin:0;padding:6px;border:1px solid #c7d4d5;border-radius:10px;background:rgba(255,255,255,.58);box-sizing:border-box;}
     #desktop-result-pane #canvasContainer .canvas-container{display:flex;width:100%;height:auto;min-height:0;margin:0;padding:6px;box-sizing:border-box;flex-direction:column;align-items:center;overflow:hidden;}
-    /* 主動使用視窗可用高度；寬度仍受卡片限制，並保持板材長寬比例與雙欄間距。 */
-    #desktop-result-pane #canvasContainer .canvas-container .canvas{display:block;width:auto!important;height:calc(100vh - 280px)!important;height:calc(100dvh - 280px)!important;max-width:100%!important;max-height:none!important;object-fit:contain;}
+    /* 結果欄本身可捲動，圖面不再預留大量已捲走內容的高度；保留足夠空間給板材標題和圖例。 */
+    #desktop-result-pane #canvasContainer .canvas-container .canvas{display:block;width:auto!important;height:calc(100vh - 160px)!important;height:calc(100dvh - 160px)!important;min-height:220px;max-width:100%!important;max-height:none!important;object-fit:contain;}
   }
   body.portrait-display-active #desktop-result-pane #canvasContainer{display:block!important}
 }

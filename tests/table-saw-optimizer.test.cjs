@@ -129,12 +129,22 @@ test('saving uses all final remnants when size thresholds are disabled',()=>{
 
 test('saving fallback uses the same remnant order when optimizer helper is unavailable',()=>{
   const {api}=loadPool(parts,boards,null);
-  const oneUsefulPlusTinyScraps=savingPlan({qualifyingRemnantCount:1,retainedRemnantCount:10,kerfArea:1200});
-  const twoUseful=savingPlan({qualifyingRemnantCount:2,retainedRemnantCount:2,kerfArea:100});
-  assert.ok(api.rankPlan(oneUsefulPlusTinyScraps,twoUseful,'saving')<0);
-  const largerWithMorePieces=savingPlan({largestQualifiedRemnantArea:50000,qualifyingRemnantCount:2});
-  const smallerWithFewerPieces=savingPlan({largestQualifiedRemnantArea:40000,qualifyingRemnantCount:1});
-  assert.ok(api.rankPlan(largerWithMorePieces,smallerWithFewerPieces,'saving')<0);
+  const pairs=[
+    [savingPlan({qualifyingRemnantCount:1,retainedRemnantCount:10,kerfArea:1200}),
+      savingPlan({qualifyingRemnantCount:2,retainedRemnantCount:2,kerfArea:100})],
+    [savingPlan({largestQualifiedRemnantArea:50000,qualifyingRemnantCount:2}),
+      savingPlan({largestQualifiedRemnantArea:40000,qualifyingRemnantCount:1})],
+    [savingPlan({reusableRemnantThresholdActive:false,qualifyingRemnantCount:0,retainedRemnantCount:1,kerfArea:1200}),
+      savingPlan({reusableRemnantThresholdActive:false,qualifyingRemnantCount:9,retainedRemnantCount:2,kerfArea:100})]
+  ];
+  for(const [left,right] of pairs){
+    assert.equal(api.rankPlan(left,right,'saving'),saw.comparePlans(left,right,'saving'));
+    assert.ok(api.rankPlan(left,right,'saving')<0);
+  }
+  const cuts=axes=>({summary:{usedBoardCount:1,boardArea:100,kerfArea:10},boards:[{cuts:axes.map(axis=>({axis,phase:'part-tree',sourceRect:{width:10,length:20}}))}]});
+  const grouped=cuts(['x','x','y','y']),alternating=cuts(['x','y','x','y']);
+  assert.equal(api.rankPlan(grouped,alternating,'convenience'),saw.comparePlans(grouped,alternating,'convenience'));
+  assert.ok(api.rankPlan(grouped,alternating,'convenience')<0);
 });
 
 test('same-cut convenience ties use axis changes before path length; metrics do not mutate cuts',()=>{

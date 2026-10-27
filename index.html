@@ -8948,24 +8948,125 @@ window.addEventListener('DOMContentLoaded', () => {
     return mode === 'ripThenCrosscut' ? packRipBoard(b, tokens, s) : packTreeBoard(b, tokens, s);
   }
 
-  // MaxRects only proposes coordinates. A full-span slicing tree must exist
-  // before any placement can become a production candidate.
+  function snapshotBoard(b) {
+    return {
+      results: b.results.slice(), cuts: b.cuts.slice(), wastes: b.wastes.slice(),
+      kerfBands: b.kerfBands.slice(), residuals: b.residuals.slice(), terminals: b.terminals.slice(),
+      materialCounter: b.materialCounter, core: b.core ? cloneRect(b.core) : null,
+      coreMaterialId: b.coreMaterialId ?? null, packingSource: b.packingSource || null,
+      maxRects: b.maxRects ? {...b.maxRects} : null, guillotine: b.guillotine || null,
+      stripSearch: b.stripSearch ? {...b.stripSearch} : null,
+      _unplacedOnBoard: b._unplacedOnBoard ? b._unplacedOnBoard.slice() : null
+    };
+  }
+
+  function restoreBoard(b, snap) {
+    b.results = snap.results.slice();
+    b.cuts = snap.cuts.slice();
+    b.wastes = snap.wastes.slice();
+    b.kerfBands = snap.kerfBands.slice();
+    b.residuals = snap.residuals.slice();
+    b.terminals = snap.terminals.slice();
+    b.materialCounter = snap.materialCounter;
+    b.core = snap.core ? cloneRect(snap.core) : null;
+    b.coreMaterialId = snap.coreMaterialId;
+    if (snap.packingSource) b.packingSource = snap.packingSource; else delete b.packingSource;
+    if (snap.maxRects) b.maxRects = {...snap.maxRects}; else delete b.maxRects;
+    if (snap.guillotine) b.guillotine = snap.guillotine; else delete b.guillotine;
+    if (snap.stripSearch) b.stripSearch = {...snap.stripSearch}; else delete b.stripSearch;
+    if (snap._unplacedOnBoard) b._unplacedOnBoard = snap._unplacedOnBoard.slice(); else delete b._unplacedOnBoard;
+    delete b.maxrectsFallback;
+  }
+
+  // Bounded probe: keep a guillotine-slicable subset of the proposed coordinates.
+  // The full production tree search stays on the success path; this only runs
+  // after that search has already failed.
+  function sawablePlacementSubset(api, placements, rect, kerf, options) {
+    if (!placements.length) return null;
+    const probe = {...options, maxVisits: 2000};
+    const kept = [];
+    let replay = null;
+    const limit = Math.min(placements.length, 12);
+    for (let i = 0; i < limit; i++) {
+      const next = api.toCutTree(kept.concat(placements[i]), rect, kerf, probe);
+      if (next && next.ok && next.tree) {
+        kept.push(placements[i]);
+        replay = next;
+      }
+    }
+    return replay ? {placements: kept.slice(), replay} : null;
+  }
+
+  // MaxRects only proposes coordinates. Those coordinates become a candidate
+  // only after a through-cut tree verifies. One unsawable board degrades to a
+  // sawable subset or the legacy packer; it does not discard the other boards.
   function packMaxRectsBoard(b, tokens, s, mode) {
     const api = global.PlywoodMaxRects;
     if (!api || typeof api.pack !== 'function' || typeof api.toCutTree !== 'function') {
       const error = new Error('MaxRects 輔助模組未載入；保留原有排料候選');
       error.code = 'MAXRECTS_UNAVAILABLE'; throw error;
     }
+    const before = snapshotBoard(b);
     const active = trimBoard(b, s);
     const packed = api.pack(tokens.map(token => ({id:token.id,width:token.width,length:token.length,
       orientations:orientations(token)})), active.rect, s.kerf);
-    const replay = api.toCutTree(packed.placements, active.rect, s.kerf,
-      {mode,minSupport:s.minSupport});
-    if (!replay.ok || !replay.tree) {
-      const error = new Error(`MaxRects 座標無法轉為所選工序的完整貫通切割樹：${replay.reason || '無可行刀序'}`);
-      error.code = 'MAXRECTS_NOT_SAWABLE'; throw error;
+    const treeOptions = {mode, minSupport:s.minSupport};
+    const replay = api.toCutTree(packed.placements, active.rect, s.kerf, treeOptions);
+    if (replay.ok && replay.tree) {
+      return emitPackedBoard(b,tokens,s,mode,active,packed,replay,'MaxRects','maxrects-bssf');
     }
-    return emitPackedBoard(b,tokens,s,mode,active,packed,replay,'MaxRects','maxrects-bssf');
+    const trimmed = snapshotBoard(b);
+    const reason = replay.reason || '無可行刀序';
+    let best = null;
+    let legacyError = null;
+    const betterQuality = (next, prev) => next.placed !== prev.placed ? next.placed > prev.placed
+      : Math.abs(next.largest - prev.largest) > EPS ? next.largest > prev.largest
+      : next.cuts < prev.cuts;
+    const consider = via => {
+      const verdict = verifyBoard(b, s.kerf);
+      if (!verdict.ok || !b.results.length) return;
+      const quality = {
+        placed: b.results.length,
+        largest: (verdict.finalRemnants || []).reduce((max, remnant) => Math.max(max, remnant.area), 0),
+        cuts: b.cuts.length
+      };
+      if (best && !betterQuality(quality, best.quality)) return;
+      best = {via, quality, snap: snapshotBoard(b)};
+    };
+    restoreBoard(b, before);
+    try {
+      if (mode === 'ripThenCrosscut') packRipBoard(b, tokens, s);
+      else packTreeBoard(b, tokens, s);
+      consider(mode === 'ripThenCrosscut' ? 'legacy-rip' : 'legacy-tree');
+    } catch (error) {
+      restoreBoard(b, before);
+      legacyError = error;
+    }
+    // A subset of the failed coordinates can place at most packed.placements.
+    // Skip that search when legacy already placed at least that many and verified.
+    if (!(best && best.quality.placed >= packed.placements.length)) {
+      restoreBoard(b, trimmed);
+      const subset = sawablePlacementSubset(api, packed.placements, active.rect, s.kerf, treeOptions);
+      if (subset) {
+        const kept = new Set(subset.placements.map(p => p.id));
+        try {
+          emitPackedBoard(b, tokens, s, mode, active, {
+            placements: subset.placements,
+            remainingIds: tokens.filter(t => !kept.has(t.id)).map(t => t.id),
+            diagnostics: packed.diagnostics
+          }, subset.replay, 'MaxRects', 'maxrects-bssf');
+          consider('sawable-subset');
+        } catch (_) { /* 子集無法序列化時保留已驗證的本板回退 */ }
+      }
+    }
+    if (!best) {
+      restoreBoard(b, before);
+      if (legacyError) throw legacyError;
+      return tokens.slice();
+    }
+    restoreBoard(b, best.snap);
+    b.maxrectsFallback = {reason, via: best.via, proposed: packed.placements.length, kept: best.quality.placed};
+    return tokens.filter(t => !b.results.some(p => p.id === t.id));
   }
 
   // Independent constructive guillotine packer: the physical cut tree is built
@@ -10421,9 +10522,44 @@ window.addEventListener('DOMContentLoaded', () => {
   function guillotineProfiles(){try{const list=window.PlywoodGuillotine?.profiles?.();return Array.isArray(list)?list.slice(0,18):[];}catch(_){return [];}}
   function rankPlan(a,b,objective=selectedObjective()){
     if(window.PlywoodTableSaw)return window.PlywoodTableSaw.comparePlans(a,b,objective);
-    if(objective==='convenience'&&totalCutCount(a)!==totalCutCount(b))return totalCutCount(a)-totalCutCount(b);
-    if(objective==='convenience')return a.summary.usedBoardCount-b.summary.usedBoardCount||a.summary.boardArea-b.summary.boardArea||a.summary.kerfArea-b.summary.kerfArea||totalCutCount(a)-totalCutCount(b);
-    return a.summary.usedBoardCount-b.summary.usedBoardCount||a.summary.boardArea-b.summary.boardArea||(b.summary.largestRemnantArea??0)-(a.summary.largestRemnantArea??0)||(b.summary.largestRemnantShortSide??0)-(a.summary.largestRemnantShortSide??0)||a.summary.kerfArea-b.summary.kerfArea||(a.summary.retainedRemnantCount??0)-(b.summary.retainedRemnantCount??0)||totalCutCount(a)-totalCutCount(b);
+    // Helper 未載入時沿用 comparePlans 的欄位次序（慳料門檻、合格餘料先於鋸縫）。
+    const metrics=plan=>{
+      let cuts=0,axisChanges=0,cutLength=0;
+      for(const board of plan.boards||[]){
+        let previousAxis=null;
+        for(const step of board.cuts||[]){
+          cuts++;
+          cutLength+=step.axis==='x'?step.sourceRect.length:step.sourceRect.width;
+          if(step.phase==='trim')continue;
+          if(previousAxis&&previousAxis!==step.axis)axisChanges++;
+          previousAxis=step.axis;
+        }
+      }
+      return {cuts,axisChanges,cutLength};
+    };
+    const ma=metrics(a),mb=metrics(b);
+    const thresholdActive=a.summary.reusableRemnantThresholdActive===true||b.summary.reusableRemnantThresholdActive===true;
+    const fields=objective==='convenience'
+      ? [[ma.cuts,mb.cuts],[ma.axisChanges,mb.axisChanges],[ma.cutLength,mb.cutLength],
+          [a.summary.usedBoardCount,b.summary.usedBoardCount],[a.summary.boardArea,b.summary.boardArea],
+          [a.summary.kerfArea,b.summary.kerfArea]]
+      : [[a.summary.usedBoardCount,b.summary.usedBoardCount],
+          [b.summary.savedRemnantBoardsUsed??0,a.summary.savedRemnantBoardsUsed??0],
+          [a.summary.boardArea,b.summary.boardArea],
+          ...(thresholdActive
+            ? [[b.summary.largestQualifiedRemnantArea??0,a.summary.largestQualifiedRemnantArea??0],
+                [b.summary.largestQualifiedRemnantShortSide??0,a.summary.largestQualifiedRemnantShortSide??0]]
+            : [[b.summary.largestRemnantArea??0,a.summary.largestRemnantArea??0],
+                [b.summary.largestRemnantShortSide??0,a.summary.largestRemnantShortSide??0]]),
+          [thresholdActive?a.summary.qualifyingRemnantCount??0:a.summary.retainedRemnantCount??0,
+            thresholdActive?b.summary.qualifyingRemnantCount??0:b.summary.retainedRemnantCount??0],
+          [a.summary.kerfArea,b.summary.kerfArea],
+          [ma.cuts,mb.cuts],[ma.axisChanges,mb.axisChanges],[ma.cutLength,mb.cutLength]];
+    for(const [left,right] of fields){
+      const delta=Number(left)-Number(right);
+      if(Math.abs(delta)>1e-7)return delta;
+    }
+    return 0;
   }
   function candidateSignature(plan){
     const q=n=>Math.round(Number(n)*1e6)/1e6;

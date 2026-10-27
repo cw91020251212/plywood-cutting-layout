@@ -36,6 +36,7 @@ function check(engine, plan, expectedCount) {
   for(const board of plan.boards) {
     assert.ok(engine.verifyBoard(board,plan.kerf).ok);
     assert.equal(board.packingSource,'maxrects-bssf');
+    assert.equal(board.maxrectsFallback,undefined);
     const physical = overlay.finalMaterialLeaves(board);
     assert.equal(physical.reduce((n,r)=>n+r.area,0),board.validation.finalRemnants.reduce((n,r)=>n+r.area,0));
     assert.ok(Math.abs(board.validation.accountedArea-board.width*board.length)<0.01);
@@ -120,16 +121,24 @@ test('the actual candidate pool calls MaxRects, preserves legacy baselines and n
   assert.ok(saw.comparePlans(after[0].plan,before[0].plan,'saving')<=0);
 });
 
-test('unavailable or rejected MaxRects cannot remove a verified baseline; explicit failure stays explicit',()=>{
+test('unavailable MaxRects stays explicit; a rejected cut tree falls back per board',()=>{
   const parts=[{width:300,length:400,count:1,orientationPreference:'auto'}],boards=[{width:1000,length:1000}];
-  for(const api of [null,{...maxrects,toCutTree:()=>({ok:false,tree:null,reason:'test rejection',visits:1})}]) {
-    const enabled={...base,enableMaxRects:true};
-    const {engine,pool}=load(parts,boards,api),initial=engine.plan(parts,boards,enabled);
-    const candidates=pool.buildCandidatePool(initial,enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',[]);
-    assert.ok(candidates.length>0);
-    assert.ok(candidates.every(x=>pool.strictlyValidCandidate(x.plan,{})));
-    assert.throws(()=>engine.plan(parts,boards,{...base,packingStrategy:'maxrects'}),e=>['MAXRECTS_UNAVAILABLE','MAXRECTS_NOT_SAWABLE'].includes(e.code));
-  }
+  const enabled={...base,enableMaxRects:true};
+  const missing=load(parts,boards,null);
+  const missingPool=missing.pool.buildCandidatePool(missing.engine.plan(parts,boards,enabled),enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',[]);
+  assert.ok(missingPool.length>0);
+  assert.ok(missingPool.every(x=>missing.pool.strictlyValidCandidate(x.plan,{})));
+  assert.throws(()=>missing.engine.plan(parts,boards,{...base,packingStrategy:'maxrects'}),e=>e.code==='MAXRECTS_UNAVAILABLE');
+
+  const rejected=load(parts,boards,{...maxrects,toCutTree:()=>({ok:false,tree:null,reason:'test rejection',visits:1})});
+  const fallback=rejected.engine.plan(parts,boards,{...base,packingStrategy:'maxrects'});
+  assert.equal(fallback.status,'candidate');
+  assert.equal(fallback.summary.placedParts,1);
+  assert.equal(fallback.unplaced.length,0);
+  assert.ok(fallback.boards.every(board=>rejected.engine.verifyBoard(board,fallback.kerf).ok&&board.maxrectsFallback&&board.maxrectsFallback.via==='legacy-rip'));
+  const kept=rejected.pool.buildCandidatePool(rejected.engine.plan(parts,boards,enabled),enabled,['ripThenCrosscut','partFirstTree'],x=>x,'saving',[]);
+  assert.ok(kept.length>0);
+  assert.ok(kept.every(x=>rejected.pool.strictlyValidCandidate(x.plan,{})));
 });
 
 test('oversize demand remains incomplete instead of disappearing',()=>{
@@ -185,22 +194,46 @@ test('respecting rip-before-crosscut remains mandatory even when a tree layout h
 });
 
 test('deterministic randomized MaxRects candidates retain count, geometry, direction and full cut replay',()=>{
-  let seed=20261023,accepted=0,rejected=0;
+  let seed=20261023,pure=0,fallback=0;
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   for(let i=0;i<40;i++) {
     const parts=Array.from({length:4},()=>({width:100+Math.floor(random()*250),length:200+Math.floor(random()*400),count:1+Math.floor(random()*2),orientationPreference:i%3?'auto':'fixed_vertical'}));
     const boards=[{width:1000,length:1500}],{engine}=load(parts,boards);
     const settings={...base,mode:i%2?'partFirstTree':'ripThenCrosscut',packingStrategy:'maxrects',
       kerf:i%2?3.2:3,trims:i%2?{left:10,right:10,top:10,bottom:10}:{}};
-    try {
-      const plan=engine.plan(parts,boards,settings);
-      check(engine,plan,parts.reduce((n,p)=>n+p.count,0));
-      accepted++;
-    } catch(e) {
-      assert.equal(e.code,'MAXRECTS_NOT_SAWABLE');
-      rejected++;
+    const plan=engine.plan(parts,boards,settings);
+    const expected=parts.reduce((n,p)=>n+p.count,0);
+    assert.equal(plan.status,'candidate');
+    assert.equal(plan.summary.placedParts,expected);
+    assert.equal(plan.unplaced.length,0);
+    for(const board of plan.boards) {
+      assert.ok(engine.verifyBoard(board,plan.kerf).ok);
+      if(plan.mode==='ripThenCrosscut') {
+        let crossed=false;
+        for(const cut of board.cuts) {
+          if(cut.phase==='trim') continue;
+          if(cut.phase==='crosscut') crossed=true;
+          if(crossed) assert.notEqual(cut.phase,'rip');
+        }
+      }
     }
+    if(plan.boards.every(board=>board.packingSource==='maxrects-bssf'&&!board.maxrectsFallback)) pure++;
+    else fallback++;
   }
-  assert.ok(accepted>=10,'enough randomized full production replays must actually succeed');
-  assert.equal(accepted+rejected,40);
+  assert.ok(pure>=10,'enough randomized full MaxRects replays must actually succeed');
+  assert.equal(pure+fallback,40);
+});
+
+test('a board whose MaxRects coordinates are not sawable does not drop the rest of the plan',()=>{
+  const parts=[{width:200,length:300,count:20,orientationPreference:'auto'},{width:300,length:450,count:20,orientationPreference:'auto'}];
+  const boards=[{width:1220,length:2440}];
+  const {engine}=load(parts,boards);
+  for(const mode of ['ripThenCrosscut','partFirstTree']) {
+    const plan=engine.plan(parts,boards,{...base,mode,packingStrategy:'maxrects'});
+    assert.equal(plan.status,'candidate',mode);
+    assert.equal(plan.summary.placedParts,40);
+    assert.equal(plan.unplaced.length,0);
+    assert.ok(plan.boards.length>=2);
+    for(const board of plan.boards) assert.ok(engine.verifyBoard(board,plan.kerf).ok,JSON.stringify(board.validation&&board.validation.errors));
+  }
 });

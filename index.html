@@ -13848,28 +13848,27 @@ h1#mainTitle{
      2) sw.js 的  APP_VERSION      （手機快取才會抓到新版本）
    範 例：v1.0 → v1.1 → v1.2 …  每次有改動就遞增，避免忘記更新。
    ========================================================================== */
-:root{ --app-version: "v1.1"; }
+:root{ --app-version: "v1.2"; }
 
-/* 右下角版本 badge：掛在底部資訊欄右端，轉語言／重繪都不會消失 */
+/* 右下角版本：純文字、無外框，低調顯示在底部資訊欄右端 */
 #wood-info-bar::after{
   content: var(--app-version) !important;
   display: inline-block !important;
   margin-left: auto !important;
   flex: 0 0 auto !important;
-  padding: 2px 9px !important;
-  border-radius: 10px !important;
-  background: rgba(255,255,255,.16) !important;
-  border: 1px solid rgba(255,255,255,.45) !important;
-  color: #fff !important;
+  padding: 0 2px !important;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,.6) !important;
   font-size: 11px !important;
   line-height: 1.4 !important;
-  font-weight: 600 !important;
-  letter-spacing: .4px !important;
+  font-weight: 400 !important;
+  letter-spacing: .3px !important;
   text-shadow: none !important;
   box-shadow: none !important;
   filter: none !important;
   white-space: nowrap !important;
-  opacity: .9 !important;
 }
 /* 列印時隱藏版本 badge */
 @media print{ #wood-info-bar::after{ display: none !important; } }

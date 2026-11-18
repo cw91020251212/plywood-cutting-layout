@@ -13797,12 +13797,9 @@ body.wood-dark-mode .section.collapsed .section-title .collapse-arrow{background
 }
 </style>
 <style id="blue-bars-unify">
-/* —— 頂部標題列深色化；底部資訊欄保留原來的黑底黃字設計 —— */
-/* 頂部主標題：藍色實底配黃框白字，與分段標題一致 */
+/* —— 頂部標題列：還原原本木紋（由 simple-title-outline 樣式控制），只保留調整後的高度/字級 —— */
+/* 不再覆蓋背景色與背景圖，讓 simple-title-outline 的木紋顯示出來 */
 h1#mainTitle{
-  background-color:#1a75ff!important;
-  background-image:linear-gradient(135deg,#4da6ff,#1a75ff)!important;
-  background-size:auto!important;
   border:3px solid #FFD700!important;
   padding:7px 16px!important;
   font-size:1.5em!important;
@@ -13844,27 +13841,28 @@ h1#mainTitle{
 }
 </style>
 <style id="version-badge-style">
-/* ============================================================
-   ★★★ 版本號：每次改軟件，只改下面呢一行嘅 "v1.0"（例如改做 "v1.1"），
-       標題右邊嘅版本 badge 就會自動跟住變。改完記得同步 update sw.js 嘅
-       APP_VERSION，手機快取先會抓到新版本。★★★
-   ============================================================ */
-:root{ --app-version: "v1.0"; }
+/* ==========================================================================
+   ★★★★★  程 式 版 本 集 中 設 定  ★★★★★
+   版 本 號：每 次 改 動 功 能 後，請 更 新 下 面 兩 個 地 方：
+     1) 下 面 這 行  --app-version  （畫面右下角會即時顯示）
+     2) sw.js 的  APP_VERSION      （手機快取才會抓到新版本）
+   範 例：v1.0 → v1.1 → v1.2 …  每次有改動就遞增，避免忘記更新。
+   ========================================================================== */
+:root{ --app-version: "v1.1"; }
 
-/* 標題右側版本 badge：用 ::after 偽元素，轉語言重寫 innerHTML 都唔會消失 */
-h1#mainTitle::after{
+/* 右下角版本 badge：掛在底部資訊欄右端，轉語言／重繪都不會消失 */
+#wood-info-bar::after{
   content: var(--app-version) !important;
   display: inline-block !important;
   margin-left: auto !important;
   flex: 0 0 auto !important;
-  align-self: center !important;
   padding: 2px 9px !important;
   border-radius: 10px !important;
-  background: rgba(255,255,255,.2) !important;
-  border: 1px solid rgba(255,255,255,.5) !important;
+  background: rgba(255,255,255,.16) !important;
+  border: 1px solid rgba(255,255,255,.45) !important;
   color: #fff !important;
-  font-size: .46em !important;
-  line-height: 1.5 !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
   font-weight: 600 !important;
   letter-spacing: .4px !important;
   text-shadow: none !important;
@@ -13873,11 +13871,8 @@ h1#mainTitle::after{
   white-space: nowrap !important;
   opacity: .9 !important;
 }
-@media screen and (max-width:767px){
-  h1#mainTitle::after{ font-size: .4em !important; padding: 2px 7px !important; }
-}
 /* 列印時隱藏版本 badge */
-@media print{ h1#mainTitle::after{ display: none !important; } }
+@media print{ #wood-info-bar::after{ display: none !important; } }
 </style>
 <script data-standalone-asset="assets/mobile-view.js">
 (function(root,factory){

@@ -13843,6 +13843,42 @@ h1#mainTitle{
   .add-reset-row .compact-action-btn{height:40px!important;min-height:40px!important}
 }
 </style>
+<style id="version-badge-style">
+/* ============================================================
+   ★★★ 版本號：每次改軟件，只改下面呢一行嘅 "v1.0"（例如改做 "v1.1"），
+       標題右邊嘅版本 badge 就會自動跟住變。改完記得同步 update sw.js 嘅
+       APP_VERSION，手機快取先會抓到新版本。★★★
+   ============================================================ */
+:root{ --app-version: "v1.0"; }
+
+/* 標題右側版本 badge：用 ::after 偽元素，轉語言重寫 innerHTML 都唔會消失 */
+h1#mainTitle::after{
+  content: var(--app-version) !important;
+  display: inline-block !important;
+  margin-left: auto !important;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  padding: 2px 9px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.2) !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  color: #fff !important;
+  font-size: .46em !important;
+  line-height: 1.5 !important;
+  font-weight: 600 !important;
+  letter-spacing: .4px !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  white-space: nowrap !important;
+  opacity: .9 !important;
+}
+@media screen and (max-width:767px){
+  h1#mainTitle::after{ font-size: .4em !important; padding: 2px 7px !important; }
+}
+/* 列印時隱藏版本 badge */
+@media print{ h1#mainTitle::after{ display: none !important; } }
+</style>
 <script data-standalone-asset="assets/mobile-view.js">
 (function(root,factory){
   'use strict';

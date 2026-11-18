@@ -1743,9 +1743,9 @@ html:not([lang="en"]) [data-english-only] { display: none !important; }
 <label>數量:</label>
 <input type="number" id="partCount" min="1" max="100" autocomplete="off" value="1">
 
-<div style="display: flex; gap: 10px;">
-<button onclick="calculator.addPart()" style="flex: 1;">新增</button>
-<button class="reset-btn" onclick="calculator.resetParts()" style="flex: 1;">重置</button>
+<div class="add-reset-row" style="display: flex; gap: 10px;">
+<button class="compact-action-btn" onclick="calculator.addPart()" style="flex: 1;">新增</button>
+<button class="reset-btn compact-action-btn" onclick="calculator.resetParts()" style="flex: 1;">重置</button>
 </div>
 <div class="table-wrapper">
 <table id="partsTable">
@@ -1829,9 +1829,9 @@ html:not([lang="en"]) [data-english-only] { display: none !important; }
 <label>數量:</label>
 <input type="number" id="boardCount" min="1" max="100" autocomplete="off" value="1">
 
-<div style="display: flex; gap: 10px;">
-<button onclick="calculator.addBoard()" style="flex: 1;">新增</button>
-<button class="reset-btn" onclick="calculator.resetBoards()" style="flex: 1;">重置</button>
+<div class="add-reset-row" style="display: flex; gap: 10px;">
+<button class="compact-action-btn" onclick="calculator.addBoard()" style="flex: 1;">新增</button>
+<button class="reset-btn compact-action-btn" onclick="calculator.resetBoards()" style="flex: 1;">重置</button>
 </div>
 <div class="table-wrapper">
 <table id="boardsTable">
@@ -13814,6 +13814,34 @@ h1#mainTitle{
 }
 /* 列印時隱藏底部資訊欄 */
 @media print{#wood-info-bar{display:none!important}}
+</style>
+<style id="compact-action-buttons">
+/* —— 新增／重置／計算按鈕適度縮細，功能與配置不變 —— */
+/* 新增／重置：兩個並排、置中，寬高皆縮小 */
+.add-reset-row{justify-content:center}
+.add-reset-row .compact-action-btn{
+  flex:0 1 130px!important;
+  max-width:130px!important;
+  min-width:0!important;
+  height:40px!important;
+  min-height:40px!important;
+  padding:6px 10px!important;
+  font-size:1em!important;
+  line-height:1.2!important;
+  margin:6px 0!important;
+}
+/* 計算按鈕：縮矮Height、字與圖示；保留全寬主操作鍵 */
+#calculateButton{
+  height:44px!important;
+  min-height:44px!important;
+  padding:8px 16px!important;
+}
+#calculateButton .calculate-label{font-size:20px!important}
+#calculateButton .calculate-icon{width:20px!important;height:20px!important;flex:0 0 20px!important}
+@media(max-width:600px){
+  #calculateButton .calculate-label{font-size:20px!important}
+  .add-reset-row .compact-action-btn{height:40px!important;min-height:40px!important}
+}
 </style>
 <script data-standalone-asset="assets/mobile-view.js">
 (function(root,factory){
